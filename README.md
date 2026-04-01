@@ -17,6 +17,10 @@ I build AI systems, automation pipelines, and data architectures. Most of my wor
 - Building tools for automated market research and analysis
 - Contributing to open-source AI tooling
 
+#### Posts
+
+- [Tool Selection Patterns in Agent Systems](./posts/tool-selection-patterns.md) — On structuring tool registries for agent systems
+
 #### Find me
 
 - 🌐 [emil.aiadoption.cz](https://emil.aiadoption.cz)
