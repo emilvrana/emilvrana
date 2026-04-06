@@ -1,0 +1,94 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>A2A Bridge: Three Hard Lessons — Emil Vrána</title>
+    <style>
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+            line-height: 1.7;
+            color: #333;
+            max-width: 700px;
+            margin: 0 auto;
+            padding: 2rem 1.5rem;
+            background: #fff;
+        }
+        nav { margin-bottom: 3rem; }
+        nav a { color: #666; text-decoration: none; font-size: 0.9rem; }
+        nav a:hover { color: #000; }
+        article header { margin-bottom: 2rem; }
+        h1 { font-size: 1.8rem; font-weight: 600; margin-bottom: 0.5rem; line-height: 1.3; }
+        .meta { color: #666; font-size: 0.9rem; }
+        .meta span { margin-right: 1rem; }
+        .tag { background: #f3f3f3; padding: 0.15rem 0.5rem; border-radius: 3px; font-size: 0.8rem; }
+        article h2 { font-size: 1.2rem; margin: 2.5rem 0 1rem; font-weight: 600; }
+        article p { margin-bottom: 1.2rem; }
+        article strong { font-weight: 600; }
+        hr { border: none; border-top: 1px solid #eee; margin: 2rem 0; }
+        .closing { color: #555; font-style: italic; margin-top: 2rem; padding-top: 1rem; border-top: 1px solid #eee; }
+        footer { margin-top: 4rem; padding-top: 2rem; border-top: 1px solid #eee; color: #666; font-size: 0.9rem; }
+    </style>
+</head>
+<body>
+    <nav><a href="index.html">← Back</a></nav>
+    
+    <article>
+        <header>
+            <h1>A2A Bridge: Three Hard Lessons From Connecting Two Agents</h1>
+            <div class="meta">
+                <span>April 6, 2026</span>
+                <span class="tag">agents</span>
+                <span class="tag">a2a</span>
+                <span class="tag">integration</span>
+            </div>
+        </header>
+        
+        <p>Last week I shipped the first working version of an A2A (Agent-to-Agent) bridge between Claude Code and OpenClaw. Same machine, two agents, one goal: coordinate without stepping on each other.</p>
+        
+        <p>Here's what actually mattered.</p>
+        
+        <h2>1. Bidirectional is a trap</h2>
+        
+        <p>My first instinct: build full bidirectional communication. Both agents can call each other, seamless handoff, beautiful symmetry.</p>
+        
+        <p>Reality: deadlock city. When both sides can initiate, you need complex state management, timeouts, and conflict resolution. I spent two days debugging race conditions that only happened under load.</p>
+        
+        <p><strong>What worked:</strong> Asymmetric protocol. One agent initiates, the other responds. Simple state machine. Predictable flow. The "bridge" is just a message queue with clear ownership.</p>
+        
+        <h2>2. Context windows are not infinite</h2>
+        
+        <p>I initially passed full conversation history on every handoff. Context = better decisions, right?</p>
+        
+        <p>Wrong. Context windows fill up. Costs explode. And agents start "remembering" things that didn't happen in <em>their</em> session — hallucinated continuity.</p>
+        
+        <p><strong>What worked:</strong> Deliberate context pruning. Each agent gets a structured summary, not raw logs. Key decisions, open questions, blockers. Like a standup update, not a transcript.</p>
+        
+        <h2>3. Error handling is the whole game</h2>
+        
+        <p>The happy path worked in an hour. The failure modes took three days.</p>
+        
+        <ul style="margin: 1rem 0 1.5rem 1.5rem;">
+            <li>Network hiccup mid-handoff? One agent thinks it's done, the other is waiting.</li>
+            <li>Parser error on a malformed response? Silent failure, no retry.</li>
+            <li>Timeout on a long task? Both agents assume the other failed.</li>
+        </ul>
+        
+        <p><strong>What worked:</strong> Brutal simplicity. Every exchange has: <code>request_id</code>, <code>expected_response</code>, <code>timeout_sec</code>, and <code>failure_action</code>. No ambiguity. If something breaks, both sides know what to do.</p>
+        
+        <hr>
+        
+        <p>The bridge is working now. Claude Code handles deep architectural work. OpenClaw runs routine tasks, monitors, deploys. They hand off with a simple JSON message over a Unix socket.</p>
+        
+        <p>Not fancy. But it works.</p>
+        
+        <p class="closing">If you're building multi-agent systems, my advice: start with one-directional, over-communicate in your protocol, and spend 80% of your time on failure modes. The happy path is never the hard part.</p>
+    </article>
+    
+    <footer>
+        <p>Emil Vrána — AI &amp; Systems Engineer, Prague</p>
+        <p><a href="https://github.com/emilvrana">GitHub</a></p>
+    </footer>
+</body>
+</html>

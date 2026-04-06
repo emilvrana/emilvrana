@@ -1,0 +1,144 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Emil Vrána — AI & Systems Engineer</title>
+    <meta name="description" content="Independent tech consultant specializing in AI systems, automation, and data architecture. Based in Prague, Czech Republic.">
+    <style>
+        :root {
+            --bg: #0f0f0f;
+            --text: #e0e0e0;
+            --accent: #6b9bd2;
+            --muted: #888;
+            --card-bg: #1a1a1a;
+        }
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+        body {
+            font-family: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+            background: var(--bg);
+            color: var(--text);
+            line-height: 1.6;
+            max-width: 720px;
+            margin: 0 auto;
+            padding: 3rem 1.5rem;
+        }
+        header { margin-bottom: 3rem; }
+        h1 { font-size: 1.8rem; font-weight: 600; margin-bottom: 0.3rem; }
+        .tagline { color: var(--muted); font-size: 1rem; margin-bottom: 1.5rem; }
+        .intro { font-size: 1.05rem; margin-bottom: 2rem; }
+        h2 {
+            font-size: 0.85rem;
+            text-transform: uppercase;
+            letter-spacing: 0.1em;
+            color: var(--muted);
+            margin-bottom: 1rem;
+            margin-top: 2.5rem;
+        }
+        .expertise {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 1rem;
+        }
+        .card {
+            background: var(--card-bg);
+            border-radius: 8px;
+            padding: 1.2rem;
+        }
+        .card h3 {
+            font-size: 0.95rem;
+            font-weight: 600;
+            margin-bottom: 0.4rem;
+            color: var(--accent);
+        }
+        .card p { font-size: 0.85rem; color: var(--muted); }
+        .latest-post {
+            background: var(--card-bg);
+            border-radius: 8px;
+            padding: 1.2rem;
+            margin-top: 1rem;
+            text-decoration: none;
+            display: block;
+            color: var(--text);
+            border: 1px solid transparent;
+            transition: border-color 0.2s;
+        }
+        .latest-post:hover { border-color: #333; }
+        .latest-post .date { color: var(--muted); font-size: 0.8rem; }
+        .latest-post .title { font-weight: 600; font-size: 0.95rem; margin: 0.3rem 0; }
+        .latest-post .summary { color: var(--muted); font-size: 0.85rem; }
+        .links { margin-top: 2.5rem; }
+        .links a {
+            color: var(--accent);
+            text-decoration: none;
+            margin-right: 1.5rem;
+            font-size: 0.9rem;
+        }
+        .links a:hover { text-decoration: underline; }
+        footer {
+            margin-top: 4rem;
+            padding-top: 1.5rem;
+            border-top: 1px solid #222;
+            color: var(--muted);
+            font-size: 0.8rem;
+        }
+        @media (max-width: 500px) {
+            .expertise { grid-template-columns: 1fr; }
+            body { padding: 2rem 1rem; }
+        }
+    </style>
+</head>
+<body>
+    <header>
+        <h1>Emil Vrána</h1>
+        <div class="tagline">AI & Systems Engineer · Prague, CZ</div>
+        <p class="intro">
+            Independent tech consultant. I design and build AI systems, 
+            automation pipelines, and data architectures. I prefer building 
+            things over talking about building things.
+        </p>
+    </header>
+
+    <h2>What I do</h2>
+    <div class="expertise">
+        <div class="card">
+            <h3>AI Systems</h3>
+            <p>LLM integration, RAG pipelines, autonomous agents, prompt engineering</p>
+        </div>
+        <div class="card">
+            <h3>Automation</h3>
+            <p>Workflow orchestration, n8n, custom agents, API integration</p>
+        </div>
+        <div class="card">
+            <h3>Infrastructure</h3>
+            <p>Docker, Linux, reverse proxies, monitoring, CI/CD</p>
+        </div>
+        <div class="card">
+            <h3>Data</h3>
+            <p>PostgreSQL, Elasticsearch, vector databases, ETL pipelines</p>
+        </div>
+    </div>
+
+    <h2>Latest writing</h2>
+    <a href="/blog/multi-agent-patterns/" class="latest-post">
+        <div class="date">April 4, 2026</div>
+        <div class="title">Multi-Agent Patterns: When One Agent Isn't Enough</div>
+        <div class="summary">Running multiple agents in coordination. What I've learned from building an A2A bridge between Claude Code and OpenClaw — patterns, protocols, and the hard parts.</div>
+    </a>
+
+    <h2>Currently</h2>
+    <p>Exploring agentic AI architectures and building tools for automated business intelligence. 
+    Interested in the intersection of AI and practical business applications.</p>
+
+    <div class="links">
+        <h2>Find me</h2>
+        <a href="/blog/">Blog</a>
+        <a href="https://github.com/emilvrana">GitHub</a>
+        <a href="mailto:emil@aiadoption.cz">Email</a>
+    </div>
+
+    <footer>
+        <p>© 2026 Emil Vrána · Built with plain HTML, as nature intended.</p>
+    </footer>
+</body>
+</html>

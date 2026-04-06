@@ -1,0 +1,173 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Multi-Agent Patterns: When One Agent Isn't Enough — Emil Vrána</title>
+    <meta name="description" content="Running multiple agents in coordination. What I've learned from building an A2A bridge between Claude Code and OpenClaw — patterns, protocols, and the hard parts.">
+    <style>
+        *, *::before, *::after { box-sizing: border-box; }
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+            line-height: 1.7;
+            max-width: 680px;
+            margin: 0 auto;
+            padding: 2rem 1.5rem;
+            color: #1a1a1a;
+            background: #fff;
+        }
+        a { color: #0066cc; text-decoration: none; }
+        a:hover { text-decoration: underline; }
+        h1 { font-size: 1.75rem; font-weight: 600; margin: 0 0 0.5rem; line-height: 1.3; }
+        .meta { color: #666; font-size: 0.9rem; margin-bottom: 2rem; }
+        h2 { font-size: 1.25rem; font-weight: 600; margin: 2.5rem 0 1rem; }
+        h3 { font-size: 1.1rem; font-weight: 600; margin: 1.5rem 0 0.75rem; }
+        p { margin: 0 0 1rem; }
+        code {
+            font-family: "SF Mono", Monaco, "Cascadia Code", monospace;
+            font-size: 0.875em;
+            background: #f5f5f5;
+            padding: 0.15em 0.3em;
+            border-radius: 3px;
+        }
+        pre {
+            background: #f8f8f8;
+            padding: 1rem;
+            border-radius: 6px;
+            overflow-x: auto;
+            font-size: 0.85rem;
+            line-height: 1.5;
+        }
+        pre code { background: none; padding: 0; }
+        ul { margin: 0 0 1rem; padding-left: 1.5rem; }
+        li { margin: 0.25rem 0; }
+        hr { border: none; border-top: 1px solid #e0e0e0; margin: 2rem 0; }
+        .back { margin-bottom: 1.5rem; }
+        blockquote {
+            border-left: 3px solid #0066cc;
+            margin: 1.5rem 0;
+            padding-left: 1rem;
+            color: #444;
+        }
+    </style>
+</head>
+<body>
+    <div class="back"><a href="/blog/">← Blog</a></div>
+    
+    <h1>Multi-Agent Patterns: When One Agent Isn't Enough</h1>
+    <div class="meta">April 4, 2026 · Emil Vrána</div>
+
+    <p>Most agent tutorials stop at the single-agent case. You build a chatbot, a code assistant, a RAG system. It works in isolation. But real production systems rarely run alone — they integrate with other agents, human workflows, and existing infrastructure.</p>
+
+    <p>I've spent the last few weeks building an A2A (Agent-to-Agent) bridge between Claude Code (running Opus 4.6) and OpenClaw (my local agent system). The goal was simple: let the two systems delegate tasks to each other based on their strengths. What I found is that the hard part isn't the protocol — it's deciding <em>when</em> to hand off, <em>what</em> to pass along, and <em>how</em> to maintain continuity.</p>
+
+    <h2>The case for multiple agents</h2>
+
+    <p>A single agent has a fixed context window, a fixed knowledge cutoff, and fixed capabilities. It can't simultaneously be great at everything. Claude Code (Opus) is excellent at complex reasoning and architecture but expensive and slower. Sonnet is fast and cheap but occasionally makes architectural mistakes. My local system (OpenClaw) has tool access, long-term memory, and can run indefinitely — but it's running a smaller model and struggles with complex multi-step reasoning.</p>
+
+    <p>The obvious solution: route tasks to the agent best suited for them. But this isn't as simple as "hard tasks go to Opus, easy tasks go to Sonnet." Task complexity isn't always obvious upfront. And sometimes a task starts simple and gets complicated, or vice versa.</p>
+
+    <h2>What I built</h2>
+
+    <p>The bridge is a lightweight protocol over HTTP. Each agent exposes a <code>/delegate</code> endpoint that accepts:</p>
+
+    <ul>
+        <li><strong>task</strong>: A description of what needs to be done</li>
+        <li><strong>context</strong>: The relevant background — not the full conversation history, just what matters</li>
+        <li><strong>artifacts</strong>: Files, code snippets, any concrete inputs</li>
+        <li><strong>constraints</strong>: Hard limits (time, cost, what not to do)</li>
+        <li><strong>callback</strong>: Where to send the result</li>
+    </ul>
+
+    <p>The receiving agent can either accept the task or escalate it further. Each delegation is logged with a unique ID, so you can trace the chain later.</p>
+
+    <h2>The patterns that emerged</h2>
+
+    <h3>1. Router agent pattern</h3>
+
+    <p>One agent acts as a dispatcher. It doesn't do the work itself — it just classifies incoming requests and routes them. This works well when you have a clear taxonomy of tasks and your routing logic is stable.</p>
+
+    <pre><code>{"complexity": "high", "domain": "architecture", "suggested_handler": "opus"}
+{"complexity": "low", "domain": "infrastructure", "suggested_handler": "openclaw"}</code></pre>
+
+    <p>The downside: the router can become a bottleneck, and its classification errors are expensive (wrong routing means either overpaying for simple tasks or getting poor results on hard ones).</p>
+
+    <h3>2. Escalation pattern</h3>
+
+    <p>Start with the cheap/fast agent. If it fails confidence checks or hits complexity walls, escalate. This is what I'm using now:</p>
+
+    <ul>
+        <li>OpenClaw (Sonnet) tries the task first</li>
+        <li>If it detects complexity > threshold, it escalates to Claude Code</li>
+        <li>Claude Code can delegate back for tool execution</li>
+    </ul>
+
+    <p>The key is making escalation cheap. You don't want to burn 10k tokens before realizing you need Opus. I use a fast pre-flight check: "Estimate the complexity of this task on a scale of 1-5 and explain why." This costs ~500 tokens and catches most mis-routings early.</p>
+
+    <h3>3. Specialist pool pattern</h3>
+
+    <p>Instead of generalist agents, you have specialist agents: one for code review, one for infrastructure, one for writing. The router selects from a registry based on task type. This is clean in theory but I've found it hard to maintain — the boundaries between specialists blur over time, and you end up with overlapping capabilities.</p>
+
+    <h2>The hard parts</h2>
+
+    <h3>Context continuity</h3>
+
+    <p>When Agent A hands off to Agent B, what does B need to know? Not everything. I've learned to pass:</p>
+
+    <ul>
+        <li>The immediate task</li>
+        <li>Key decisions already made</li>
+        <li>Current constraints (budget, time, scope)</li>
+        <li>What's explicitly out of scope</li>
+    </ul>
+
+    <p>What I <em>don't</em> pass: the full conversation history, every exploratory thought, tool call logs. These bloat the context and often confuse more than they help.</p>
+
+    <h3>Tool access asymmetry</h3>
+
+    <p>Claude Code in a sandbox can't exec commands on my local machine. OpenClaw can. This means some tasks require handoff not because of complexity, but because of capability gaps. I've had to design the protocol so agents can advertise their capabilities:</p>
+
+    <pre><code>{"capabilities": ["file_read", "file_write", "shell_exec", "web_search", "git"],
+ "limitations": ["no_internet", "no_github_write_without_pat"]}</code></pre>
+
+    <h3>Cost accounting</h3>
+
+    <p>With multiple agents, you need to track costs across the chain. I propagate a <code>cost_budget_remaining</code> field through delegations. If Agent A has $0.10 left and delegates to Agent B, B knows it can't spend $0.50 on its own.</p>
+
+    <h3>Error handling</h3>
+
+    <p>When an agent fails, who handles it? The original requester? The agent that delegated? I've settled on this: if Agent B fails, it reports back to Agent A with an error classification. A decides whether to retry, escalate, or fail the whole chain.</p>
+
+    <h2>What actually works</h2>
+
+    <p>After two weeks of experimentation, here's what's in production:</p>
+
+    <ul>
+        <li><strong>Escalation over routing</strong>: Start cheap, escalate when needed. The overhead of a router agent isn't worth it for my volume.</li>
+        <li><strong>Minimal context passing</strong>: Summarize, don't forward. The receiving agent should get what it needs, not what happened.</li>
+        <li><strong>Explicit capability negotiation</strong>: Agents declare what they can and can't do before accepting tasks.</li>
+        <li><strong>Structured handoff protocol</strong>: JSON schema for tasks, not natural language. Less ambiguity.</li>
+    </ul>
+
+    <h2>When multi-agent makes sense</h2>
+
+    <p>Not every system needs this. If your tasks are uniform in complexity and your single agent handles them well, adding multi-agent coordination is just overhead. But consider it when:</p>
+
+    <ul>
+        <li>You have clear capability differences (e.g., local tools vs. cloud reasoning)</li>
+        <li>Cost matters and you can classify tasks accurately</li>
+        <li>Tasks vary widely in complexity</li>
+        <li>You need 24/7 operation but can't afford Opus for everything</li>
+    </ul>
+
+    <p>The pattern I'm happiest with: treat agents as services with different SLAs. The strong reasoner is your premium tier. The fast local agent is your default. Route between them based on what's at stake.</p>
+
+    <hr>
+
+    <p><em>I'm currently running this setup for my own work — Claude Code for complex design and debugging, OpenClaw for routine tasks and anything needing local tool access. The bridge adds ~100ms of latency per handoff, which is acceptable for the cost savings on routine work.</em></p>
+
+    <p style="margin-top: 2rem; padding-top: 1.5rem; border-top: 1px solid #e0e0e0; font-size: 0.9rem; color: #666;">
+        <a href="/">← Home</a> · <a href="/blog/">More writing</a>
+    </p>
+</body>
+</html>
