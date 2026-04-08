@@ -14,11 +14,12 @@ I build AI systems, automation pipelines, and data architectures. Most of my wor
 #### Currently
 
 - Exploring agentic AI architectures for business automation
-- Building tools for automated market research and analysis
+- Building local RAG systems with hybrid search and proper evaluation frameworks
 - Contributing to open-source AI tooling
 
 #### Posts
 
+- [Lessons from Building Local RAG Systems](./posts/rag-lessons-learned.md) — Three things I wish I'd known about chunking, hybrid search, and evaluation
 - [Tool Selection Patterns in Agent Systems](./posts/tool-selection-patterns.md) — On structuring tool registries for agent systems
 
 #### Find me
