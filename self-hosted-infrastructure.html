@@ -1,0 +1,143 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Self-Hosted Agent Infrastructure: Lessons from Running OpenClaw — Emil Vrána</title>
+    <meta name="description" content="Practical lessons from months of running OpenClaw in production: gateway pattern, tool registries, session management, and when self-hosting makes sense.">
+    <style>
+        :root {
+            --bg: #0f0f0f;
+            --text: #e0e0e0;
+            --accent: #6b9bd2;
+            --muted: #888;
+        }
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+        body {
+            font-family: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+            background: var(--bg);
+            color: var(--text);
+            line-height: 1.7;
+            max-width: 720px;
+            margin: 0 auto;
+            padding: 3rem 1.5rem;
+        }
+        .back { color: var(--muted); text-decoration: none; font-size: 0.85rem; }
+        .back:hover { color: var(--accent); }
+        h1 { font-size: 1.6rem; font-weight: 600; margin: 1.5rem 0 0.5rem; line-height: 1.3; }
+        .meta { color: var(--muted); font-size: 0.85rem; margin-bottom: 2rem; }
+        h2 { font-size: 1.2rem; font-weight: 600; margin: 2rem 0 0.75rem; color: var(--text); }
+        h3 { font-size: 1rem; font-weight: 600; margin: 1.5rem 0 0.5rem; color: var(--text); }
+        p { margin-bottom: 1rem; }
+        ul { margin: 1rem 0 1rem 1.5rem; }
+        li { margin-bottom: 0.5rem; }
+        code {
+            background: #222;
+            padding: 0.2rem 0.4rem;
+            border-radius: 3px;
+            font-family: 'Monaco', 'Consolas', monospace;
+            font-size: 0.9em;
+        }
+        pre {
+            background: #1a1a1a;
+            padding: 1rem;
+            border-radius: 6px;
+            overflow-x: auto;
+            margin: 1rem 0;
+        }
+        pre code { background: none; padding: 0; }
+        strong { color: #fff; font-weight: 600; }
+        blockquote {
+            border-left: 3px solid var(--accent);
+            padding-left: 1rem;
+            margin: 1.5rem 0;
+            color: var(--muted);
+        }
+        footer {
+            margin-top: 3rem;
+            padding-top: 1.5rem;
+            border-top: 1px solid #222;
+            color: var(--muted);
+            font-size: 0.8rem;
+        }
+        @media (max-width: 500px) {
+            body { padding: 2rem 1rem; }
+        }
+    </style>
+</head>
+<body>
+    <a href="/blog/" class="back">← All posts</a>
+    <h1>Self-Hosted Agent Infrastructure: Lessons from Running OpenClaw</h1>
+    <div class="meta">April 10, 2026 · Infrastructure · Agents</div>
+
+    <p>After months of running OpenClaw as my primary agent orchestration layer, I've gathered enough scars to share practical notes on self-hosted agent infrastructure. This isn't a setup guide — there are plenty of those. Instead: patterns that work, traps that don't, and why "just use the cloud" isn't always wrong.</p>
+
+    <h2>The Promise and the Friction</h2>
+    <p>Running agents locally sounds liberating: no API rate limits, no vendor lock-in, complete control. The reality is more nuanced. You're trading cloud convenience for operational complexity — and that trade only makes sense if you're actually hitting cloud constraints.</p>
+    <p>I started with a simple question: <em>Can I run multiple specialized agents without paying per-token fees for orchestration logic?</em> The answer is yes, but the architecture matters more than the hardware.</p>
+
+    <h2>Architecture That Survives</h2>
+
+    <h3>The Gateway Pattern</h3>
+    <p>My setup centers on a lightweight gateway daemon (the OpenClaw core) that handles routing, session state, and tool dispatch. Individual agents connect as clients, not servers. This inversion is critical — it means agents can be ephemeral, crash, or restart without the system losing coherence.</p>
+    <p>Key insight: <strong>State lives in the gateway, not in agents.</strong> Agents are stateless workers. This lets me kill and respawn agents mid-conversation without data loss. I've done this intentionally during long tasks when I wanted to switch models or clear context pollution.</p>
+
+    <h3>Tool Registry Over Hardcoding</h3>
+    <p>Early on, I hardcoded available tools into each agent. This failed quickly — every tool addition meant agent restarts. Now I maintain a dynamic tool registry in the gateway. Agents discover capabilities at runtime.</p>
+    <p>This decouples development: I can add a new data connector to the gateway and immediately use it from any agent without touching their code. The registry pattern is worth the initial complexity.</p>
+
+    <h3>Session Persistence Without Bloat</h3>
+    <p>Long-running agent conversations accumulate context. Without management, this becomes expensive (token usage) or breaks entirely (context window overflow).</p>
+    <p>My approach: <strong>progressive summarization.</strong> The gateway maintains full session logs, but agents receive only the current task + relevant context window + summary of prior work. Summaries are generated by a separate "compactor" agent that runs asynchronously. It's imperfect — occasionally misses nuances — but keeps the working agents efficient.</p>
+
+    <h2>The Hard Parts</h2>
+
+    <h3>Model Context Protocols</h3>
+    <p>Different local models (I run Ollama with 4-bit quantized variants) handle tool calling differently. Some follow OpenAI's function schema reliably. Others hallucinate parameters or ignore schemas entirely.</p>
+    <p>I ended up with per-model wrappers that normalize behavior. This is tedious maintenance — every new model needs testing and potential wrapper adjustments. There's no clean abstraction here; you adapt to what actually works.</p>
+
+    <h3>Security Boundaries</h3>
+    <p>Local agents have access to your actual system. This is the point, but also the risk. I run agents in constrained sandboxes where possible, but some tasks (infrastructure management, file operations) inherently need broader access.</p>
+    <p>My compromise: <strong>capability elevation through explicit gates.</strong> The gateway holds a capability manifest per agent. Sensitive operations require both the tool capability AND runtime approval (for interactive work) or pre-registered task signatures (for automated work). This isn't perfect security — it's managed risk.</p>
+
+    <h3>Observability</h3>
+    <p>Debugging multi-agent systems is harder than single agents. When something fails, was it the model, the tool, the prompt, or the orchestration logic?</p>
+    <p>I added structured logging throughout — every tool call, every model response, every routing decision. This creates noise, but I've learned to filter it. The alternative is guessing why a 5-step agent chain failed on step 4.</p>
+
+    <h2>When This Makes Sense</h2>
+    <p>Self-hosted agent infrastructure isn't for everyone. Consider it when:</p>
+    <ul>
+        <li><strong>Volume economics:</strong> You're running enough agent tasks that per-call API pricing hurts</li>
+        <li><strong>Latency constraints:</strong> You need sub-second response times in tight loops</li>
+        <li><strong>Data residency:</strong> Your use case can't send data to external APIs</li>
+        <li><strong>Custom orchestration:</strong> Cloud platforms don't support your specific multi-agent patterns</li>
+    </ul>
+    <p>For one-off tasks or simple chains, use the cloud. The operational overhead isn't worth it.</p>
+
+    <h2>Current Stack</h2>
+    <ul>
+        <li><strong>Orchestration:</strong> OpenClaw gateway + agent registry</li>
+        <li><strong>Models:</strong> Ollama with quantized Llama and Qwen variants</li>
+        <li><strong>Sessions:</strong> Elasticsearch for persistence + search</li>
+        <li><strong>Tools:</strong> Mixed — some local (file system, shell), some remote (web search, translation APIs)</li>
+        <li><strong>Hosts:</strong> Mac mini for development, VPS for persistent services</li>
+    </ul>
+
+    <h2>Open Questions</h2>
+    <p>I'm still figuring out:</p>
+    <ul>
+        <li>How to gracefully handle agent version upgrades mid-conversation</li>
+        <li>Whether to cache tool results more aggressively (currently conservative)</li>
+        <li>If there's a cleaner way to share context between agents without central bottlenecks</li>
+    </ul>
+    <p>These are good problems — they mean the system is used enough to expose edge cases.</p>
+
+    <blockquote>
+        If you're building similar infrastructure, I'd be curious about your patterns. The space is still young enough that practical experience is more valuable than theoretical design.
+    </blockquote>
+
+    <footer>
+        <p>© 2026 Emil Vrána · Prague</p>
+    </footer>
+</body>
+</html>
