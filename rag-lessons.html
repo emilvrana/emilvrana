@@ -1,0 +1,129 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Lessons from Building Local RAG Systems — Emil Vrána</title>
+    <meta name="description" content="Three things I wish I'd known about chunking, hybrid search, and evaluation before building production RAG pipelines.">
+    <style>
+        :root {
+            --bg: #0f0f0f;
+            --text: #e0e0e0;
+            --accent: #6b9bd2;
+            --muted: #888;
+            --card-bg: #1a1a1a;
+        }
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+        body {
+            font-family: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+            background: var(--bg);
+            color: var(--text);
+            line-height: 1.7;
+            max-width: 680px;
+            margin: 0 auto;
+            padding: 2rem 1.5rem;
+        }
+        a { color: var(--accent); text-decoration: none; }
+        a:hover { text-decoration: underline; }
+        .back { color: var(--muted); font-size: 0.85rem; margin-bottom: 1rem; display: block; }
+        .back:hover { color: var(--accent); }
+        h1 { font-size: 1.6rem; font-weight: 600; margin: 0 0 0.3rem; line-height: 1.3; }
+        .meta { color: var(--muted); font-size: 0.85rem; margin-bottom: 2rem; }
+        h2 { font-size: 1.2rem; font-weight: 600; margin: 2rem 0 1rem; color: var(--text); }
+        h3 { font-size: 1rem; font-weight: 600; margin: 1.5rem 0 0.75rem; }
+        p { margin: 0 0 1rem; }
+        ul { margin: 0 0 1rem 1.5rem; }
+        li { margin: 0.4rem 0; }
+        code {
+            font-family: 'SF Mono', Monaco, 'Cascadia Code', monospace;
+            font-size: 0.9em;
+            background: var(--card-bg);
+            padding: 0.15em 0.3em;
+            border-radius: 3px;
+        }
+        blockquote {
+            border-left: 2px solid var(--accent);
+            margin: 1.5rem 0;
+            padding-left: 1rem;
+            color: var(--muted);
+        }
+        hr {
+            border: none;
+            border-top: 1px solid #333;
+            margin: 2.5rem 0;
+        }
+        footer {
+            margin-top: 3rem;
+            padding-top: 1.5rem;
+            border-top: 1px solid #333;
+            color: var(--muted);
+            font-size: 0.8rem;
+        }
+    </style>
+</head>
+<body>
+    <a href="/blog/" class="back">← Blog</a>
+    
+    <h1>Lessons from Building Local RAG Systems</h1>
+    <div class="meta">April 12, 2026 · Emil Vrána</div>
+
+    <p>I've spent the past month rebuilding a document retrieval pipeline from scratch. Not because the old one was broken — it worked fine for small datasets. But "fine" isn't the same as "reliable at scale."</p>
+
+    <p>Here are three things I wish I'd known earlier.</p>
+
+    <h2>1. Chunking is underrated</h2>
+
+    <p>Everyone talks about embedding models and vector stores. Nobody talks about chunking strategy until it bites them.</p>
+
+    <p>My first approach: fixed-size chunks with overlap. Works great for structured text. Falls apart on technical documentation where a code block gets split mid-function.</p>
+
+    <p>What works better now:</p>
+
+    <ul>
+        <li>Semantic boundaries first (paragraphs, sections)</li>
+        <li>Code blocks kept intact</li>
+        <li>Overlap only when necessary, not by default</li>
+        <li>Metadata that preserves context (document source, section headers)</li>
+    </ul>
+
+    <p>The chunk is your retrieval unit. If it's nonsensical, your retrieval is nonsensical. No embedding model fixes that.</p>
+
+    <h2>2. Hybrid search isn't optional</h2>
+
+    <p>Pure vector search is seductive. It feels intelligent. But for precise facts — version numbers, configuration values, exact dates — it's frustratingly fuzzy.</p>
+
+    <p>I now run hybrid by default:</p>
+
+    <ul>
+        <li>Dense retrieval (vectors) for semantic similarity</li>
+        <li>Sparse retrieval (BM25) for exact matches</li>
+        <li>Reciprocal rank fusion to combine scores</li>
+    </ul>
+
+    <p>The latency cost is real (two queries instead of one). The accuracy gain is worth it.</p>
+
+    <h2>3. Evaluation is harder than implementation</h2>
+
+    <p>Building the pipeline took two days. Building a decent evaluation framework took two weeks.</p>
+
+    <p>Questions that seem simple but aren't:</p>
+
+    <ul>
+        <li>What makes a retrieval "correct"?</li>
+        <li>How do you measure relevance when there's no single right answer?</li>
+        <li>How do you catch regressions without manually checking hundreds of queries?</li>
+    </ul>
+
+    <p>My current compromise: a golden dataset of 50 hand-curated queries with multiple acceptable answers per query. Run it before every deployment. It's not perfect, but it's better than hoping.</p>
+
+    <hr>
+
+    <p>The local RAG stack I'm building around this is open source: <a href="https://github.com/emilvrana/local-rag-stack">github.com/emilvrana/local-rag-stack</a>. It's opinionated, not universal. But it's what I actually use.</p>
+
+    <p>🐦‍⬛</p>
+
+    <footer>
+        <a href="/">← Home</a> · <a href="/blog/">More writing</a>
+    </footer>
+</body>
+</html>
