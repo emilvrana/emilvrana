@@ -24,6 +24,7 @@ I build AI systems, automation pipelines, and data architectures. Most of my wor
 - [Self-Hosted Agent Infrastructure: Lessons from Running OpenClaw](./posts/self-hosted-agent-infrastructure.md) — Architecture patterns, hard parts, and when self-hosting makes sense
 - [Lessons from Building Local RAG Systems](./posts/rag-lessons-learned.md) — Three things I wish I'd known about chunking, hybrid search, and evaluation
 - [Tool Selection Patterns in Agent Systems](./posts/tool-selection-patterns.md) — On structuring tool registries for agent systems
+- [The Evaluation Gap in AI Systems](./posts/the-evaluation-gap-in-ai-systems.md) — Why most AI systems are evaluated by vibes, and what actually works instead
 
 #### Find me
 
