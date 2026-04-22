@@ -19,6 +19,7 @@ I build AI systems, automation pipelines, and data architectures. Most of my wor
 
 #### Posts
 
+- [The Hidden Cost of Context: Why Your Agent Forgets](./posts/hidden-cost-of-context.md) — Context budget economics, compaction strategies, and the memory architecture that actually works
 - [When Not to Use an Agent](./posts/when-not-to-use-an-agent.md) — Pipelines over agents for the happy path, and the hybrid pattern that actually works
 - [Making Autonomous Agents Reliable Enough for Production](./posts/agent-reliability-production.md) — Budgeted execution, decision logging, circuit breakers, and checkpointing — the 80% between demo and production
 - [Self-Hosted Agent Infrastructure: Lessons from Running OpenClaw](./posts/self-hosted-agent-infrastructure.md) — Architecture patterns, hard parts, and when self-hosting makes sense
