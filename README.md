@@ -26,6 +26,7 @@ I build AI systems, automation pipelines, and data architectures. Most of my wor
 - [Lessons from Building Local RAG Systems](./posts/rag-lessons-learned.md) — Three things I wish I'd known about chunking, hybrid search, and evaluation
 - [Tool Selection Patterns in Agent Systems](./posts/tool-selection-patterns.md) — On structuring tool registries for agent systems
 - [The Evaluation Gap in AI Systems](./posts/the-evaluation-gap-in-ai-systems.md) — Why most AI systems are evaluated by vibes, and what actually works instead
+- [The Observability Problem](./posts/agent-observability.md) — Why you can't fix what you can't see in agent systems, and the minimum viable observability stack
 
 #### Find me
 
