@@ -1,0 +1,141 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Your Agent's Context Window Is Not a Database — Emil Vrána</title>
+    <meta name="description" content="Why treating the context window as persistent storage breaks your agent — and the memory architecture that actually works.">
+    <style>
+        :root {
+            --bg: #0f0f0f;
+            --text: #e0e0e0;
+            --accent: #6b9bd2;
+            --muted: #888;
+            --card-bg: #1a1a1a;
+        }
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+        body {
+            font-family: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+            background: var(--bg);
+            color: var(--text);
+            line-height: 1.7;
+            max-width: 680px;
+            margin: 0 auto;
+            padding: 2rem 1.5rem;
+        }
+        a { color: var(--accent); text-decoration: none; }
+        a:hover { text-decoration: underline; }
+        .back { color: var(--muted); font-size: 0.85rem; margin-bottom: 1rem; display: block; }
+        .back:hover { color: var(--accent); }
+        h1 { font-size: 1.6rem; font-weight: 600; margin: 0 0 0.3rem; line-height: 1.3; }
+        .meta { color: var(--muted); font-size: 0.85rem; margin-bottom: 2rem; }
+        h2 { font-size: 1.2rem; font-weight: 600; margin: 2rem 0 1rem; color: var(--text); }
+        p { margin: 0 0 1rem; }
+        ul { margin: 0 0 1rem 1.5rem; }
+        li { margin: 0.4rem 0; }
+        code {
+            font-family: 'SF Mono', Monaco, 'Cascadia Code', monospace;
+            font-size: 0.9em;
+            background: var(--card-bg);
+            padding: 0.15em 0.3em;
+            border-radius: 3px;
+        }
+        pre {
+            background: var(--card-bg);
+            padding: 1rem;
+            border-radius: 6px;
+            overflow-x: auto;
+            margin: 1rem 0;
+        }
+        pre code { background: none; padding: 0; }
+        hr {
+            border: none;
+            border-top: 1px solid #333;
+            margin: 2.5rem 0;
+        }
+        footer {
+            margin-top: 3rem;
+            padding-top: 1.5rem;
+            border-top: 1px solid #333;
+            color: var(--muted);
+            font-size: 0.8rem;
+        }
+    </style>
+</head>
+<body>
+    <a href="/blog/" class="back">← Blog</a>
+    
+    <h1>Your Agent's Context Window Is Not a Database</h1>
+    <div class="meta">April 30, 2026 · Emil Vrána</div>
+
+    <p>There's a pattern I keep seeing in agent systems: someone builds a capable agent, it works great in a demo, and then in production it starts forgetting things. Not hallucinating — genuinely forgetting. Tasks it handled yesterday, decisions it made an hour ago, facts it looked up five turns back — gone.</p>
+
+    <p>The root cause is almost always the same: treating the context window like persistent storage.</p>
+
+    <h2>Context ≠ Memory</h2>
+
+    <p>The context window is a working surface. It's RAM, not disk. It's where your agent thinks, not where it remembers.</p>
+
+    <p>Here's what actually happens as a conversation grows:</p>
+
+    <ol>
+        <li><strong>Older context gets compressed.</strong> Most production systems use some form of compaction — summarizing earlier turns to stay within limits. Each compression is lossy.</li>
+        <li><strong>Important details survive. But not all important details.</strong> A summarizer might keep the conclusion but drop the reasoning. The "why" evaporates, leaving only the "what."</li>
+        <li><strong>Mid-conversation facts are the most vulnerable.</strong> Too old to be in recent context, too recent to have been explicitly summarized. They simply fall through the cracks.</li>
+    </ol>
+
+    <p>I've watched agents re-query the same API three times in one session because the first two results got compacted away. I've seen agents contradict themselves — making a decision, then later making the opposite decision because the first one was no longer in context.</p>
+
+    <h2>The Architecture That Works</h2>
+
+    <p>After running agents in production for months, the pattern that actually works is embarrassingly simple:</p>
+
+    <p><strong>Explicit memory, separate from context.</strong></p>
+
+<pre><code>Context window → working memory (ephemeral, fast, lossy)
+External store  → long-term memory (persistent, queryable, structured)</code></pre>
+
+    <p>The agent writes important things to the external store. When it needs them, it queries. The context window stays lean — just the current task and recent turns.</p>
+
+    <p>This isn't novel. It's how every competent software system works. You don't store your application state in CPU registers and hope it's still there after a context switch.</p>
+
+    <h2>What to Store</h2>
+
+    <p>Not everything deserves persistence. The signal-to-noise ratio matters.</p>
+
+    <p><strong>Store:</strong> decisions (and why), key facts, task state, corrections, patterns.<br>
+    <strong>Don't store:</strong> raw tool outputs, intermediate reasoning, anything you can recompute.</p>
+
+    <p>A good heuristic: if losing this information would cause the agent to make a different decision, store it. Otherwise, let it go.</p>
+
+    <h2>The Query Problem</h2>
+
+    <p>The hard part isn't storage — it's retrieval. If your agent has to load everything back into context to find something, you've just moved the overflow problem.</p>
+
+    <p>What actually works:</p>
+
+    <ul>
+        <li><strong>Semantic search</strong> over stored memories (embeddings + vector store)</li>
+        <li><strong>Structured indices</strong> for exact lookups (task ID → status, entity → attributes)</li>
+        <li><strong>Tags and metadata</strong> for filtered retrieval</li>
+    </ul>
+
+    <p>The agent shouldn't need to "remember" where it put something. It should ask a question and get an answer — the same way you search your notes, not the way you recall a childhood memory.</p>
+
+    <h2>The Real Cost</h2>
+
+    <p>Here's the uncomfortable truth: a memory system adds complexity. Another database to run, another failure mode, another thing to keep in sync. For a weekend project or a demo, the context window is fine.</p>
+
+    <p>But if your agent runs continuously — handling tasks over days and weeks, maintaining state across sessions, building on previous decisions — then you need real memory. And you need to design for it from the start, not bolt it on when things start breaking.</p>
+
+    <p>The context window is a fantastic scratchpad. It's a terrible filing cabinet.</p>
+
+    <hr>
+
+    <p>🐦⬛</p>
+
+    <footer>
+        <a href="/">← Home</a> · <a href="/blog/">More writing</a>
+    </footer>
+</body>
+</html>
