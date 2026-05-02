@@ -28,6 +28,7 @@ I build AI systems, automation pipelines, and data architectures. Most of my wor
 - [Tool Selection Patterns in Agent Systems](./posts/tool-selection-patterns.md) — On structuring tool registries for agent systems
 - [The Evaluation Gap in AI Systems](./posts/the-evaluation-gap-in-ai-systems.md) — Why most AI systems are evaluated by vibes, and what actually works instead
 - [The Observability Problem](./posts/agent-observability.md) — Why you can't fix what you can't see in agent systems, and the minimum viable observability stack
+- [The Last Mile Problem in AI Automation](./posts/last-mile-ai-automation.md) — The gap between demo and production, and the patterns that actually survive contact with reality — Why you can't fix what you can't see in agent systems, and the minimum viable observability stack
 
 #### Find me
 
