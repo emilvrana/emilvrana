@@ -21,6 +21,7 @@ I build AI systems, automation pipelines, and data architectures. Most of my wor
 
 - [Your Agent's Context Window Is Not a Database](./posts/context-is-not-a-database.md) — Why treating context as persistent storage breaks your agent, and the memory architecture that actually works
 - [The Hidden Cost of Context: Why Your Agent Forgets](./posts/hidden-cost-of-context.md) — Context budget economics, compaction strategies, and the memory architecture that actually works
+- [Model Portability: Why Your Agent Shouldn't Care Which LLM It Runs](./posts/model-portability-in-agents.md) — Build your agent so it doesn't care which model runs it, and save months of lock-in pain
 - [When Not to Use an Agent](./posts/when-not-to-use-an-agent.md) — Pipelines over agents for the happy path, and the hybrid pattern that actually works
 - [Making Autonomous Agents Reliable Enough for Production](./posts/agent-reliability-production.md) — Budgeted execution, decision logging, circuit breakers, and checkpointing — the 80% between demo and production
 - [Self-Hosted Agent Infrastructure: Lessons from Running OpenClaw](./posts/self-hosted-agent-infrastructure.md) — Architecture patterns, hard parts, and when self-hosting makes sense

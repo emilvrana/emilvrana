@@ -1,0 +1,89 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Model Portability: Why Your Agent Shouldn't Care Which LLM It Runs — Emil Vrána</title>
+    <meta name="description" content="Build your agent so it doesn't care which model runs it. Prompt templates, tool schema standards, and the portability test that saves months of lock-in pain.">
+    <style>
+        :root {
+            --bg: #0f0f0f;
+            --text: #e0e0e0;
+            --accent: #6b9bd2;
+            --muted: #888;
+        }
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+        body {
+            font-family: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+            background: var(--bg);
+            color: var(--text);
+            line-height: 1.7;
+            max-width: 720px;
+            margin: 0 auto;
+            padding: 3rem 1.5rem;
+        }
+        .back { color: var(--muted); text-decoration: none; font-size: 0.85rem; }
+        .back:hover { color: var(--accent); }
+        h1 { font-size: 1.6rem; font-weight: 600; margin: 1.5rem 0 0.5rem; line-height: 1.3; }
+        .meta { color: var(--muted); font-size: 0.85rem; margin-bottom: 2rem; }
+        h2 { font-size: 1.2rem; font-weight: 600; margin: 2rem 0 0.75rem; color: var(--text); }
+        p { margin-bottom: 1rem; }
+        code { background: #1a1a1a; padding: 0.15rem 0.4rem; border-radius: 3px; font-size: 0.9em; }
+        strong { color: #fff; }
+        em { color: var(--accent); }
+        hr { border: none; border-top: 1px solid #222; margin: 2rem 0; }
+        ul, ol { margin: 0.5rem 0 1rem 1.5rem; }
+        li { margin-bottom: 0.4rem; }
+        footer {
+            margin-top: 3rem;
+            padding-top: 1.5rem;
+            border-top: 1px solid #222;
+            color: var(--muted);
+            font-size: 0.8rem;
+        }
+        footer a { color: var(--accent); text-decoration: none; }
+        @media (max-width: 500px) {
+            body { padding: 2rem 1rem; }
+        }
+    </style>
+</head>
+<body>
+    <a href="/blog/" class="back">← Blog</a>
+    <h1>Model Portability: Why Your Agent Shouldn't Care Which LLM It Runs</h1>
+    <div class="meta">May 4, 2026 · 4 min read</div>
+
+    <p>Everyone picks a model first, then builds around it. Wrong order. Build your agent so it doesn't care which model runs it, and you'll save yourself months of pain when you inevitably need to switch.</p>
+
+    <h2>The Lock-In You Didn't Notice</h2>
+    <p>It starts innocently. You pick GPT-4, write prompts that work with GPT-4, tune tool descriptions for how GPT-4 interprets them, structure your context window around GPT-4's attention patterns. Everything works great.</p>
+    <p>Then the pricing changes. Or the API version shifts. Or you need a local model for a client with data residency requirements. And you discover your "model-agnostic architecture" has model-specific assumptions baked into every prompt.</p>
+    <p>Three months of work to rewrite prompts, retune tool schemas, restructure context. Three months where your system is half-broken.</p>
+
+    <h2>The Abstraction Layer That Actually Works</h2>
+    <p>Not an ORM-style abstraction — those just add complexity. A thin contract between your agent logic and the model:</p>
+    <p><strong>1. Separate prompt templates from code.</strong> Prompts live in their own files, versioned alongside your evals. When you switch models, you switch prompt sets. Your agent code doesn't change.</p>
+    <p><strong>2. Standardize on a tool schema, not a model's dialect.</strong> Every provider has opinions about how tools should be described. Pick one format (OpenAI's function calling schema is the de facto standard) and translate at the adapter layer. Your agent defines tools once. The adapter handles the rest.</p>
+    <p><strong>3. Model config, not model identity.</strong> Your agent shouldn't know if it's running GPT-4, Claude, or Gemini. It knows it has a context budget, a preferred output format, and a latency tolerance. The model name is a config value, not an architectural pillar.</p>
+
+    <h2>What Breaks When You Switch Models</h2>
+    <p>The stuff nobody talks about until they try it:</p>
+    <ul>
+        <li><strong>Tool calling reliability drops.</strong> Models interpret tool schemas differently. A parameter that GPT-4 fills reliably, Claude might skip half the time. Solution: minimal schemas with clear descriptions, and fallback handling in your tool executor — not in the prompt.</li>
+        <li><strong>Context attention shifts.</strong> GPT-4 and Claude weight context positions differently. Instructions at position 40k that GPT-4 respects, Claude might ignore. Solution: critical instructions at top and bottom. Redundancy is a feature.</li>
+        <li><strong>Output format consistency.</strong> Even with explicit format instructions, models drift differently. Solution: validate outputs against a schema before processing. Parse failures are normal, not exceptional.</li>
+        <li><strong>Reasoning depth varies.</strong> The same prompt that gets a thorough analysis from one model gets a surface-level summary from another. Solution: explicit step requirements in the prompt ("analyze, then evaluate, then recommend") rather than open-ended requests.</li>
+    </ul>
+
+    <h2>The Portability Test</h2>
+    <p>Before you're locked in, run this: take your agent, swap the model adapter, run your eval suite. If more than 30% of cases fail — you're locked in. Start decoupling.</p>
+    <p>The goal isn't to make every model perform identically. It's to make switching a configuration change, not an architecture rewrite. The model is a component. Treat it like one.</p>
+
+    <hr>
+
+    <p><em>Emil Vrána is an AI systems engineer based in Prague, building production automation infrastructure. He writes about the gaps between AI demos and production reality.</em></p>
+
+    <footer>
+        <p>© 2026 Emil Vrána · <a href="https://emil.aiadoption.cz">emil.aiadoption.cz</a></p>
+    </footer>
+</body>
+</html>
