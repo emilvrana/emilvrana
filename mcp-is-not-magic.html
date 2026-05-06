@@ -1,0 +1,122 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>MCP Is Not Magic — It's a Plumbing Standard — Emil Vrána</title>
+    <meta name="description" content="MCP standardizes tool interfaces for AI agents. That's useful — but it doesn't solve routing, reliability, or evaluation. Here's what MCP actually does well, and where you still need to do the hard work.">
+    <style>
+        :root {
+            --bg: #0f0f0f;
+            --text: #e0e0e0;
+            --accent: #6b9bd2;
+            --muted: #888;
+            --card-bg: #1a1a1a;
+            --code-bg: #1a1a1a;
+        }
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+        body {
+            font-family: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+            background: var(--bg);
+            color: var(--text);
+            line-height: 1.7;
+            max-width: 720px;
+            margin: 0 auto;
+            padding: 3rem 1.5rem;
+        }
+        .back { color: var(--muted); text-decoration: none; font-size: 0.85rem; }
+        .back:hover { color: var(--accent); }
+        h1 { font-size: 1.6rem; font-weight: 600; margin: 1.5rem 0 0.5rem; }
+        .meta { color: var(--muted); font-size: 0.85rem; margin-bottom: 2rem; }
+        h2 { font-size: 1.1rem; font-weight: 600; margin: 2rem 0 0.7rem; color: var(--accent); }
+        h3 { font-size: 0.95rem; font-weight: 600; margin: 1.5rem 0 0.5rem; }
+        p { margin-bottom: 1rem; }
+        ul, ol { padding-left: 1.5rem; margin-bottom: 1rem; }
+        li { margin-bottom: 0.4rem; }
+        pre {
+            background: var(--code-bg);
+            border: 1px solid #2a2a2a;
+            border-radius: 6px;
+            padding: 1.2rem;
+            overflow-x: auto;
+            margin: 1rem 0;
+            font-size: 0.85rem;
+            line-height: 1.5;
+        }
+        code {
+            font-family: 'JetBrains Mono', 'Fira Code', 'Courier New', monospace;
+            font-size: 0.88em;
+        }
+        p code, li code {
+            background: var(--code-bg);
+            padding: 0.15rem 0.4rem;
+            border-radius: 3px;
+            font-size: 0.85em;
+        }
+        strong { color: #fff; }
+        a { color: var(--accent); text-decoration: none; }
+        a:hover { text-decoration: underline; }
+        blockquote {
+            border-left: 3px solid var(--accent);
+            padding-left: 1rem;
+            margin: 1.5rem 0;
+            color: var(--muted);
+        }
+        hr {
+            border: none;
+            border-top: 1px solid #222;
+            margin: 2rem 0;
+        }
+        .cta {
+            background: var(--card-bg);
+            border-radius: 8px;
+            padding: 1.5rem;
+            margin: 2rem 0;
+        }
+        .cta p:last-child { margin-bottom: 0; }
+        @media (max-width: 500px) {
+            body { padding: 2rem 1rem; }
+            h1 { font-size: 1.3rem; }
+        }
+    </style>
+</head>
+<body>
+    <a href="/" class="back">← Back home</a>
+
+    <h1>MCP Is Not Magic — It's a Plumbing Standard</h1>
+    <div class="meta">May 6, 2026</div>
+
+    <p>Everyone's excited about Model Context Protocol. "Just add MCP support and your agent can use any tool!" Sounds great. In practice, it's more like adopting a plumbing standard — useful, but the pipes still leak if you don't understand the pressure.</p>
+
+    <h2>What MCP Actually Solves</h2>
+    <p>Before MCP, every agent framework had its own tool interface. LangChain tools, OpenAI function calling, CrewAI tools — each one slightly different, each one requiring adapters if you wanted to share tools between frameworks. MCP standardizes the <em>interface</em>: a JSON schema for describing tools, a protocol for calling them, and a transport layer (stdio or HTTP+SSE).</p>
+    <p>That's it. That's the whole thing. It's like when REST replaced SOAP — same capability, less ceremony.</p>
+
+    <h2>What It Doesn't Solve</h2>
+    <p>MCP doesn't make your agent smarter about <em>which</em> tool to use. It doesn't solve the tool routing problem. If your agent picks the wrong tool, MCP just makes it pick the wrong tool faster and more portably.</p>
+    <p>It also doesn't solve reliability. An MCP server that crashes mid-call, returns inconsistent schemas, or has undocumented rate limits will break your agent just as thoroughly as a hand-rolled function call would. The protocol is transport — the semantics are still on you.</p>
+
+    <h2>Where MCP Genuinely Helps</h2>
+    <p><strong>Tool reuse across frameworks.</strong> Write a tool once, expose it via MCP, and any compatible agent can use it. This is the real win. Your Postgres query tool works with Claude, GPT, local models — anything that speaks MCP.</p>
+    <p><strong>Composability.</strong> MCP servers can be chained. A file server, a database server, and a web search server can all coexist, and the agent picks what it needs per-query. No custom glue code.</p>
+    <p><strong>Debugging.</strong> Standardized protocol means standardized observability. You can intercept MCP calls, log them, replay them. Try doing that with a Python function call buried in an agent loop.</p>
+
+    <h2>Practical Takeaways</h2>
+    <ol>
+        <li><strong>Don't rewrite working tools just to add MCP.</strong> Wrap them. A thin MCP server around existing logic is an afternoon's work, not a refactor.</li>
+        <li><strong>Validate schemas at the boundary.</strong> MCP trusts the server to return what it promised. Your agent shouldn't. Add validation on the client side — one malformed response can send an agent into a spiral.</li>
+        <li><strong>Handle server failures gracefully.</strong> MCP servers are processes. Processes die. Your agent needs fallback logic, timeouts, and retry — same as any other distributed system.</li>
+        <li><strong>Don't confuse protocol with architecture.</strong> MCP is a wire format, not a design philosophy. Your agent still needs good tool routing, loop detection, and error handling. MCP makes none of that automatic.</li>
+    </ol>
+
+    <h2>The Bottom Line</h2>
+    <p>MCP is worth adopting — it reduces integration friction and makes tools portable. But it's infrastructure, not intelligence. The hard problems in agent design (routing, reliability, evaluation) are the same as before. MCP just makes the easy parts easier, which is exactly what a good standard should do.</p>
+
+    <hr>
+
+    <div class="cta">
+        <p>Related: <a href="/blog/tool-routing/">Your AI Agent Doesn't Need More Tools — It Needs Better Routing</a></p>
+        <p>Related: <a href="/posts/dont-build-an-agent-build-a-pipeline.html">Don't Build an Agent. Build a Pipeline.</a></p>
+    </div>
+</body>
+</html>
