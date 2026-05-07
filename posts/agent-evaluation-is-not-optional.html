@@ -1,0 +1,95 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Agent Evaluation Is Not Optional — It's the Feature — Emil Vrána</title>
+    <meta name="description" content="Every agent demo looks impressive. But without evaluation, you're flying blind. Evaluation isn't overhead — it's the specification of what working means.">
+    <style>
+        :root {
+            --bg: #0f0f0f;
+            --text: #e0e0e0;
+            --accent: #6b9bd2;
+            --muted: #888;
+            --card-bg: #1a1a1a;
+            --code-bg: #1a1a1a;
+        }
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+        body {
+            font-family: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+            background: var(--bg);
+            color: var(--text);
+            line-height: 1.7;
+            max-width: 720px;
+            margin: 0 auto;
+            padding: 3rem 1.5rem;
+        }
+        .back { color: var(--muted); text-decoration: none; font-size: 0.85rem; }
+        .back:hover { color: var(--accent); }
+        h1 { font-size: 1.6rem; font-weight: 600; margin: 1.5rem 0 0.5rem; }
+        .meta { color: var(--muted); font-size: 0.85rem; margin-bottom: 2rem; }
+        h2 { font-size: 1.1rem; font-weight: 600; margin: 2rem 0 0.7rem; color: var(--accent); }
+        p { margin-bottom: 1rem; }
+        ul, ol { padding-left: 1.5rem; margin-bottom: 1rem; }
+        li { margin-bottom: 0.4rem; }
+        strong { color: #fff; }
+        a { color: var(--accent); text-decoration: none; }
+        a:hover { text-decoration: underline; }
+        hr {
+            border: none;
+            border-top: 1px solid #222;
+            margin: 2rem 0;
+        }
+        .cta {
+            background: var(--card-bg);
+            border-radius: 8px;
+            padding: 1.5rem;
+            margin: 2rem 0;
+        }
+        .cta p:last-child { margin-bottom: 0; }
+        @media (max-width: 500px) {
+            body { padding: 2rem 1rem; }
+            h1 { font-size: 1.3rem; }
+        }
+    </style>
+</head>
+<body>
+    <a href="/" class="back">← Back home</a>
+
+    <h1>Agent Evaluation Is Not Optional — It's the Feature</h1>
+    <div class="meta">May 7, 2026</div>
+
+    <p>Every AI agent demo looks impressive. You show it a task, it produces output, everyone nods. Ship it?</p>
+    <p>Not so fast. The demo is the easy part. What happens when the agent runs unattended, when inputs drift from your test cases, when the model changes beneath you? Without evaluation, you're flying blind — and the crash comes in production, not in your notebook.</p>
+
+    <h2>The Evaluation Gap</h2>
+    <p>Most agent projects spend 90% of time on building and 10% on checking if it works. This is backwards. Evaluation isn't QA — it's the architecture itself.</p>
+    <p>Consider a RAG pipeline. You can measure retrieval precision (did I get the right chunks?), generation quality (does the answer address the question?), and end-to-end correctness (is the answer actually true?). Each layer needs its own test. Skip one, and you won't know which layer failed.</p>
+    <p>For autonomous agents, it's worse. An agent that loops, hallucinates tool calls, or silently drops context will pass unit tests and fail in the real world. You need scenario-level evaluation: given this task, does the agent reach the correct outcome within reasonable steps?</p>
+
+    <h2>What to Measure</h2>
+    <p><strong>Deterministic checks first.</strong> Does the output contain the expected entity? Does the agent call the right tool? Is the response under the length limit? These are cheap, fast, and catch most regressions.</p>
+    <p><strong>LLM-as-judge for the rest.</strong> When correctness is subjective, use a cheaper model to rate outputs against criteria. "Does this answer the user's question completely and accurately?" A smaller model at a fraction of the cost makes this practical for CI pipelines.</p>
+    <p><strong>Aggregate metrics, not point scores.</strong> Track your agent's success rate, average step count, and cost per task over time. A 5% regression in success rate is easier to spot than one wrong answer in a hundred.</p>
+
+    <h2>Build Evaluation In, Not On</h2>
+    <p>Don't add evaluation after the agent is built. Design your agent so every component produces evaluable output:</p>
+    <ul>
+        <li><strong>Tool calls</strong> → log them, assert against expected sequences</li>
+        <li><strong>Intermediate reasoning</strong> → check for known failure patterns (repetition, contradiction)</li>
+        <li><strong>Final output</strong> → compare against reference answers or rubrics</li>
+    </ul>
+    <p>This means your agent needs structured logging from day one. Not console prints. Not "I'll add logging later." Structured JSON events that flow into your evaluation pipeline.</p>
+
+    <h2>The Uncomfortable Truth</h2>
+    <p>If you can't evaluate it, you can't improve it. And you definitely can't ship it to production with confidence.</p>
+    <p>Evaluation is not overhead. It's the specification of what "working" means. Write that specification first, build the agent second, and you'll spend less time debugging and more time shipping.</p>
+
+    <hr>
+
+    <div class="cta">
+        <p>Related: <a href="/the-evaluation-gap-in-ai-systems.html">The Evaluation Gap in AI Systems</a></p>
+        <p>Related: <a href="/mcp-is-not-magic.html">MCP Is Not Magic — It's a Plumbing Standard</a></p>
+    </div>
+</body>
+</html>
