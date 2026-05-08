@@ -1,0 +1,139 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Your Agent's API Is a Contract — Emil Vrána</title>
+    <meta name="description" content="Most AI agent projects focus on what the agent can do. Very few focus on what it promises to do. The difference matters more than you think.">
+    <style>
+        :root {
+            --bg: #0f0f0f;
+            --text: #e0e0e0;
+            --accent: #6b9bd2;
+            --muted: #888;
+            --card-bg: #1a1a1a;
+            --code-bg: #1a1a1a;
+        }
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+        body {
+            font-family: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+            background: var(--bg);
+            color: var(--text);
+            line-height: 1.7;
+            max-width: 720px;
+            margin: 0 auto;
+            padding: 3rem 1.5rem;
+        }
+        .back { color: var(--muted); text-decoration: none; font-size: 0.85rem; }
+        .back:hover { color: var(--accent); }
+        h1 { font-size: 1.6rem; font-weight: 600; margin: 1.5rem 0 0.5rem; }
+        .meta { color: var(--muted); font-size: 0.85rem; margin-bottom: 2rem; }
+        h2 { font-size: 1.1rem; font-weight: 600; margin: 2rem 0 0.7rem; color: var(--accent); }
+        p { margin-bottom: 1rem; }
+        ul, ol { padding-left: 1.5rem; margin-bottom: 1rem; }
+        li { margin-bottom: 0.4rem; }
+        strong { color: #fff; }
+        a { color: var(--accent); text-decoration: none; }
+        a:hover { text-decoration: underline; }
+        code {
+            background: var(--code-bg);
+            padding: 0.15rem 0.4rem;
+            border-radius: 3px;
+            font-size: 0.9rem;
+        }
+        pre {
+            background: var(--code-bg);
+            padding: 1rem;
+            border-radius: 6px;
+            overflow-x: auto;
+            margin-bottom: 1rem;
+        }
+        pre code {
+            background: none;
+            padding: 0;
+            font-size: 0.85rem;
+        }
+        hr {
+            border: none;
+            border-top: 1px solid #222;
+            margin: 2rem 0;
+        }
+        .cta {
+            background: var(--card-bg);
+            border-radius: 8px;
+            padding: 1.5rem;
+            margin: 2rem 0;
+        }
+        .cta p:last-child { margin-bottom: 0; }
+        @media (max-width: 500px) {
+            body { padding: 2rem 1rem; }
+            h1 { font-size: 1.3rem; }
+        }
+    </style>
+</head>
+<body>
+    <a href="/" class="back">← Back home</a>
+
+    <h1>Your Agent's API Is a Contract</h1>
+    <div class="meta">May 8, 2026</div>
+
+    <p>Most AI agent projects focus on what the agent can do. Very few focus on what the agent promises to do. The difference matters more than you think.</p>
+    <p>When you build an agent that "responds to natural language," you've built a demo. When you build an agent that accepts a structured request, produces a typed response within a latency bound, and degrades gracefully when it can't — you've built a system other software can depend on.</p>
+
+    <h2>The Demo-to-Product Gap</h2>
+    <p>Here's a pattern I've seen repeated:</p>
+    <ol>
+        <li>Build an agent that works great on happy-path inputs</li>
+        <li>Deploy it behind a chat interface</li>
+        <li>Real users send edge-case inputs</li>
+        <li>Agent produces inconsistent, slow, or broken responses</li>
+        <li>Add more prompts, more guardrails, more model calls</li>
+        <li>System becomes fragile and expensive</li>
+    </ol>
+    <p>The root cause isn't the model. It's that the agent never had a contract.</p>
+
+    <h2>What a Contract Looks Like</h2>
+    <p>A real API has:</p>
+    <ul>
+        <li><strong>Input schema</strong> — what fields are required, what types, what ranges</li>
+        <li><strong>Output schema</strong> — what the caller gets back, every field typed</li>
+        <li><strong>Error contract</strong> — what happens when things go wrong, with structured error types</li>
+        <li><strong>Latency bounds</strong> — how long the caller should wait before giving up</li>
+        <li><strong>Versioning</strong> — what changes are safe, what require migration</li>
+    </ul>
+    <p>Your agent needs all five. Not as documentation — as enforceable code.</p>
+    <p><strong>Input schema</strong> means you validate before the model sees the request. Catch the obviously broken inputs at the API layer. "I need a customer ID and a date range" is a contract. "Ask me anything" is a demo.</p>
+    <p><strong>Output schema</strong> means you validate after the model responds. If the agent is supposed to return a list of actions with confidence scores, validate that structure. If the model returns free text instead, that's not "creative" — it's a contract violation.</p>
+    <p><strong>Error contract</strong> means your agent has well-defined failure modes. A timeout is different from a validation error is different from "I don't have enough information." Each maps to a specific HTTP status, a specific error code, a specific recovery path for the caller.</p>
+
+    <h2>The Pattern That Works</h2>
+    <pre><code>Request → Validate → Route → Execute → Validate → Respond
+              ↓                       ↓
+          400 Bad Request        Retry or Fallback</code></pre>
+    <p>The two validation steps are the contract. The first catches bad inputs before they waste model tokens. The second catches bad outputs before they reach the caller.</p>
+    <p>Between them, routing decides: is this a task the agent should handle, or should it be sent to a deterministic pipeline? Not every request needs an LLM. The contract makes this routing explicit.</p>
+
+    <h2>What This Costs</h2>
+    <p>Structure isn't free. You spend time defining schemas instead of tweaking prompts. You write validation code instead of adding more examples. You think about failure modes before they happen.</p>
+    <p>But you gain something most agent projects never have: the ability to reason about your system's behavior without running it. You can look at the contract and know what's guaranteed, what's best-effort, and what's undefined. You can write tests against the contract, not against the model's mood.</p>
+    <p>And when the model changes — and it will — the contract catches regressions before your users do.</p>
+
+    <h2>Start Small</h2>
+    <p>You don't need a full OpenAPI spec on day one. Start with:</p>
+    <ol>
+        <li>A Pydantic model (or Zod schema) for your inputs</li>
+        <li>A Pydantic model for your outputs</li>
+        <li>Three error types: validation, timeout, and unknown</li>
+        <li>A timeout on every model call</li>
+    </ol>
+    <p>That's it. That's your v1 contract. Everything else builds on top of this foundation.</p>
+    <p>The model is the engine. The contract is the chassis. You can swap engines. You can't swap a missing chassis.</p>
+
+    <hr>
+
+    <div class="cta">
+        <p>Related: <a href="/posts/agent-reliability-production.html">Making Autonomous Agents Reliable Enough for Production</a></p>
+        <p>Related: <a href="/posts/when-not-to-use-an-agent.html">When Not to Use an Agent</a></p>
+    </div>
+</body>
+</html>
