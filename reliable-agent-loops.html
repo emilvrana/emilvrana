@@ -1,0 +1,131 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Three Patterns for Reliable Agent Loops — Emil Vrána</title>
+    <meta name="description" content="Most agent systems spiral. Gate the loop, structure your errors, checkpoint your state — three underrated patterns for keeping agents on track.">
+    <style>
+        :root {
+            --bg: #0f0f0f;
+            --text: #e0e0e0;
+            --accent: #6b9bd2;
+            --muted: #888;
+            --code-bg: #1a1a1a;
+        }
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+        body {
+            font-family: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+            background: var(--bg);
+            color: var(--text);
+            line-height: 1.7;
+            max-width: 720px;
+            margin: 0 auto;
+            padding: 3rem 1.5rem;
+        }
+        .back { color: var(--muted); text-decoration: none; font-size: 0.85rem; }
+        .back:hover { color: var(--accent); }
+        h1 { font-size: 1.8rem; font-weight: 700; margin: 1rem 0 0.3rem; }
+        .date { color: var(--muted); font-size: 0.85rem; margin-bottom: 2rem; }
+        h2 { font-size: 1.3rem; font-weight: 600; margin: 2.5rem 0 0.8rem; color: var(--accent); }
+        p { margin-bottom: 1rem; }
+        code {
+            background: var(--code-bg);
+            padding: 0.15em 0.4em;
+            border-radius: 4px;
+            font-size: 0.88em;
+            font-family: 'JetBrains Mono', 'Fira Code', monospace;
+        }
+        pre {
+            background: var(--code-bg);
+            border-radius: 8px;
+            padding: 1.2rem;
+            overflow-x: auto;
+            margin: 1rem 0 1.5rem;
+            font-size: 0.88em;
+            line-height: 1.5;
+        }
+        pre code { background: none; padding: 0; }
+        strong { color: #fff; }
+        hr { border: none; border-top: 1px solid #222; margin: 2.5rem 0; }
+        footer {
+            margin-top: 3rem;
+            padding-top: 1.5rem;
+            border-top: 1px solid #222;
+            color: var(--muted);
+            font-size: 0.8rem;
+        }
+        @media (max-width: 500px) {
+            body { padding: 2rem 1rem; }
+        }
+    </style>
+</head>
+<body>
+    <a href="/blog/" class="back">← All posts</a>
+    <h1>Three Patterns for Reliable Agent Loops</h1>
+    <div class="date">May 9, 2026</div>
+
+    <p>Agent loops sound simple: give the model a goal, let it call tools, repeat until done. In practice, they spiral — calling the same API with the same bad arguments, hallucinating tool names, or wandering through irrelevant tangents until the context window fills up.</p>
+
+    <p>After running agent systems in production for the past year, three patterns keep coming back. None are novel. All are underrated.</p>
+
+    <h2>1. Gate the Loop, Don't Just Cap It</h2>
+
+    <p>Everyone sets <code>max_iterations: 10</code> or <code>max_tokens: 50000</code>. That's a safety net, not a strategy. The real problem is that agents don't know when to stop — they treat iteration as progress.</p>
+
+    <p>Instead, gate each iteration with a <strong>relevance check</strong>. Before the model acts, ask: does the proposed action directly advance the original goal? This can be as simple as including the original task in every prompt and requiring the model to explain <em>why</em> the next step matters.</p>
+
+    <pre><code># Before each tool call, inject:
+original_task = "Fix the failing CI pipeline on branch main"
+rationale = "This SSH into the CI runner directly addresses the build failure"
+
+# If rationale is weak → skip, re-prompt with tighter constraints</code></pre>
+
+    <p>The goal isn't to add overhead — it's to make the model justify its trajectory. Agents that can't articulate why they're doing something are agents that are about to spiral.</p>
+
+    <h2>2. Make Failures Structured, Not Narrative</h2>
+
+    <p>When a tool call fails, the typical response is to dump the error into context and let the model "figure it out." This works for simple cases. For recurring failures, it creates a narrative of retries that consumes context without converging.</p>
+
+    <p>Structure your error feedback:</p>
+
+    <pre><code>{
+  "tool": "ssh",
+  "error_type": "connection_refused",
+  "attempts": 3,
+  "last_attempt": "2026-05-09T14:00:00Z",
+  "suggestion": "Check if the host is reachable on port 22"
+}</code></pre>
+
+    <p>This does two things. First, it gives the model a clear signal about <em>what kind</em> of failure occurred, not just the raw output. Second, it lets you implement <strong>escalation rules</strong> — if <code>attempts >= 3</code> and <code>error_type == "connection_refused"</code>, skip to a different strategy instead of retrying.</p>
+
+    <p>Narrative errors are for humans. Structured errors are for agents.</p>
+
+    <h2>3. Checkpoint State, Not Context</h2>
+
+    <p>Agent systems that rely on accumulating context are fragile. A single hallucinated fact early in the loop poisons every subsequent decision. The fix isn't better prompts — it's external state.</p>
+
+    <p>After each meaningful step, write the <em>result</em> to a structured store, not the <em>process</em>:</p>
+
+    <pre><code># checkpoint after step 3:
+current_state:
+  ci_status: failing
+  root_cause: "missing dependency: libssl-dev"
+  attempted_fixes: ["reinstall libssl-dev"]
+  next_action: "commit fix and push"</code></pre>
+
+    <p>When context gets long, summarize from checkpoints — not from the raw conversation. This is the difference between "the agent remembers what it tried" and "the agent remembers what happened."</p>
+
+    <p>Context windows are getting bigger. That's a trap. More context means more room for the model to latch onto irrelevant details from 20 steps ago. Checkpoints give you clean, compressible state.</p>
+
+    <hr>
+
+    <p>These patterns share a principle: <strong>don't trust the model to manage itself.</strong> That's not a limitation — it's good engineering. We don't let databases manage their own consistency either. We build constraints that make correct behavior the path of least resistance.</p>
+
+    <p>The best agent systems aren't the ones with the smartest models. They're the ones where the architecture makes it hard to fail.</p>
+
+    <footer>
+        <p>© 2026 Emil Vrána · <a href="/blog/" style="color: var(--muted);">All posts</a></p>
+    </footer>
+</body>
+</html>
