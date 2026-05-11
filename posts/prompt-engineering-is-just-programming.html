@@ -1,0 +1,132 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Prompt Engineering Is Just Programming — Emil Vrána</title>
+    <meta name="description" content="We gave it a fancy name and built a cottage industry around it. But prompt engineering is just programming — with all the discipline that implies.">
+    <style>
+        :root {
+            --bg: #0f0f0f;
+            --text: #e0e0e0;
+            --accent: #6b9bd2;
+            --muted: #888;
+            --card-bg: #1a1a1a;
+            --code-bg: #1a1a1a;
+        }
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+        body {
+            font-family: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+            background: var(--bg);
+            color: var(--text);
+            line-height: 1.7;
+            max-width: 720px;
+            margin: 0 auto;
+            padding: 3rem 1.5rem;
+        }
+        .back { color: var(--muted); text-decoration: none; font-size: 0.85rem; }
+        .back:hover { color: var(--accent); }
+        h1 { font-size: 1.6rem; font-weight: 600; margin: 1.5rem 0 0.5rem; }
+        .meta { color: var(--muted); font-size: 0.85rem; margin-bottom: 2rem; }
+        h2 { font-size: 1.1rem; font-weight: 600; margin: 2rem 0 0.7rem; color: var(--accent); }
+        p { margin-bottom: 1rem; }
+        ul, ol { padding-left: 1.5rem; margin-bottom: 1rem; }
+        li { margin-bottom: 0.4rem; }
+        strong { color: #fff; }
+        a { color: var(--accent); text-decoration: none; }
+        a:hover { text-decoration: underline; }
+        code {
+            background: var(--code-bg);
+            padding: 0.15rem 0.4rem;
+            border-radius: 3px;
+            font-size: 0.9rem;
+        }
+        pre {
+            background: var(--code-bg);
+            padding: 1rem;
+            border-radius: 6px;
+            overflow-x: auto;
+            margin-bottom: 1rem;
+        }
+        pre code {
+            background: none;
+            padding: 0;
+            font-size: 0.85rem;
+        }
+        hr {
+            border: none;
+            border-top: 1px solid #222;
+            margin: 2rem 0;
+        }
+        .cta {
+            background: var(--card-bg);
+            border-radius: 8px;
+            padding: 1.5rem;
+            margin: 2rem 0;
+        }
+        .cta p:last-child { margin-bottom: 0; }
+        @media (max-width: 500px) {
+            body { padding: 2rem 1rem; }
+            h1 { font-size: 1.3rem; }
+        }
+    </style>
+</head>
+<body>
+    <a href="/" class="back">← Back home</a>
+
+    <h1>Prompt Engineering Is Just Programming</h1>
+    <div class="meta">May 11, 2026</div>
+
+    <p>We gave it a fancy name and built a cottage industry around it. But "prompt engineering" is just programming — with all the discipline that implies, and none of the rigidity people fear.</p>
+
+    <h2>The Naming Problem</h2>
+    <p>When you call something "prompt engineering," you imply it's a new discipline. A special skill. Something separate from software engineering that requires its own certifications, frameworks, and conference tracks.</p>
+    <p>Here's what it actually is: writing specifications for a very flexible, very unreliable, very powerful interpreter.</p>
+    <p>If you've ever written a config file, designed an API contract, or debugged a distributed system, you've already done the core work. The medium changed. The discipline didn't.</p>
+
+    <h2>What Makes It Hard (And What Doesn't)</h2>
+    <p>The hard part isn't writing English instructions to a model. The hard part is:</p>
+    <p><strong>Managing state.</strong> The context window is memory. When it overflows, your program loses scope. Sound familiar? It's the same problem as memory management in any system — you need explicit strategies for what to keep, what to discard, and what to externalize.</p>
+    <p><strong>Handling failure.</strong> LLMs fail silently and creatively. They don't throw exceptions. They produce plausible wrong answers. This is exactly the problem of dealing with untrusted inputs, except your compute layer is also untrusted.</p>
+    <p><strong>Controlling non-determinism.</strong> Temperature, sampling, model version drift — these are sources of variance. In traditional systems, you design for variance with idempotency, retries, and circuit breakers. Same tools apply here.</p>
+    <p>The easy part, ironically, is "writing prompts." The text is the least important component. The architecture around it — routing, validation, fallbacks, evaluation — is where the engineering happens.</p>
+
+    <h2>Patterns That Transfer</h2>
+    <p>If you're a developer moving into agent systems, you already know the patterns:</p>
+    <ul>
+        <li><strong>Input validation</strong> → Structured output parsing with schemas, not regex on free text</li>
+        <li><strong>Error boundaries</strong> → Retry with backoff + model downgrade, not just "try again"</li>
+        <li><strong>Caching</strong> → Cache semantic intent, not exact strings</li>
+        <li><strong>Monitoring</strong> → Log inputs, outputs, latency, and tool calls — not just "it worked"</li>
+        <li><strong>Testing</strong> → Eval suites with labeled examples, not "I tried it and it seemed fine"</li>
+    </ul>
+    <p>The companies struggling with AI in production aren't struggling because they lack prompt engineers. They're struggling because they skipped the engineering.</p>
+
+    <h2>The Anti-Pattern</h2>
+    <p>The most common anti-pattern I see: a brilliant prompt, no architecture.</p>
+    <p>Someone crafts the perfect system message. The model nails the demo. Then they deploy it, and reality arrives — edge cases, inconsistent outputs, cost overruns, and no way to debug why.</p>
+    <p>The prompt was never the problem. The problem was building a system that depends on a single, fragile, untested component. We wouldn't accept that in any other part of our stack. We shouldn't accept it here.</p>
+
+    <h2>What I Actually Do</h2>
+    <p>When someone asks me to "optimize the prompt," here's what I typically do:</p>
+    <ol>
+        <li><strong>Map the failure modes</strong> — what goes wrong, how often, why</li>
+        <li><strong>Add structure</strong> — schemas, typed outputs, validation layers</li>
+        <li><strong>Reduce scope</strong> — narrower tasks, clearer boundaries, less ambiguity</li>
+        <li><strong>Build evaluation</strong> — automated checks, not manual review</li>
+        <li><strong>Then</strong> tweak the text</li>
+    </ol>
+    <p>Steps 1–4 are programming. Step 5 is the prompt engineering part, and it's usually the smallest change.</p>
+
+    <h2>The Takeaway</h2>
+    <p>Call it what you want. The discipline that makes AI systems reliable is the same discipline that makes any system reliable: clear contracts, explicit failure handling, observable state, and automated verification.</p>
+    <p>The prompt is the interface. The engineering is everything around it.</p>
+
+    <hr>
+
+    <div class="cta">
+        <p>Related: <a href="/posts/your-agents-api-is-a-contract.html">Your Agent's API Is a Contract</a></p>
+        <p>Related: <a href="/posts/debugging-agent-pipelines.html">When Agents Break: Debugging Patterns for LLM Pipelines</a></p>
+    </div>
+</body>
+</html>

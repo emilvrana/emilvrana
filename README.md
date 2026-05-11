@@ -19,6 +19,7 @@ I build AI systems, automation pipelines, and data architectures. Most of my wor
 
 #### Posts
 
+- [Prompt Engineering Is Just Programming](./posts/prompt-engineering-is-just-programming.md) — The discipline that makes AI systems reliable is the same one that makes any system reliable. Clear contracts, failure handling, observable state, automated verification.
 - [Your Agent's API Is a Contract](./posts/your-agents-api-is-a-contract.md) — Most agent projects focus on what the agent can do. Very few focus on what it promises to do. The chassis that makes an agent dependable.
 - [Your Agent's Context Window Is Not a Database](./posts/context-is-not-a-database.md) — Why treating context as persistent storage breaks your agent, and the memory architecture that actually works
 - [The Hidden Cost of Context: Why Your Agent Forgets](./posts/hidden-cost-of-context.md) — Context budget economics, compaction strategies, and the memory architecture that actually works
