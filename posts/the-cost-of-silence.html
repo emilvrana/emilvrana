@@ -1,0 +1,127 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>The Cost of Silence: When Your Agent Fails Quietly — Emil Vrána</title>
+    <meta name="description" content="The worst production failures aren't the loud ones. They're the agents that return plausible-looking wrong answers while your monitoring says green.">
+    <style>
+        :root {
+            --bg: #0f0f0f;
+            --text: #e0e0e0;
+            --accent: #6b9bd2;
+            --muted: #888;
+            --card-bg: #1a1a1a;
+        }
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+        body {
+            font-family: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+            background: var(--bg);
+            color: var(--text);
+            line-height: 1.7;
+            max-width: 680px;
+            margin: 0 auto;
+            padding: 2rem 1.5rem;
+        }
+        a { color: var(--accent); text-decoration: none; }
+        a:hover { text-decoration: underline; }
+        .back { color: var(--muted); font-size: 0.85rem; margin-bottom: 1rem; display: block; }
+        .back:hover { color: var(--accent); }
+        h1 { font-size: 1.6rem; font-weight: 600; margin: 0 0 0.3rem; line-height: 1.3; }
+        .meta { color: var(--muted); font-size: 0.85rem; margin-bottom: 2rem; }
+        h2 { font-size: 1.2rem; font-weight: 600; margin: 2rem 0 1rem; color: var(--text); }
+        h3 { font-size: 1rem; font-weight: 600; margin: 1.5rem 0 0.75rem; }
+        p { margin: 0 0 1rem; }
+        ul { margin: 0 0 1rem 1.5rem; }
+        li { margin: 0.4rem 0; }
+        code {
+            font-family: 'SF Mono', Monaco, 'Cascadia Code', monospace;
+            font-size: 0.9em;
+            background: var(--card-bg);
+            padding: 0.15em 0.3em;
+            border-radius: 3px;
+        }
+        blockquote {
+            border-left: 2px solid var(--accent);
+            margin: 1.5rem 0;
+            padding-left: 1rem;
+            color: var(--muted);
+        }
+        hr {
+            border: none;
+            border-top: 1px solid #333;
+            margin: 2.5rem 0;
+        }
+        footer {
+            margin-top: 3rem;
+            padding-top: 1.5rem;
+            border-top: 1px solid #333;
+            color: var(--muted);
+            font-size: 0.8rem;
+        }
+    </style>
+</head>
+<body>
+    <a href="/blog/" class="back">← Blog</a>
+    
+    <h1>The Cost of Silence: When Your Agent Fails Quietly</h1>
+    <div class="meta">May 14, 2026 · Emil Vrána</div>
+
+    <p>The worst production failures aren't the loud ones. The agent that crashes, throws an exception, returns a 500 — those are easy. You see them. You fix them. You move on.</p>
+
+    <p>The failures that kill systems are silent. The agent that returns a plausible-looking answer that's wrong. The pipeline that degrades 2% per week until someone notices a month later. The extraction step that starts hallucinating entity names because the context window shifted.</p>
+
+    <p>Nobody opens a ticket. Nobody gets paged. The system looks green. And the data rots.</p>
+
+    <h2>What Silent Failure Looks Like</h2>
+
+    <p>I've seen this pattern repeat across every agent deployment I've worked on:</p>
+
+    <ul>
+        <li><strong>Confident hallucination.</strong> The agent returns a well-structured response that's completely fabricated. No error code, no hedging. Just wrong data presented with authority.</li>
+        <li><strong>Context drift.</strong> An agent that worked perfectly in testing gradually produces different outputs as the conversation history shifts. No single run fails — but the aggregate degrades.</li>
+        <li><strong>Graceful degradation into meaninglessness.</strong> The agent falls back through its error handling and returns an empty or generic response. Technically "works." Practically useless.</li>
+        <li><strong>Shadow state.</strong> The agent's internal state diverges from what the user or monitoring expects, but there's no signal because the agent never reports state — only output.</li>
+    </ul>
+
+    <p>The common thread: the monitoring says green, the metrics say fine, and the actual output is garbage.</p>
+
+    <h2>Why Agents Fail Silently</h2>
+
+    <p>Traditional software fails loudly because we built it to. Exceptions, error codes, health checks — these are all deliberate design choices. Agent systems often skip this layer for three reasons:</p>
+
+    <p><strong>1. LLM output is unstructured.</strong> You can't easily validate "did the model return a correct answer" the way you validate "did the API return 200." So teams skip output validation entirely.</p>
+
+    <p><strong>2. Evaluation is an afterthought.</strong> Most agent projects evaluate during development (maybe) and never again in production. There's no ongoing check that the system is still producing quality output.</p>
+
+    <p><strong>3. Agent frameworks encourage fire-and-forget.</strong> Send a prompt, get a response, move on. The frameworks don't nudge you toward logging intermediate state, validating outputs, or tracking degradation.</p>
+
+    <h2>What Actually Works</h2>
+
+    <p>The fix isn't complicated. It's just boring, and most teams skip it:</p>
+
+    <p><strong>Structured output validation.</strong> Every agent output should pass through a validation layer — schema checks, type checks, range checks, business logic checks. If the output doesn't conform, that's a signal, not just a bad result.</p>
+
+    <p><strong>Output regression testing.</strong> Run your eval suite periodically against production. Not just at deploy time. If accuracy drifts from 94% to 87%, you want to know on day two, not day thirty.</p>
+
+    <p><strong>Decision logging, not just result logging.</strong> Log <em>why</em> the agent chose what it chose. Not the full context window (expensive), but the key decision points: which tool was selected, which path was taken, what confidence level. This is what lets you debug the silent failures after they happen.</p>
+
+    <p><strong>Circuit breakers for quality.</strong> If the validation layer catches too many bad outputs in a window, trip a breaker. Stop the pipeline rather than let it produce garbage at scale. The alert from a stopped pipeline is the loud failure you want.</p>
+
+    <h2>The Pattern</h2>
+
+    <p>Silent failures happen when you optimize for "does it run" instead of "is it right." The monitoring that matters isn't uptime — it's output quality. And quality monitoring requires deliberate architecture: validation layers, periodic evaluation, decision logging, and circuit breakers.</p>
+
+    <p>If your monitoring says everything is fine but you haven't validated an agent output in production this week, you don't know if everything is fine. You just know it hasn't crashed.</p>
+
+    <p>That's not the same thing.</p>
+
+    <hr>
+
+    <p>🐦‍⬛</p>
+
+    <footer>
+        <a href="/">← Home</a> · <a href="/blog/">More writing</a>
+    </footer>
+</body>
+</html>
