@@ -1,0 +1,135 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Configuration as Code for AI Agents — Emil Vrána</title>
+    <meta name="description" content="Agent configs are semi-code, semi-data. If a change affects behavior, it should go through the same process as code changes. Commits, reviews, tests, rollbacks.">
+    <style>
+        :root {
+            --bg: #0f0f0f;
+            --text: #e0e0e0;
+            --accent: #6b9bd2;
+            --muted: #888;
+            --card-bg: #1a1a1a;
+            --code-bg: #1a1a1a;
+        }
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+        body {
+            font-family: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+            background: var(--bg);
+            color: var(--text);
+            line-height: 1.7;
+            max-width: 720px;
+            margin: 0 auto;
+            padding: 3rem 1.5rem;
+        }
+        .back { color: var(--muted); text-decoration: none; font-size: 0.85rem; }
+        .back:hover { color: var(--accent); }
+        h1 { font-size: 1.6rem; font-weight: 600; margin: 1.5rem 0 0.5rem; }
+        .meta { color: var(--muted); font-size: 0.85rem; margin-bottom: 2rem; }
+        h2 { font-size: 1.1rem; font-weight: 600; margin: 2rem 0 0.7rem; color: var(--accent); }
+        p { margin-bottom: 1rem; }
+        ul, ol { padding-left: 1.5rem; margin-bottom: 1rem; }
+        li { margin-bottom: 0.4rem; }
+        strong { color: #fff; }
+        a { color: var(--accent); text-decoration: none; }
+        a:hover { text-decoration: underline; }
+        code {
+            background: var(--code-bg);
+            padding: 0.15rem 0.4rem;
+            border-radius: 3px;
+            font-size: 0.9rem;
+        }
+        pre {
+            background: var(--code-bg);
+            padding: 1rem;
+            border-radius: 6px;
+            overflow-x: auto;
+            margin-bottom: 1rem;
+        }
+        pre code {
+            background: none;
+            padding: 0;
+            font-size: 0.85rem;
+        }
+        hr {
+            border: none;
+            border-top: 1px solid #222;
+            margin: 2rem 0;
+        }
+    </style>
+</head>
+<body>
+    <a href="/" class="back">← Emil Vrána</a>
+    <h1>Configuration as Code for AI Agents</h1>
+    <p class="meta">May 17, 2026</p>
+
+    <p>Every AI agent has configuration. Prompts, model parameters, tool definitions, temperature settings, context window limits. At first it's a single YAML file or a few environment variables. Then it's three files. Then ten. Then someone changes the temperature in production and the agent that was reliably extracting invoices starts writing poetry.</p>
+
+    <p>If this sounds familiar, it's because we've solved this problem before — just not for agents.</p>
+
+    <h2>The Config Creep Problem</h2>
+
+    <p>Agent configurations have a unique property that makes them harder to manage than traditional service configs: they're <strong>semi-code, semi-data</strong>.</p>
+
+    <p>Your temperature setting isn't just a number — it's a behavioral contract. Your system prompt isn't just text — it's a program written in natural language that gets interpreted by a non-deterministic runtime. Your tool definitions are both API specs and behavioral instructions.</p>
+
+    <p>This means config changes have <strong>unpredictable blast radius</strong>. Changing a database timeout from 30s to 60s is predictable. Changing "Be concise" to "Be brief" in a system prompt might shift your agent's entire decision-making pattern.</p>
+
+    <p>And yet most teams manage agent configs the way they managed server configs in 2010 — manual edits, no versioning, no review, no rollback.</p>
+
+    <h2>What Configuration as Code Means for Agents</h2>
+
+    <p>The principle is simple: if a change affects agent behavior, it should go through the same process as code changes. Commits, reviews, tests, rollbacks.</p>
+
+    <p>Here's what this looks like in practice:</p>
+
+    <p><strong>Version control everything.</strong> System prompts, tool descriptions, model parameters, even few-shot examples. If it changes behavior, it's in git. No exceptions.</p>
+
+    <p><strong>Diff-friendly formats.</strong> Store prompts as Markdown files, not JSON strings embedded in code. You can't review a 2000-character escaped string in a diff. But you can review a Markdown file.</p>
+
+    <p><strong>Environment parity.</strong> Your dev agent and production agent should differ only in the model endpoint and API keys. Same prompts, same tools, same parameters. If you need different behavior in production, that's a config flag, not a copy-paste.</p>
+
+    <p><strong>Deploy configs like code.</strong> CI/CD for prompts. A merge to main deploys the new configuration. With rollback. With canary if you're serious.</p>
+
+    <h2>The Prompt-as-Code Pattern</h2>
+
+    <p>Here's the pattern I use:</p>
+
+    <pre><code>agents/
+  invoice-extractor/
+    system-prompt.md       # The system prompt — versioned, reviewed
+    tools.json             # Tool definitions
+    config.yaml            # Temperature, max_tokens, etc.
+    tests/
+      extract-invoice.yaml # Test cases
+      edge-cases.yaml</code></pre>
+
+    <p>Each agent has its own directory. The system prompt is a first-class file, not a string constant. Tool definitions are separate from the prompt so you can version them independently. Configuration is explicit and minimal.</p>
+
+    <p>When someone wants to change the extraction behavior, they edit <code>system-prompt.md</code>, open a PR, and the test suite runs against the new prompt. If tests pass, it ships. If tests fail, you catch it before users do.</p>
+
+    <h2>The Uncomfortable Truth About Prompt Changes</h2>
+
+    <p>Here's something most teams learn the hard way: <strong>prompt changes are more like schema migrations than config updates</strong>.</p>
+
+    <p>When you change a database schema, you plan a migration. You test it. You have a rollback plan. When you change a system prompt, you should apply the same discipline — because a prompt change is effectively a behavioral migration. Your agent will behave differently. Downstream systems that consume its output may break.</p>
+
+    <p>Treat prompt changes with the same gravity you'd treat an API contract change. Because that's exactly what they are.</p>
+
+    <h2>What to Do Monday</h2>
+
+    <ol>
+        <li><strong>Find all your agent configs.</strong> Prompts, parameters, tool definitions. All of them. Check the database, check the codebase, check the .env files, check the admin panel.</li>
+        <li><strong>Put them in git.</strong> Extract them from wherever they're hiding. One file per logical unit. Markdown for prompts, YAML/JSON for structured config.</li>
+        <li><strong>Write three test cases per agent.</strong> One happy path, one edge case, one failure mode. Run them manually if you have to. You can automate later.</li>
+        <li><strong>Stop editing configs in production.</strong> If you're SSHing into a server or clicking around an admin panel to change a prompt, that's the habit to break first.</li>
+    </ol>
+
+    <p>Configuration as code isn't exciting. It's plumbing. But it's the plumbing that keeps your agents from becoming unmaintainable messes. And unlike most agent infrastructure advice, you can actually start doing it on Monday.</p>
+
+    <hr>
+    <p><a href="/">← Back to home</a></p>
+</body>
+</html>
