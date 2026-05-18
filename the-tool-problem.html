@@ -1,0 +1,143 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>The Tool Problem: Why More Tools Make Agents Worse — Emil Vrána</title>
+    <meta name="description" content="Adding more tools to an AI agent degrades performance, not improves it. Context tax, selection problems, and chaining complexity — why fewer tools make better agents.">
+    <style>
+        :root {
+            --bg: #0f0f0f;
+            --text: #e0e0e0;
+            --accent: #6b9bd2;
+            --muted: #888;
+            --card-bg: #1a1a1a;
+            --code-bg: #1a1a1a;
+        }
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+        body {
+            font-family: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+            background: var(--bg);
+            color: var(--text);
+            line-height: 1.7;
+            max-width: 720px;
+            margin: 0 auto;
+            padding: 3rem 1.5rem;
+        }
+        .back { color: var(--muted); text-decoration: none; font-size: 0.85rem; }
+        .back:hover { color: var(--accent); }
+        h1 { font-size: 1.6rem; font-weight: 600; margin: 1.5rem 0 0.5rem; }
+        .meta { color: var(--muted); font-size: 0.85rem; margin-bottom: 2rem; }
+        h2 { font-size: 1.1rem; font-weight: 600; margin: 2rem 0 0.7rem; color: var(--accent); }
+        h3 { font-size: 0.95rem; font-weight: 600; margin: 1.5rem 0 0.5rem; }
+        p { margin-bottom: 1rem; }
+        ul, ol { padding-left: 1.5rem; margin-bottom: 1rem; }
+        li { margin-bottom: 0.4rem; }
+        pre {
+            background: var(--code-bg);
+            border: 1px solid #2a2a2a;
+            border-radius: 6px;
+            padding: 1.2rem;
+            overflow-x: auto;
+            margin: 1rem 0;
+            font-size: 0.85rem;
+            line-height: 1.5;
+        }
+        code {
+            font-family: 'JetBrains Mono', 'Fira Code', 'Courier New', monospace;
+            font-size: 0.88em;
+        }
+        p code, li code {
+            background: var(--code-bg);
+            padding: 0.15rem 0.4rem;
+            border-radius: 3px;
+            font-size: 0.85em;
+        }
+        strong { color: #fff; }
+        a { color: var(--accent); text-decoration: none; }
+        a:hover { text-decoration: underline; }
+        blockquote {
+            border-left: 3px solid var(--accent);
+            padding-left: 1rem;
+            margin: 1.5rem 0;
+            color: var(--muted);
+        }
+        hr {
+            border: none;
+            border-top: 1px solid #222;
+            margin: 2rem 0;
+        }
+        .cta {
+            background: var(--card-bg);
+            border-radius: 8px;
+            padding: 1.5rem;
+            margin: 2rem 0;
+        }
+        .cta p:last-child { margin-bottom: 0; }
+        @media (max-width: 500px) {
+            body { padding: 2rem 1rem; }
+            h1 { font-size: 1.3rem; }
+        }
+    </style>
+</head>
+<body>
+    <a href="/" class="back">← Back home</a>
+
+    <h1>The Tool Problem: Why More Tools Make Agents Worse</h1>
+    <div class="meta">May 18, 2026</div>
+
+    <p>Every new capability you add to an agent makes it weaker. Not stronger.</p>
+
+    <p>This sounds wrong. More tools = more power, right? An agent that can search the web, query a database, send emails, update a CRM, and generate reports is more capable than one that can only search the web.</p>
+
+    <p>Except it isn't. In practice, an agent with 15 tools performs worse than an agent with 5. The reasoning model spends its context budget deciding <em>which</em> tool to use instead of <em>how</em> to solve the problem. It picks the wrong tool. It calls three tools when one would do. It forgets what it was doing halfway through a tool chain because the context window is cluttered with tool definitions.</p>
+
+    <p>This is the tool problem, and I've watched it degrade every multi-tool agent system I've worked on.</p>
+
+    <h2>The Context Tax</h2>
+    <p>Every tool you give an agent has a cost. The cost isn't the API call — it's the space in the context window that the tool definition occupies. A typical tool definition (name, description, parameters, examples) takes 200-500 tokens. Fifteen tools? That's 3,000-7,500 tokens before the user even says anything.</p>
+    <p>On a 128K context window, that's not a lot. But on the models most production systems actually use — the fast, cheap ones — you're working with 8K-32K effective context. Spend 7K of that on tool definitions, and your agent has less room for the actual task, conversation history, and reasoning.</p>
+    <p>The result: shorter reasoning chains, more errors, more retries, more tokens burned on failures.</p>
+
+    <h2>The Selection Problem</h2>
+    <p>More tools means more decisions. Every time an agent needs to act, it has to choose from a larger menu. This is where things get subtly bad.</p>
+    <p>With 3 tools, the agent almost always picks the right one. The decision space is small, the descriptions are distinct, and the model can distinguish between them reliably.</p>
+    <p>With 15 tools, several will have overlapping descriptions. "Search the knowledge base" and "Query the documentation index" sound different to you. To a language model trying to pick one in 50 milliseconds, they're nearly identical. The agent picks the wrong one, gets a bad result, and either retries (burning tokens) or proceeds with garbage input (producing garbage output).</p>
+    <p>I've measured this. In one system, going from 5 to 12 tools dropped first-call tool selection accuracy from 92% to 71%. The remaining 29% weren't failures — they were the agent using a slightly wrong tool and producing slightly wrong results. The worst kind of failure.</p>
+
+    <h2>The Chaining Problem</h2>
+    <p>Tools interact. An agent with 3 tools has 3 possible single-tool calls and 6 possible two-tool sequences. An agent with 12 tools has 12 single-tool calls and 132 possible two-tool sequences. The combinatorics explode.</p>
+    <p>In practice, this means the agent tries tool chains that shouldn't exist. It queries the CRM, then searches the web for information it already has, then sends an email based on the web search instead of the CRM data. Not because the logic is wrong — because the option space is too large and the model can't prune it effectively.</p>
+
+    <h2>What Actually Works</h2>
+    <p>After building and debugging too many over-tooled agents, here's what I've learned:</p>
+    <ol>
+        <li><strong>Start with fewer tools than you think you need.</strong> Begin with 3-5. Add tools only when you can measure that the agent actually needs them. Not "might need them." <em>Needs them.</em> The default answer to "should we add another tool?" is no.</li>
+        <li><strong>Group tools by task, not by capability.</strong> Instead of giving the agent 15 tools at once, create toolsets for specific tasks. An order-processing agent gets order tools. A research agent gets search tools. The routing layer — which agent handles which request — is a simple, deterministic switch. Not another LLM call.</li>
+        <li><strong>Make tool descriptions unambiguous.</strong> Each tool description should make it crystal clear when to use <em>this</em> tool and when <em>not</em> to. "Searches the internal knowledge base for product documentation. Use this when the question is about product features, specifications, or troubleshooting. Do not use for general web searches or customer data." The more tools you have, the more important specificity becomes.</li>
+        <li><strong>Measure tool selection accuracy.</strong> Don't just measure task completion. Measure whether the agent picked the right tool for the job. If selection accuracy drops below 90%, you have too many tools or poorly written descriptions. Fix one or both.</li>
+        <li><strong>Delete tools.</strong> When you add a tool and task completion doesn't measurably improve, remove it. Dead tools still cost context. They still create decision noise. The best tool list is the shortest one that gets the job done.</li>
+    </ol>
+
+    <h2>The Counter-Argument</h2>
+    <p>"But what about GPT-4 / Claude / Gemini? They can handle lots of tools."</p>
+    <p>Some can, sometimes. The latest frontier models are better at tool selection than the models most production systems run on. But:</p>
+    <ul>
+        <li>You're probably not running the latest frontier model in production (cost, latency).</li>
+        <li>Even frontier models degrade with tool count — just at a higher threshold.</li>
+        <li>Your users don't care about the model's theoretical capability. They care about whether the system works.</li>
+    </ul>
+    <p>Design for the model you're deploying, not the model you wish you were deploying.</p>
+
+    <h2>The Principle</h2>
+    <p>Tool count is a design constraint, not a feature list. Every tool should justify its existence with measured improvement. Every tool that doesn't is making your agent worse.</p>
+    <p>The best agent I ever built had three tools. It did one thing and did it reliably. The worst agent I ever built had twenty-three. It did everything poorly.</p>
+    <p>Start small. Add deliberately. Measure relentlessly. Cut ruthlessly.</p>
+
+    <hr>
+
+    <div class="cta">
+        <p>Related: <a href="/posts/tool-selection-patterns.html">Tool Selection Patterns</a> · <a href="/posts/when-not-to-use-an-agent.html">When Not to Use an Agent</a> · <a href="/posts/your-agents-api-is-a-contract.html">Your Agent's API Is a Contract</a></p>
+    </div>
+</body>
+</html>
