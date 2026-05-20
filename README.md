@@ -19,6 +19,7 @@ I build AI systems, automation pipelines, and data architectures. Most of my wor
 
 #### Posts
 
+- [Five Things Companies Get Wrong About AI Adoption](./posts/ai-adoption-mistakes.md) — The patterns I see most often in companies adopting AI, and what to do instead
 - [Graceful Degradation in Agent Systems](./posts/graceful-degradation-agents.md) — When tools fail, your agent shouldn't. Fail open, not closed — the pattern that keeps agents useful when components go down.
 - [Prompt Engineering Is Just Programming](./posts/prompt-engineering-is-just-programming.md) — The discipline that makes AI systems reliable is the same one that makes any system reliable. Clear contracts, failure handling, observable state, automated verification.
 - [Your Agent's API Is a Contract](./posts/your-agents-api-is-a-contract.md) — Most agent projects focus on what the agent can do. Very few focus on what it promises to do. The chassis that makes an agent dependable.
