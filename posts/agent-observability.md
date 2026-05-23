@@ -1,90 +1,45 @@
-# The Observability Problem: Why You Can't Fix What You Can't See in Agent Systems
+# Agent Observability: You Can't Fix What You Can't See
 
-You deployed your AI agent. It runs. Customers interact with it. Then something goes wrong — a weird response, an infinite loop, a decision that makes no sense.
+May 23, 2026
 
-You open the logs. There's a timestamp, a model name, and a token count. Maybe a truncated prompt. Nothing that tells you *why* the agent did what it did.
+You built an agent. It works in dev. You deploy it. And then... what?
 
-This is the observability gap, and it's the silent killer of production agent systems.
+Most agent projects have the same blind spot: they log errors but not behavior. You know when the agent crashes. You don't know when it drifts — when it starts calling the wrong tool 40% of the time, when its responses get 2x longer over a week, when it skips a step in the pipeline because the prompt got trimmed.
 
-## What "Observability" Actually Means for Agents
+This isn't monitoring. Monitoring tells you the process is running. Observability tells you what the process is *doing*.
 
-Traditional software observability has three pillars: logs, metrics, traces. Agent systems need all three, but they need them differently.
+## The three signals that matter
 
-**Logs** aren't just error messages. You need *decision logs* — every time the agent chooses a tool, makes a judgment call, or decides not to act. Not the final output. The reasoning chain that got there.
+**Latency distribution.** Not average latency — that hides everything. You need p50, p95, p99. When an agent's p99 jumps from 8s to 45s, something changed. Maybe the model started generating longer outputs. Maybe a tool endpoint is slow. Maybe the context window filled up and the model is spinning. Average latency won't tell you any of this.
 
-**Metrics** aren't just latency and throughput. You need *decision quality metrics* — tool selection accuracy, task completion rate, escalation frequency, and the gap between what the agent thought it did and what actually happened.
+**Tool call patterns.** Every agent has a signature: which tools it calls, in what order, how often. Log tool names, not just outcomes. If your agent normally calls `search` → `summarize` → `respond` and suddenly starts calling `search` → `search` → `search` → `respond`, the pattern broke. You don't need to know *why* yet — you need to know *that it happened*.
 
-**Traces** aren't just request paths. You need *cognitive traces* — the full chain from input through reasoning steps to output, including the branches the agent considered and rejected.
+**Output shape.** Track response length, structured output parse success rate, and key field presence. If your agent is supposed to return JSON with `decision` and `confidence` fields, log whether those fields exist and what values they take. A drift from `confidence: 0.85` to `confidence: 0.6` over a week is a signal no error log will catch.
 
-## The Minimum Viable Observability Stack
+## What most teams get wrong
 
-Here's what I deploy before anything else:
+**Logging everything is not observability.** Dumping raw LLM inputs/outputs into a database gives you data, not insight. You need to extract structured signals *before* storage. The log is the raw material; the metric is the signal.
 
-### 1. Structured Decision Logging
+**Alerting on errors only.** Most agent failures don't produce errors. They produce wrong answers that look right. If you only alert on exceptions, you'll miss the slow degradation that accounts for 80% of production problems.
 
-```json
-{
-  "timestamp": "2026-04-27T14:00:00Z",
-  "agent": "order-processor",
-  "decision": "refund_issued",
-  "reasoning": "Customer reported damaged item, order < 30 days, policy allows auto-refund",
-  "alternatives_considered": ["replacement_offer", "escalate_to_human"],
-  "confidence": 0.82,
-  "input_hash": "a3f2...",
-  "tools_used": ["order_lookup", "policy_check", "refund_api"],
-  "latency_ms": 3400,
-  "token_budget_used": 0.43
-}
-```
+**Ignoring the feedback loop.** Observability without action is just expensive logging. When you detect drift, you need a response: revert the prompt, switch the model, alert a human, throttle traffic. The best teams automate the easy responses and surface the hard ones.
 
-This one structure gives you debugging, audit trails, and quality metrics in one shot.
+## A minimal observability stack
 
-### 2. Decision Quality Scoring
+You don't need Jaeger and Grafana and a three-person SRE team. Start here:
 
-After each agent run, log a simple scorecard:
+1. **Structured logs.** Every agent run gets a trace ID. Log tool calls with timestamps and durations. Log the model, prompt version, and token count. This is 90% of the value.
 
-- Did the agent complete the task? (yes/no/partial)
-- Did it use the right tools? (check against ground truth or human review)
-- Did it stay within budget? (tokens, time, API calls)
-- Did it escalate when it should have? (missed escalation = failure)
+2. **A simple dashboard.** Even a shell script that aggregates last 1000 runs by tool call count and latency percentile. You're not building a platform — you're building a habit of looking.
 
-You don't need a complex evaluation framework to start. A weekly review of 50 random decisions tells you more than any dashboard.
+3. **A drift alert.** One threshold: if any key metric deviates more than 2 standard deviations from the 7-day rolling mean, send a notification. One alert. That's it.
 
-### 3. The Cognitive Trace
+4. **Weekly review.** Spend 15 minutes looking at the dashboard. Not debugging — just observing. Patterns emerge that no alert will catch.
 
-When something goes wrong, you need to replay the agent's thinking. Store:
+## The uncomfortable truth
 
-- The full prompt sent to the model (not just the user message — the system prompt, tool definitions, conversation history)
-- The model's raw output before any parsing
-- Which tools were available and why each was (or wasn't) selected
-- Any intermediate steps — tool results, reflections, corrections
+The teams with the best agent systems aren't the ones with the most sophisticated architectures. They're the ones who can tell you, right now, what their agent did in the last hour, whether it's operating within normal parameters, and what changed since last week.
 
-Storage is cheap. Debugging without traces is expensive.
+If you can't answer those questions, you're not running a system. You're running a demo.
 
-## The Anti-Pattern: Logging Everything, Understanding Nothing
-
-More logs ≠ more observability. I've seen systems that dump every API call into Elasticsearch and then wonder why they can't find anything.
-
-The fix is simple: **log decisions, not transactions.** One structured decision record beats fifty raw API logs. You can always add raw logs later when you need them. You can't reconstruct a decision from raw logs after the fact.
-
-## What This Looks Like in Practice
-
-At a recent client, we added decision logging to an order-processing agent. Within the first week, we found:
-
-1. The agent was escalating 40% of cases — way above the 15% target. The decision logs showed it was misidentifying edge cases as ambiguous.
-2. A specific product category was causing 3x more retries. The traces showed the product lookup tool returned partial data for that category.
-3. The agent was spending 60% of its token budget on cases it ultimately escalated anyway. A simple confidence threshold cut that in half.
-
-None of this was visible in the raw metrics. The system "worked" — it processed orders, it didn't crash. But it was burning money and frustrating customers in ways that only structured observability could reveal.
-
-## Start Before You Need It
-
-The hardest time to add observability is after something goes wrong. By then, you've lost the traces that would explain it.
-
-Add decision logging from day one. Even if nobody reads the logs at first, the data accumulates. When you eventually need to debug — and you will — you'll have history to compare against.
-
-The observability problem isn't a technical challenge. It's a design decision. Make it early.
-
----
-
-*Emil Vrána is an independent AI & systems engineer based in Prague. He builds production agent systems and writes about the parts between the demo and the deployment.*
+And demos don't survive contact with production.

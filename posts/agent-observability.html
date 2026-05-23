@@ -1,0 +1,100 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Agent Observability: You Can't Fix What You Can't See — Emil Vrána</title>
+    <meta name="description" content="Most agent projects log errors but not behavior. Observability tells you what your agent is actually doing in production — and why it drifts.">
+    <style>
+        :root {
+            --bg: #0f0f0f;
+            --text: #e0e0e0;
+            --accent: #6b9bd2;
+            --muted: #888;
+            --card-bg: #1a1a1a;
+            --code-bg: #1a1a1a;
+        }
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+        body {
+            font-family: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+            background: var(--bg);
+            color: var(--text);
+            line-height: 1.7;
+            max-width: 720px;
+            margin: 0 auto;
+            padding: 3rem 1.5rem;
+        }
+        .back { color: var(--muted); text-decoration: none; font-size: 0.85rem; }
+        .back:hover { color: var(--accent); }
+        h1 { font-size: 1.6rem; font-weight: 600; margin: 1.5rem 0 0.5rem; }
+        .meta { color: var(--muted); font-size: 0.85rem; margin-bottom: 2rem; }
+        h2 { font-size: 1.1rem; font-weight: 600; margin: 2rem 0 0.7rem; color: var(--accent); }
+        p { margin-bottom: 1rem; }
+        ul, ol { padding-left: 1.5rem; margin-bottom: 1rem; }
+        li { margin-bottom: 0.4rem; }
+        strong { color: #fff; }
+        a { color: var(--accent); text-decoration: none; }
+        a:hover { text-decoration: underline; }
+        code {
+            background: var(--code-bg);
+            padding: 0.15rem 0.4rem;
+            border-radius: 3px;
+            font-size: 0.9rem;
+        }
+        hr {
+            border: none;
+            border-top: 1px solid #222;
+            margin: 2rem 0;
+        }
+    </style>
+</head>
+<body>
+    <a href="/" class="back">← Emil Vrána</a>
+    <h1>Agent Observability: You Can't Fix What You Can't See</h1>
+    <p class="meta">May 23, 2026</p>
+
+    <p>You built an agent. It works in dev. You deploy it. And then... what?</p>
+
+    <p>Most agent projects have the same blind spot: they log errors but not behavior. You know when the agent crashes. You don't know when it drifts — when it starts calling the wrong tool 40% of the time, when its responses get 2x longer over a week, when it skips a step in the pipeline because the prompt got trimmed.</p>
+
+    <p>This isn't monitoring. Monitoring tells you the process is running. Observability tells you what the process is <em>doing</em>.</p>
+
+    <h2>The three signals that matter</h2>
+
+    <p><strong>Latency distribution.</strong> Not average latency — that hides everything. You need p50, p95, p99. When an agent's p99 jumps from 8s to 45s, something changed. Maybe the model started generating longer outputs. Maybe a tool endpoint is slow. Maybe the context window filled up and the model is spinning. Average latency won't tell you any of this.</p>
+
+    <p><strong>Tool call patterns.</strong> Every agent has a signature: which tools it calls, in what order, how often. Log tool names, not just outcomes. If your agent normally calls <code>search</code> → <code>summarize</code> → <code>respond</code> and suddenly starts calling <code>search</code> → <code>search</code> → <code>search</code> → <code>respond</code>, the pattern broke. You don't need to know <em>why</em> yet — you need to know <em>that it happened</em>.</p>
+
+    <p><strong>Output shape.</strong> Track response length, structured output parse success rate, and key field presence. If your agent is supposed to return JSON with <code>decision</code> and <code>confidence</code> fields, log whether those fields exist and what values they take. A drift from <code>confidence: 0.85</code> to <code>confidence: 0.6</code> over a week is a signal no error log will catch.</p>
+
+    <h2>What most teams get wrong</h2>
+
+    <p><strong>Logging everything is not observability.</strong> Dumping raw LLM inputs/outputs into a database gives you data, not insight. You need to extract structured signals <em>before</em> storage. The log is the raw material; the metric is the signal.</p>
+
+    <p><strong>Alerting on errors only.</strong> Most agent failures don't produce errors. They produce wrong answers that look right. If you only alert on exceptions, you'll miss the slow degradation that accounts for 80% of production problems.</p>
+
+    <p><strong>Ignoring the feedback loop.</strong> Observability without action is just expensive logging. When you detect drift, you need a response: revert the prompt, switch the model, alert a human, throttle traffic. The best teams automate the easy responses and surface the hard ones.</p>
+
+    <h2>A minimal observability stack</h2>
+
+    <p>You don't need Jaeger and Grafana and a three-person SRE team. Start here:</p>
+
+    <ol>
+        <li><strong>Structured logs.</strong> Every agent run gets a trace ID. Log tool calls with timestamps and durations. Log the model, prompt version, and token count. This is 90% of the value.</li>
+        <li><strong>A simple dashboard.</strong> Even a shell script that aggregates last 1000 runs by tool call count and latency percentile. You're not building a platform — you're building a habit of looking.</li>
+        <li><strong>A drift alert.</strong> One threshold: if any key metric deviates more than 2 standard deviations from the 7-day rolling mean, send a notification. One alert. That's it.</li>
+        <li><strong>Weekly review.</strong> Spend 15 minutes looking at the dashboard. Not debugging — just observing. Patterns emerge that no alert will catch.</li>
+    </ol>
+
+    <h2>The uncomfortable truth</h2>
+
+    <p>The teams with the best agent systems aren't the ones with the most sophisticated architectures. They're the ones who can tell you, right now, what their agent did in the last hour, whether it's operating within normal parameters, and what changed since last week.</p>
+
+    <p>If you can't answer those questions, you're not running a system. You're running a demo.</p>
+
+    <p>And demos don't survive contact with production.</p>
+
+    <hr>
+    <p><a href="/">← Back to home</a></p>
+</body>
+</html>
