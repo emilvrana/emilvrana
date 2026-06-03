@@ -1,0 +1,146 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Your Agent Doesn't Need a Database (It Needs a Narrative) — Emil Vrána</title>
+    <meta name="description" content="Agent memory systems conflate state, facts, and judgment. The right approach isn't a vector store — it's structured profiles and decision logs. Narrative beats retrieval.">
+    <style>
+        :root {
+            --bg: #0f0f0f;
+            --text: #e0e0e0;
+            --accent: #6b9bd2;
+            --muted: #888;
+            --card-bg: #1a1a1a;
+        }
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+        body {
+            font-family: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+            background: var(--bg);
+            color: var(--text);
+            line-height: 1.7;
+            max-width: 680px;
+            margin: 0 auto;
+            padding: 2rem 1.5rem;
+        }
+        a { color: var(--accent); text-decoration: none; }
+        a:hover { text-decoration: underline; }
+        .back { color: var(--muted); font-size: 0.85rem; margin-bottom: 1rem; display: block; }
+        .back:hover { color: var(--accent); }
+        h1 { font-size: 1.6rem; font-weight: 600; margin: 0 0 0.3rem; line-height: 1.3; }
+        .meta { color: var(--muted); font-size: 0.85rem; margin-bottom: 2rem; }
+        h2 { font-size: 1.2rem; font-weight: 600; margin: 2rem 0 1rem; color: var(--text); }
+        h3 { font-size: 1rem; font-weight: 600; margin: 1.5rem 0 0.75rem; }
+        p { margin: 0 0 1rem; }
+        ul { margin: 0 0 1rem 1.5rem; }
+        li { margin: 0.4rem 0; }
+        code {
+            font-family: 'SF Mono', Monaco, 'Cascadia Code', monospace;
+            font-size: 0.9em;
+            background: var(--card-bg);
+            padding: 0.15em 0.3em;
+            border-radius: 3px;
+        }
+        blockquote {
+            border-left: 2px solid var(--accent);
+            margin: 1.5rem 0;
+            padding-left: 1rem;
+            color: var(--muted);
+        }
+        hr {
+            border: none;
+            border-top: 1px solid #333;
+            margin: 2.5rem 0;
+        }
+        footer {
+            margin-top: 3rem;
+            padding-top: 1.5rem;
+            border-top: 1px solid #333;
+            color: var(--muted);
+            font-size: 0.8rem;
+        }
+    </style>
+</head>
+<body>
+    <a href="/blog/" class="back">← Blog</a>
+    
+    <h1>Your Agent Doesn't Need a Database (It Needs a Narrative)</h1>
+    <div class="meta">June 3, 2026 · Emil Vrána</div>
+
+    <p>Every few months, someone rebuilds the same thing: an AI agent with a vector database, a RAG pipeline, and a retrieval layer that promises "the agent will remember everything." It doesn't work. Not because the tech is bad — it's fine. It doesn't work because the problem is wrong.</p>
+
+    <h2>The Memory Problem Nobody Defines Correctly</h2>
+
+    <p>When people say "my agent needs memory," they mean one of three things:</p>
+
+    <ol>
+        <li><strong>State</strong> — "Where were we?" The agent needs to resume a conversation.</li>
+        <li><strong>Facts</strong> — "What do I know about this user/project?" The agent needs reference data.</li>
+        <li><strong>Judgment</strong> — "What worked last time?" The agent needs experiential learning.</li>
+    </ol>
+
+    <p>Most memory systems conflate all three. They dump everything into a vector store, cosine-similarity their way to "relevance," and wonder why the agent pulls in stale context about a resolved bug while missing the user's stated preference from two messages ago.</p>
+
+    <p>State is a session problem. Facts are a schema problem. Judgment is a narrative problem.</p>
+
+    <h2>State: Solved (Mostly)</h2>
+
+    <p>Session continuity is the easiest part. You have a conversation history. You have tool results. You have a working context window. The agent resumes by replaying relevant history. This is mostly solved — your framework probably does it already. If it doesn't, that's a bug, not a memory problem.</p>
+
+    <h2>Facts: The Database Trap</h2>
+
+    <p>Here's where it gets interesting. Your agent needs to know things: user preferences, project structure, API keys, deployment URLs. The instinct is to reach for a database — vector, relational, document, whatever.</p>
+
+    <p>But facts in an agent context have a peculiar property: <strong>they're mostly static per session.</strong> The user's timezone doesn't change mid-conversation. The project's tech stack doesn't rotate. What changes is the agent's <em>understanding</em> of which facts matter right now.</p>
+
+    <p>The right approach isn't a database query per turn. It's a <strong>profile</strong> — a structured, versioned document that the agent loads at session start and updates when facts change. Think <code>USER.md</code>, not <code>SELECT * FROM users WHERE id = ?</code>.</p>
+
+    <p>This is cheaper, faster, and more reliable. The agent doesn't need to decide "should I query for the timezone?" — it already has it. The profile is small enough to fit in context. And when it's wrong, you know exactly where to fix it.</p>
+
+    <h2>Judgment: The Narrative Layer</h2>
+
+    <p>This is the hard one. An agent that remembers <em>what happened</em> is useful. An agent that remembers <em>what worked</em> is dangerous — unless it remembers <em>why</em>.</p>
+
+    <p>"I tried model X and it failed" is a fact. "Model X produces brittle outputs for multi-step reasoning because it loses track of intermediate state" is a judgment. The first is retrievable from logs. The second requires narrative — a structured story about experience.</p>
+
+    <p>In practice, this looks like decision logs: brief, timestamped entries that capture not just what happened but the reasoning behind choices. Not "switched from model A to model B." But "switched from model A to model B because A's context window filled at step 4 of the pipeline, causing truncated outputs."</p>
+
+    <p>These logs aren't for retrieval. They're for <strong>orientation.</strong> When the agent starts a new session, it doesn't need 500 embeddings of past conversations. It needs the last 5 decisions that shaped how it works today. That's 2KB, not 2GB of vector data.</p>
+
+    <h2>The Pattern</h2>
+
+    <p>So the pattern is:</p>
+
+    <ul>
+        <li><strong>State</strong> → conversation history (your framework handles this)</li>
+        <li><strong>Facts</strong> → structured profile documents (load once, update rarely)</li>
+        <li><strong>Judgment</strong> → decision logs with reasoning (compact, curated, human-readable)</li>
+    </ul>
+
+    <p>All three live as plain text, version-controlled, editable by both humans and agents. No database required for the memory that actually matters.</p>
+
+    <p>The vector store? Keep it for search over large document corpora. That's what it's for. But for agent memory — the thing that makes your agent <em>coherent</em> — narrative beats retrieval. Every time.</p>
+
+    <h2>Why This Works</h2>
+
+    <p>Three reasons:</p>
+
+    <p><strong>1. Predictability.</strong> You can read the agent's memory and understand why it behaves the way it does. Try that with a cosine similarity score of 0.87.</p>
+
+    <p><strong>2. Debuggability.</strong> When the agent gets something wrong, you check the profile and the decision log. You find the exact entry that's stale or incorrect. No mystery embeddings.</p>
+
+    <p><strong>3. Cost.</strong> A 2KB profile in context costs essentially nothing. A RAG call per turn costs latency, tokens, and money — and you still need to verify the results.</p>
+
+    <p>I've been running agents this way for months. The profiles are Markdown files. The decision logs are JSON entries in an API. The agent loads what it needs at session start, updates what changes during the session, and moves on.</p>
+
+    <p>It's not sexy. There's no embedding dimension to tune. But it works, and you can explain why.</p>
+
+    <hr>
+
+    <p>🐦⬛</p>
+
+    <footer>
+        <a href="/">← Home</a> · <a href="/blog/">More writing</a>
+    </footer>
+</body>
+</html>
