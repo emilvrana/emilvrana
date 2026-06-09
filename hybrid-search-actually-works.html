@@ -1,0 +1,188 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Hybrid Search Actually Works — Emil Vrána</title>
+    <meta name="description" content="Most RAG systems use semantic search alone. Here's why adding keyword search fixes the 40% of queries that embeddings miss — and how to combine them in practice.">
+    <style>
+        :root {
+            --bg: #0f0f0f;
+            --text: #e0e0e0;
+            --accent: #6b9bd2;
+            --muted: #888;
+            --card-bg: #1a1a1a;
+        }
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+        body {
+            font-family: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+            background: var(--bg);
+            color: var(--text);
+            line-height: 1.7;
+            max-width: 680px;
+            margin: 0 auto;
+            padding: 2rem 1.5rem;
+        }
+        a { color: var(--accent); text-decoration: none; }
+        a:hover { text-decoration: underline; }
+        .back { color: var(--muted); font-size: 0.85rem; margin-bottom: 1rem; display: block; }
+        .back:hover { color: var(--accent); }
+        h1 { font-size: 1.6rem; font-weight: 600; margin: 0 0 0.3rem; line-height: 1.3; }
+        .meta { color: var(--muted); font-size: 0.85rem; margin-bottom: 2rem; }
+        h2 { font-size: 1.2rem; font-weight: 600; margin: 2rem 0 1rem; color: var(--text); }
+        h3 { font-size: 1rem; font-weight: 600; margin: 1.5rem 0 0.75rem; }
+        p { margin: 0 0 1rem; }
+        ul { margin: 0 0 1rem 1.5rem; }
+        li { margin: 0.4rem 0; }
+        code {
+            font-family: 'SF Mono', Monaco, 'Cascadia Code', monospace;
+            font-size: 0.9em;
+            background: var(--card-bg);
+            padding: 0.15em 0.3em;
+            border-radius: 3px;
+        }
+        pre {
+            background: var(--card-bg);
+            padding: 1rem;
+            border-radius: 6px;
+            overflow-x: auto;
+            margin: 1rem 0 1.5rem;
+            font-size: 0.85rem;
+            line-height: 1.5;
+        }
+        pre code { background: none; padding: 0; }
+        blockquote {
+            border-left: 2px solid var(--accent);
+            margin: 1.5rem 0;
+            padding-left: 1rem;
+            color: var(--muted);
+        }
+        hr {
+            border: none;
+            border-top: 1px solid #333;
+            margin: 2.5rem 0;
+        }
+        footer {
+            margin-top: 3rem;
+            padding-top: 1.5rem;
+            border-top: 1px solid #333;
+            color: var(--muted);
+            font-size: 0.8rem;
+        }
+    </style>
+</head>
+<body>
+    <a href="/blog/" class="back">← Blog</a>
+    
+    <h1>Hybrid Search Actually Works</h1>
+    <div class="meta">June 9, 2026 · Emil Vrána</div>
+
+    <p>I rebuilt my RAG pipeline recently. The old one used pure semantic search — cosine similarity on embeddings, the standard approach everyone recommends. It worked fine for most queries.</p>
+
+    <p>Most isn't all. About 40% of real-world queries fell into a gap I hadn't accounted for.</p>
+
+    <h2>The semantic search blind spot</h2>
+
+    <p>Semantic search is great at finding conceptually related content. Ask "how do I handle authentication errors" and it finds the right docs even if they say "login failures" or "credential issues."</p>
+
+    <p>But it fails at two things people actually search for:</p>
+
+    <ul>
+        <li><strong>Exact identifiers.</strong> Error codes, function names, configuration keys, version numbers. Embeddings can't distinguish <code>ERR_AUTH_401</code> from <code>ERR_AUTH_403</code> — they look semantically identical.</li>
+        <li><strong>Negation and specificity.</strong> "Not including deprecated fields" or "only version 2.1 endpoints." Semantic search averages meaning; it's bad at precise exclusion.</li>
+    </ul>
+
+    <p>In a technical documentation corpus, these aren't edge cases. They're the majority of what people actually type.</p>
+
+    <h2>What hybrid search adds</h2>
+
+    <p>Hybrid search combines two retrieval strategies:</p>
+
+    <ul>
+        <li><strong>Semantic (dense):</strong> Embedding similarity — conceptually related content</li>
+        <li><strong>Keyword (sparse):</strong> BM25 or similar — exact and partial term matching</li>
+    </ul>
+
+    <p>The trick is the <em>combination</em>. Each covers the other's weaknesses.</p>
+
+    <blockquote>For a query like "ERR_TIMEOUT in payment service v2," semantic search finds the right service context. Keyword search finds the exact error code. Together they find the specific paragraph that mentions both.</blockquote>
+
+    <h2>How to combine them</h2>
+
+    <p>There are three common approaches, and only one I'd recommend for production:</p>
+
+    <h3>1. Result fusion (Reciprocal Rank Fusion)</h3>
+
+    <p>Run both searches independently, then merge results by rank position. Simple, works surprisingly well, and doesn't require tuning weights per query.</p>
+
+    <pre><code># RRF score for each document
+def rrf_score(doc, rankings, k=60):
+    score = 0
+    for ranking in rankings:
+        if doc in ranking:
+            score += 1 / (k + ranking.index(doc))
+    return score</code></pre>
+
+    <p>The constant <code>k</code> smooths the impact of top positions. 60 is a solid default. You probably don't need to change it.</p>
+
+    <h3>2. Weighted score merging</h3>
+
+    <p>Normalize both score ranges, then combine with a weight like <code>0.7 * semantic + 0.3 * keyword</code>.</p>
+
+    <p>This seems more precise but isn't. The weights depend on your data and query distribution, which means they're wrong for half your queries. I'd only use this if you've measured that a fixed weight genuinely beats RRF on your evaluation set.</p>
+
+    <h3>3. Reranking (the one I recommend)</h3>
+
+    <p>Run both searches with generous limits (top 30–50 each), merge and deduplicate, then run a cross-encoder reranker over the combined candidate set.</p>
+
+    <p>This is the most expensive option and the most effective. The reranker sees the full query-document pair and can judge whether a keyword match or a semantic match actually answers the question. It corrects both types of errors.</p>
+
+    <p>In my pipeline: pgvector for dense retrieval, BM25 via PostgreSQL full-text search for sparse, merge top 50 from each, then cross-encoder reranking. The whole thing runs in under 200ms on a single VPS.</p>
+
+    <h2>What actually changed</h2>
+
+    <p>On my evaluation set — 200 real queries against a technical documentation corpus:</p>
+
+    <ul>
+        <li>Semantic-only: 61% recall@5</li>
+        <li>Hybrid with RRF: 78% recall@5</li>
+        <li>Hybrid with reranking: 84% recall@5</li>
+    </ul>
+
+    <p>The 23-point jump from semantic-only to hybrid+rerank is almost entirely from queries involving exact identifiers, error codes, and version-specific content. Conceptual queries barely changed — semantic search was already handling those.</p>
+
+    <h2>Why most tutorials skip this</h2>
+
+    <p>Most RAG tutorials demonstrate on Wikipedia or general knowledge corpora. On those, semantic search works great because the queries are conceptual and the documents are prose-heavy.</p>
+
+    <p>Technical documentation is different. Code identifiers, configuration keys, and error codes are part of the content, and they need exact matching. If your users search for <code>max_retries</code>, they want that specific setting — not a paragraph about "retry strategies."</p>
+
+    <h2>Practical setup</h2>
+
+    <p>With PostgreSQL and pgvector, you already have both search types:</p>
+
+    <pre><code>-- Semantic search (pgvector)
+SELECT content, embedding <=> $1 AS distance
+FROM documents
+ORDER BY distance LIMIT 50;
+
+-- Keyword search (PostgreSQL full-text)
+SELECT content, ts_rank(to_tsvector('english', content), query) AS rank
+FROM documents, plainto_tsquery('english', $1) query
+WHERE to_tsvector('english', content) @@ query
+ORDER BY rank DESC LIMIT 50;</code></pre>
+
+    <p>Merge results, deduplicate, rerank with a small cross-encoder model. That's the whole thing.</p>
+
+    <p>No vector database needed. No separate search engine. PostgreSQL does both.</p>
+
+    <hr>
+
+    <p>The full stack — ingestion, chunking, hybrid search, reranking, and evaluation — is in <a href="https://github.com/emilvrana/local-rag-stack">local-rag-stack</a>. It's Docker-ready and designed to run on a single VPS.</p>
+
+    <footer>
+        <p><a href="/blog/">← More posts</a></p>
+        <p>Emil Vrána — AI & Systems Engineer, Prague</p>
+    </footer>
+</body>
+</html>
