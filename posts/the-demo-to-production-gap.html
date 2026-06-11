@@ -1,0 +1,123 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>The Demo-to-Production Gap in AI Agents — Emil Vrána</title>
+    <meta name="description" content="Why your agent nails the demo and falls apart in production — and the three patterns that actually help.">
+    <style>
+        :root {
+            --bg: #0f0f0f;
+            --text: #e0e0e0;
+            --accent: #6b9bd2;
+            --muted: #888;
+            --card-bg: #1a1a1a;
+            --code-bg: #1a1a1a;
+        }
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+        body {
+            font-family: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+            background: var(--bg);
+            color: var(--text);
+            line-height: 1.7;
+            max-width: 720px;
+            margin: 0 auto;
+            padding: 3rem 1.5rem;
+        }
+        .back { color: var(--muted); text-decoration: none; font-size: 0.85rem; }
+        .back:hover { color: var(--accent); }
+        h1 { font-size: 1.6rem; font-weight: 600; margin: 1.5rem 0 0.5rem; }
+        .meta { color: var(--muted); font-size: 0.85rem; margin-bottom: 2rem; }
+        h2 { font-size: 1.1rem; font-weight: 600; margin: 2rem 0 0.7rem; color: var(--accent); }
+        p { margin-bottom: 1rem; }
+        ul, ol { padding-left: 1.5rem; margin-bottom: 1rem; }
+        li { margin-bottom: 0.4rem; }
+        strong { color: #fff; }
+        a { color: var(--accent); text-decoration: none; }
+        a:hover { text-decoration: underline; }
+        code {
+            background: var(--code-bg);
+            padding: 0.15rem 0.4rem;
+            border-radius: 3px;
+            font-size: 0.9em;
+            font-family: 'SF Mono', 'Fira Code', monospace;
+        }
+        .divider { border: none; border-top: 1px solid #2a2a2a; margin: 3rem 0; }
+        .footer { color: var(--muted); font-size: 0.85rem; font-style: italic; margin-top: 2rem; }
+    </style>
+</head>
+<body>
+    <a href="index.html" class="back">← Blog</a>
+    <h1>The Demo-to-Production Gap in AI Agents</h1>
+    <p class="meta">June 5, 2026</p>
+
+    <p>Everyone has seen the demo. The agent navigates a complex task flawlessly — reads an email, looks up a customer, drafts a reply, schedules a follow-up. Smooth. Impressive. Investment-worthy.</p>
+
+    <p>Then you deploy it. Within a week: hallucinated customer IDs, replies to the wrong thread, and a meeting scheduled for 3 AM.</p>
+
+    <p>This isn't a mystery. It's structural.</p>
+
+    <h2>Why Demos Lie</h2>
+
+    <p>Demos run in a narrow corridor: known inputs, happy-path flows, short context windows. The agent never encounters the edge cases that make up 80% of real-world usage:</p>
+
+    <ul>
+        <li>Emails with ambiguous intent ("thanks" — is this a confirmation or a dismissal?)</li>
+        <li>APIs that return unexpected schemas</li>
+        <li>Conversations that go on longer than the context window</li>
+        <li>Tasks that depend on information the agent doesn't have and can't find</li>
+    </ul>
+
+    <p>The demo corridor is comfortable. Production is the rest of the map.</p>
+
+    <h2>Pattern 1: Guardrails, Not Railroads</h2>
+
+    <p>The instinct is to restrict the agent — lock down every action, require approval for everything. This creates a railroad: the agent can only do what you predicted. The first unexpected situation derails it.</p>
+
+    <p>Better: <strong>guardrails</strong>. Define boundaries (never send to external addresses, never delete records, always confirm monetary actions) and let the agent navigate within them. Guardrails catch the dangerous stuff; the agent still has room to handle the unexpected.</p>
+
+    <p>The difference matters: a railroad agent fails when it encounters a novel situation. A guardrail agent tries something reasonable and gets caught if it's dangerous.</p>
+
+    <h2>Pattern 2: Observable Failure</h2>
+
+    <p>In production, your agent <em>will</em> fail. The question is whether you can see it.</p>
+
+    <p>Most agent setups have two states: "works" and "silent wrong." Silent wrong is the dangerous one — the agent confidently does the wrong thing and nobody notices until a customer complains.</p>
+
+    <p>Make failure loud:</p>
+
+    <ul>
+        <li>Log every tool call with input and output</li>
+        <li>Track success metrics per task type (not aggregate — aggregates hide problems)</li>
+        <li>Set up alerts for anomaly patterns (sudden spike in retries, tasks taking 10x longer than baseline)</li>
+    </ul>
+
+    <p>If you can't tell when your agent is failing, you don't have a production system. You have a time bomb.</p>
+
+    <h2>Pattern 3: Graceful Degradation</h2>
+
+    <p>When the agent can't complete a task, what happens? Most systems have one answer: error out. But in production, the right answer is usually: <em>do what you can, flag what you can't.</em></p>
+
+    <p>Example: an agent processing customer support tickets. It can't resolve a billing dispute? It should still:</p>
+
+    <ol>
+        <li>Categorize the ticket</li>
+        <li>Pull the customer's recent activity</li>
+        <li>Draft a partial response with what it knows</li>
+        <li>Flag the uncertain parts for human review</li>
+    </ol>
+
+    <p>This is more useful than a generic "I encountered an error" — and it's how competent humans work too.</p>
+
+    <h2>The Uncomfortable Truth</h2>
+
+    <p>The demo-to-production gap isn't a tooling problem. It's an expectations problem. Demos show what's possible. Production shows what's reliable. Those are different things, and the distance between them is where most of the engineering work happens.</p>
+
+    <p>The agents that succeed in production aren't the smartest ones. They're the ones that fail visibly, degrade gracefully, and stay within their guardrails.</p>
+
+    <p>Everything else is a demo.</p>
+
+    <hr class="divider">
+    <p class="footer">Three years of running agents in production. The patterns above came from failures, not theory.</p>
+</body>
+</html>

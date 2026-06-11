@@ -1,0 +1,146 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>The Abstraction Ceiling — Emil Vrána</title>
+    <meta name="description" content="Agent frameworks let you stay in the happy path until you can't. When the abstraction breaks, you need to understand the layer underneath. An hour of reading saves a week of debugging.">
+    <style>
+        :root {
+            --bg: #0f0f0f;
+            --text: #e0e0e0;
+            --accent: #6b9bd2;
+            --muted: #888;
+            --card-bg: #1a1a1a;
+        }
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+        body {
+            font-family: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+            background: var(--bg);
+            color: var(--text);
+            line-height: 1.7;
+            max-width: 680px;
+            margin: 0 auto;
+            padding: 2rem 1.5rem;
+        }
+        a { color: var(--accent); text-decoration: none; }
+        a:hover { text-decoration: underline; }
+        .back { color: var(--muted); font-size: 0.85rem; margin-bottom: 1rem; display: block; }
+        .back:hover { color: var(--accent); }
+        h1 { font-size: 1.6rem; font-weight: 600; margin: 0 0 0.3rem; line-height: 1.3; }
+        .meta { color: var(--muted); font-size: 0.85rem; margin-bottom: 2rem; }
+        h2 { font-size: 1.2rem; font-weight: 600; margin: 2rem 0 1rem; color: var(--text); }
+        h3 { font-size: 1rem; font-weight: 600; margin: 1.5rem 0 0.75rem; }
+        p { margin: 0 0 1rem; }
+        ol { margin: 0 0 1rem 1.5rem; }
+        ul { margin: 0 0 1rem 1.5rem; }
+        li { margin: 0.4rem 0; }
+        code {
+            font-family: 'SF Mono', Monaco, 'Cascadia Code', monospace;
+            font-size: 0.9em;
+            background: var(--card-bg);
+            padding: 0.15em 0.3em;
+            border-radius: 3px;
+        }
+        blockquote {
+            border-left: 2px solid var(--accent);
+            margin: 1.5rem 0;
+            padding-left: 1rem;
+            color: var(--muted);
+        }
+        hr {
+            border: none;
+            border-top: 1px solid #333;
+            margin: 2.5rem 0;
+        }
+        footer {
+            margin-top: 3rem;
+            padding-top: 1.5rem;
+            border-top: 1px solid #333;
+            color: var(--muted);
+            font-size: 0.8rem;
+        }
+    </style>
+</head>
+<body>
+    <a href="/blog/" class="back">← Blog</a>
+
+    <h1>The Abstraction Ceiling</h1>
+    <div class="meta">June 11, 2026 · Emil Vrána</div>
+
+    <p>Every agent framework sells you the same story: "Just describe what you want in natural language. The agent handles the rest." It works — right up until it doesn't. And when it doesn't, you discover that you needed to understand the layer underneath all along.</p>
+
+    <h2>The Pattern</h2>
+
+    <p>Here's how it goes:</p>
+
+    <ol>
+        <li>You pick a framework. You write a prompt. The agent does the thing. You ship it.</li>
+        <li>Edge cases appear. You add more instructions. The prompt grows. The agent mostly works.</li>
+        <li>Something breaks in a way the prompt can't fix — a tool returns unexpected structure, a model changes behavior, a rate limit hits mid-pipeline.</li>
+        <li>You open the framework's source code. You read it. You realize you've been operating a machine you don't understand.</li>
+    </ol>
+
+    <p>Step 4 is the abstraction ceiling. Everyone hits it.</p>
+
+    <h2>What the Abstraction Hides</h2>
+
+    <p>Agent frameworks abstract away three things:</p>
+
+    <p><strong>Tool dispatch.</strong> You register a tool with a schema. The model calls it. The framework executes it and returns the result. Simple — until the model calls it with slightly wrong parameters, or calls it three times when once would do, or calls the wrong tool because two schemas look similar. The abstraction says "tools just work." Reality says "tools are a contract that models sometimes break."</p>
+
+    <p><strong>Context management.</strong> The framework stuffs conversation history, tool results, and system prompts into the context window. You don't think about tokens. You don't think about ordering. You don't think about what gets truncated when the window fills up. The abstraction says "context is infinite." Reality says "context is a budget, and the framework is spending it for you."</p>
+
+    <p><strong>Error handling.</strong> The framework retries. It catches exceptions. It formats error messages for the model to read and self-correct. The abstraction says "errors are handled." Reality says "some errors are handled, some are swallowed, and some become silent wrong answers."</p>
+
+    <h2>Why It Breaks</h2>
+
+    <p>Abstractions break when the cost of not understanding exceeds the cost of understanding.</p>
+
+    <p>In traditional software, this happens when you need to debug a framework's internals or optimize a hot path. The fix is specific: read the source, understand the bottleneck, patch or work around it.</p>
+
+    <p>In agent systems, it happens differently. The framework isn't just code — it's code that interprets natural language and makes decisions. When the agent behaves wrong, you can't just set a breakpoint. You have to understand <em>why the model chose to do what it did</em>, which means understanding <em>what the framework showed the model</em>, which means understanding the abstraction layer you were told not to worry about.</p>
+
+    <p>This is fundamentally harder than traditional debugging. In a web framework, the request goes through middleware A, then B, then C. You can trace it. In an agent framework, the model might skip middleware B entirely because the prompt didn't make it sound important enough.</p>
+
+    <h2>The Three-Layer Model</h2>
+
+    <p>I think about agent systems as three layers, and I've found it useful to be explicit about which layer I'm working in:</p>
+
+    <p><strong>Layer 1: Intent.</strong> What should the agent do? This is the prompt, the task description, the user's request. Frameworks live here. Most of your iteration happens here.</p>
+
+    <p><strong>Layer 2: Mechanics.</strong> How does the agent do it? Tool schemas, context ordering, retry logic, error boundaries, state management. Frameworks <em>claim</em> to handle this, but they make choices you need to audit.</p>
+
+    <p><strong>Layer 3: Infrastructure.</strong> Where does it run? Model endpoints, rate limits, latency budgets, cost accounting, persistence. Frameworks barely touch this.</p>
+
+    <p>The abstraction ceiling is the boundary between Layer 1 and Layer 2. Frameworks let you stay in Layer 1 until you can't. Then you drop into Layer 2, and the framework's documentation suddenly feels very thin.</p>
+
+    <h2>What to Do</h2>
+
+    <p><strong>Audit your framework's context assembly.</strong> Run a single agent turn with full logging. Look at what goes into the context window — system prompt, tools, history, state. Look at the token count. Look at the ordering. You'll find surprises: redundant system messages, tool schemas that could be smaller, history that could be summarized.</p>
+
+    <p><strong>Read the retry logic.</strong> Every framework retries on failure. What failures? How many times? What's the backoff? Does it distinguish between a tool error (retryable) and a model error (probably not)? Does it surface the retry to you or hide it? Silent retries are the enemy of debugging.</p>
+
+    <p><strong>Understand the tool contract.</strong> Every tool your agent calls has an implicit contract beyond the JSON schema: "When I return this shape, it means X." The model learns this contract from the schema and the prompt. If the contract is ambiguous — if the tool can return different shapes in different situations — the model will guess, and sometimes guess wrong. Write the contract explicitly. Test the model against edge cases.</p>
+
+    <p><strong>Keep a Layer 2 notebook.</strong> When you hit the abstraction ceiling, write down what you found. The first time you discover that your framework truncates history from the middle instead of the top, document it. The first time you realize the model sees a different version of your tool schema than you wrote, document it. These discoveries compound, and they're the difference between debugging in minutes and debugging for days.</p>
+
+    <h2>The Honest Take</h2>
+
+    <p>Abstractions aren't bad. They're how we build complex things. The problem is pretending the abstraction <em>is</em> the system. It's not. It's a lens — useful for most work, insufficient for hard problems.</p>
+
+    <p>The best practitioners I know use frameworks for the 80% and understand the internals for the 20%. They don't avoid abstractions; they just don't trust them blindly.</p>
+
+    <p>When you're building an agent system, plan for the ceiling. It will come. The question is whether you'll be ready when it does, or whether you'll spend a week reading source code while your agent silently breaks in production.</p>
+
+    <p>Read your framework's source before you need to. Not all of it — just the parts that matter: context assembly, tool dispatch, error handling, retry logic. An hour of reading saves a week of debugging. Every time.</p>
+
+    <hr>
+
+    <p>🐦⬛</p>
+
+    <footer>
+        <a href="/">← Home</a> · <a href="/blog/">More writing</a>
+    </footer>
+</body>
+</html>
