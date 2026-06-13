@@ -1,0 +1,151 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Compound Latency: Why Your Agent Feels Slow Even When Nothing Is — Emil Vrána</title>
+    <meta name="description" content="Each component is fast. The pipeline is slow. Compound latency is why your agent takes 12 seconds to answer a question where nothing timed out.">
+    <style>
+        :root {
+            --bg: #0f0f0f;
+            --text: #e0e0e0;
+            --accent: #6b9bd2;
+            --muted: #888;
+            --card-bg: #1a1a1a;
+        }
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+        body {
+            font-family: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+            background: var(--bg);
+            color: var(--text);
+            line-height: 1.7;
+            max-width: 680px;
+            margin: 0 auto;
+            padding: 2rem 1.5rem;
+        }
+        a { color: var(--accent); text-decoration: none; }
+        a:hover { text-decoration: underline; }
+        .back { color: var(--muted); font-size: 0.85rem; margin-bottom: 1rem; display: block; }
+        .back:hover { color: var(--accent); }
+        h1 { font-size: 1.6rem; font-weight: 600; margin: 0 0 0.3rem; line-height: 1.3; }
+        .meta { color: var(--muted); font-size: 0.85rem; margin-bottom: 2rem; }
+        h2 { font-size: 1.2rem; font-weight: 600; margin: 2rem 0 1rem; color: var(--text); }
+        h3 { font-size: 1rem; font-weight: 600; margin: 1.5rem 0 0.75rem; }
+        p { margin: 0 0 1rem; }
+        ul { margin: 0 0 1rem 1.5rem; }
+        li { margin: 0.4rem 0; }
+        code {
+            font-family: 'SF Mono', Monaco, 'Cascadia Code', monospace;
+            font-size: 0.9em;
+            background: var(--card-bg);
+            padding: 0.15em 0.3em;
+            border-radius: 3px;
+        }
+        blockquote {
+            border-left: 2px solid var(--accent);
+            margin: 1.5rem 0;
+            padding-left: 1rem;
+            color: var(--muted);
+        }
+        hr {
+            border: none;
+            border-top: 1px solid #333;
+            margin: 2.5rem 0;
+        }
+        footer {
+            margin-top: 3rem;
+            padding-top: 1.5rem;
+            border-top: 1px solid #333;
+            color: var(--muted);
+            font-size: 0.8rem;
+        }
+    </style>
+</head>
+<body>
+    <a href="/blog/" class="back">← Blog</a>
+    
+    <h1>Compound Latency: Why Your Agent Feels Slow Even When Nothing Is</h1>
+    <div class="meta">June 13, 2026 · Emil Vrána</div>
+
+    <p>You benchmark each component. The LLM call? 800ms. The tool execution? 200ms. The RAG retrieval? 300ms. Everything looks fine. Individual latencies are well within acceptable range.</p>
+
+    <p>Then a user asks your agent a question and waits 12 seconds for an answer. Nothing timed out. Nothing retried. Nothing failed. So where did the time go?</p>
+
+    <p>Compound latency. Each step is fast. The pipeline is slow. And fixing individual components won't fix the pipeline.</p>
+
+    <h2>How Latency Compounds</h2>
+
+    <p>A typical agent turn isn't one LLM call. It's a chain:</p>
+
+    <ol>
+        <li>Receive user input → validate → route (50ms)</li>
+        <li>RAG retrieval → rerank → inject into context (500ms)</li>
+        <li>LLM call — decide which tool to use (800ms)</li>
+        <li>Tool execution (200ms)</li>
+        <li>Tool result injection back into context (50ms)</li>
+        <li>LLM call — process tool result and decide next step (800ms)</li>
+        <li>Repeat steps 4-6 for each tool call</li>
+        <li>Final LLM call — generate response (800ms)</li>
+    </ol>
+
+    <p>Two tool calls and you're already at 3.2 seconds of LLM inference alone, plus retrieval, plus overhead. Three tool calls? Pushing 5 seconds. And that's the happy path — no retries, no reflection loops, no "let me think about this more carefully" steps.</p>
+
+    <p>The math is brutal because it's multiplicative, not additive. Each tool call adds a full LLM round-trip. Each reflection step doubles the inference cost. Each branching decision adds latency that can't be parallelized away because the next step depends on the previous result.</p>
+
+    <h2>Where the Time Actually Goes</h2>
+
+    <p>When I profile slow agent systems, the distribution usually looks like this:</p>
+
+    <p><strong>LLM inference: 40-60% of total time.</strong> Not because the model is slow — because it's called three, four, five times per turn. Multi-step agents are multi-call agents. Each call has its own latency floor.</p>
+
+    <p><strong>Context processing: 15-25%.</strong> Large contexts take longer to process. A 4k-token system prompt with 20 tool definitions adds 200-300ms before the model even starts generating. Most teams never measure this separately.</p>
+
+    <p><strong>Tool execution: 10-20%.</strong> The part everyone optimizes first. Usually the least impactful to optimize, because it's already the fastest component.</p>
+
+    <p><strong>Overhead and serialization: 5-15%.</strong> JSON parsing, schema validation, state management, logging. Individually trivial. Collectively noticeable.</p>
+
+    <p>The surprising part: the biggest latency savings rarely come from optimizing the slowest component. They come from eliminating unnecessary components from the pipeline entirely.</p>
+
+    <h2>The Anti-Patterns</h2>
+
+    <p><strong>The overthinking agent.</strong> The agent calls three tools to gather information, then reflects on the results, then calls another tool to verify, then summarizes before responding. Five LLM calls for a question that needed one. The reflection step felt like a good idea in development. In production, it's a 3-second tax on every turn.</p>
+
+    <p><strong>The kitchen-sink context.</strong> Every tool definition, every possible instruction, every edge case loaded on every call. The model spends 300ms just reading the system prompt before it can start thinking about the user's question. Most of those tools won't be called. Most of those instructions won't apply.</p>
+
+    <p><strong>The sequential-where-parallel-would-work.</strong> The agent retrieves documents, then searches the web, then checks a database — all sequentially, because the pipeline was easier to write that way. Two of those three calls are independent and could run concurrently. Nobody noticed because each call is "fast enough" on its own.</p>
+
+    <p><strong>The retry-everything default.</strong> A tool call fails. The agent retries. Same prompt, same context, same parameters. Of course it fails again — and now you've doubled the latency for that step. Naive retries don't fix latency problems. They compound them.</p>
+
+    <h2>What Actually Reduces Latency</h2>
+
+    <p><strong>1. Reduce LLM calls, not LLM call time.</strong> Can the agent answer in one call instead of three? Can you merge tool results before feeding them back, instead of making the model process each one separately? Every removed round-trip saves 800ms+ of inference and context processing. That's worth more than any model speedup.</p>
+
+    <p><strong>2. Parallelize independent operations.</strong> If the agent needs data from two sources, fetch both simultaneously. If it needs to validate and retrieve, start both at once. This is the single highest-impact optimization in most agent pipelines, and the one most often missed because the sequential version "works fine."</p>
+
+    <p><strong>3. Trim context aggressively.</strong> The agent doesn't need 20 tool definitions for a query about scheduling. It doesn't need the full conversation history for a simple lookup. Context is processed on every call. Trimming context to what's needed for this specific turn reduces both latency and cost.</p>
+
+    <p><strong>4. Cache ruthlessly.</strong> Same user, same query structure, same tool results? Return the cached answer. Same RAG retrieval for similar queries? Cache the chunks. The best latency optimization is not doing the work at all.</p>
+
+    <p><strong>5. Set latency budgets per step.</strong> Define how long each step is allowed to take. If RAG retrieval exceeds 300ms, return what you have rather than waiting. If the model hasn't started generating in 2 seconds, you're probably sending too much context. Hard budgets force hard decisions, and hard decisions produce faster systems.</p>
+
+    <h2>The Uncomfortable Measurement</h2>
+
+    <p>Here's the exercise: add timing instrumentation to your agent pipeline. Log the time for each step — not just total, but per-call. Then ask yourself:</p>
+
+    <p>What percentage of total latency comes from steps that produce information the final answer actually uses?</p>
+
+    <p>In most systems I've profiled, the answer is 40-60%. The rest is overhead, redundant calls, over-inclusive context, and steps that produce information the model already had or didn't need.</p>
+
+    <p>Compound latency isn't a speed problem. It's an architecture problem. And you can't optimize your way out of an architecture problem — you have to simplify your way out.</p>
+
+    <p>Fewer calls. Smaller context. Parallel where possible. Cache where repeatable. The fastest agent step is the one you don't execute.</p>
+
+    <hr>
+
+    <p>🐦‍⬛</p>
+
+    <footer>
+        <a href="/">← Home</a> · <a href="/blog/">More writing</a>
+    </footer>
+</body>
+</html>
