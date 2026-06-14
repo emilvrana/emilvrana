@@ -36,6 +36,7 @@ I build AI systems, automation pipelines, and data architectures. Most of my wor
 - [The Cost of Silence: When Your Agent Fails Quietly](./posts/the-cost-of-silence.md) — The worst production failures aren't the loud ones. They're the agents that return plausible wrong answers while your monitoring says green.
 - [Testing Agent Systems: Why Your Unit Tests Aren't Enough](./posts/testing-agent-systems.md) — Traditional testing assumes deterministic systems. Agents are probabilistic. How to test failure modes, not happy paths.
 - [The Last Mile Problem in AI Automation](./posts/last-mile-ai-automation.md) — The gap between demo and production, and the patterns that actually survive contact with reality
+- [Idempotency: Why Running Your Agent Twice Shouldn't Create Two Tickets](./posts/idempotency-in-agents.md) — Retries are inevitable. Duplicates are not. Dedup keys, idempotency tokens, and state checkpoints — the plumbing that makes agents production-safe.
 
 #### Find me
 
