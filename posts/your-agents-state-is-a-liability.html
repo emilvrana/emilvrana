@@ -1,0 +1,105 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Your Agent's State Is a Liability — Emil Vrána</title>
+    <meta name="description" content="Accumulated context makes agents brittle. Why stateless agent designs outperform stateful ones, and how to prune what you carry.">
+    <style>
+        :root {
+            --bg: #0f0f0f;
+            --text: #e0e0e0;
+            --accent: #6b9bd2;
+            --muted: #888;
+            --card-bg: #1a1a1a;
+        }
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+        body {
+            font-family: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+            background: var(--bg);
+            color: var(--text);
+            line-height: 1.7;
+            max-width: 680px;
+            margin: 0 auto;
+            padding: 2rem 1.5rem;
+        }
+        a { color: var(--accent); text-decoration: none; }
+        a:hover { text-decoration: underline; }
+        .back { color: var(--muted); font-size: 0.85rem; margin-bottom: 1rem; display: block; }
+        .back:hover { color: var(--accent); }
+        h1 { font-size: 1.6rem; font-weight: 600; margin: 0 0 0.3rem; line-height: 1.3; }
+        .meta { color: var(--muted); font-size: 0.85rem; margin-bottom: 2rem; }
+        h2 { font-size: 1.2rem; font-weight: 600; margin: 2rem 0 1rem; color: var(--text); }
+        h3 { font-size: 1rem; font-weight: 600; margin: 1.5rem 0 0.75rem; }
+        p { margin: 0 0 1rem; }
+        ul { margin: 0 0 1rem 1.5rem; }
+        li { margin: 0.4rem 0; }
+        code {
+            font-family: 'SF Mono', Monaco, 'Cascadia Code', monospace;
+            font-size: 0.9em;
+            background: var(--card-bg);
+            padding: 0.15em 0.4em;
+            border-radius: 3px;
+        }
+        strong { color: #fff; }
+        .footer { margin-top: 3rem; padding-top: 1rem; border-top: 1px solid #2a2a2a; color: var(--muted); font-size: 0.85rem; }
+    </style>
+</head>
+<body>
+    <a href="/" class="back">← Back</a>
+    <h1>Your Agent's State Is a Liability</h1>
+    <p class="meta">June 18, 2026</p>
+
+    <p>Every agent starts clean. Empty context, fresh instructions, ready to work. Then it runs — and accumulates state. Conversation history, tool results, intermediate decisions, cached facts. Each step adds weight.</p>
+
+    <p>Most agent frameworks treat this accumulation as a feature. "The agent remembers everything!" But in production, state is a liability. Here's why, and what to do about it.</p>
+
+    <h2>The compounding problem</h2>
+
+    <p>State degrades non-linearly. An agent with 10k tokens of context is fine. At 50k, it starts making subtle errors — referencing outdated information from earlier in the conversation, conflating two similar tool calls, losing track of what it already decided. At 100k, you're flying blind.</p>
+
+    <p>This isn't a model limitation. It's a fundamental property of information: <strong>the more you carry, the harder it is to find what matters.</strong> Your agent doesn't need everything it's seen. It needs the right thing at the right time.</p>
+
+    <h2>Three patterns that make state worse</h2>
+
+    <p><strong>1. Verbatim tool outputs.</strong> A search returns 2000 tokens. Your agent dumps the whole thing into context "just in case." Multiply by 5-10 tool calls per task. You've now got 10-20k tokens of raw output that the model has to navigate every single inference.</p>
+
+    <p><strong>2. Conversational meandering.</strong> The user changes direction, corrects themselves, explores tangents. The agent faithfully carries the entire conversation. But half of it is irrelevant to the current task.</p>
+
+    <p><strong>3. Implicit state drift.</strong> The agent makes a decision early ("use database X"), carries it implicitly, then contradicts itself later because the original decision is buried in 30k tokens of context and nobody can find it.</p>
+
+    <h2>The stateless-by-default pattern</h2>
+
+    <p>The fix isn't "better prompts." It's architectural:</p>
+
+    <p><strong>Summarize, don't carry.</strong> After each major step, extract the decision and discard the reasoning. "Queried the database. Result: 3 active users." Not the 2000-token JSON response.</p>
+
+    <p><strong>Re-derive instead of remember.</strong> If you need to know which database to use, re-read the config. It's one tool call and 50 tokens, versus carrying 500 tokens of context "in case" you need it again.</p>
+
+    <p><strong>Partition state by scope.</strong> Global state (user identity, permissions) stays. Task state (current step, intermediate results) gets a shelf life. Conversational state (the user said "actually, use the other one") gets applied and then discarded.</p>
+
+    <p><strong>Reset aggressively.</strong> Between tasks, wipe everything except what you explicitly chose to keep. A clean agent is a reliable agent.</p>
+
+    <h2>When state is worth keeping</h2>
+
+    <p>Not all state is bad. Some state is genuinely useful:</p>
+
+    <ul>
+        <li><strong>User preferences</strong> that apply across sessions</li>
+        <li><strong>Schemas and tool definitions</strong> that don't change within a session</li>
+        <li><strong>Compressed summaries</strong> of long conversations</li>
+    </ul>
+
+    <p>The difference: <strong>state you keep should be small, stable, and verified.</strong> If it's large, changing, or assumed — prune it.</p>
+
+    <h2>The practical test</h2>
+
+    <p>Ask yourself: "If I restarted this agent from scratch with only the current task description, would it produce a worse result?" If the answer is no, your state isn't helping. If the answer is yes, identify exactly what it needs from the past, compress that to its minimal form, and carry only that.</p>
+
+    <p>State is a cost. Treat it like one.</p>
+
+    <div class="footer">
+        <p><a href="/">emil.aiadoption.cz</a></p>
+    </div>
+</body>
+</html>
