@@ -1,0 +1,145 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>The Observability Gap in Agent Systems — Emil Vrána</title>
+    <meta name="description" content="The distance between what your agent did and what you can see it did is the observability gap. More logging won't fix it — you need decision checkpoints, context budget tracking, and failure classification.">
+    <style>
+        :root {
+            --bg: #0f0f0f;
+            --text: #e0e0e0;
+            --accent: #6b9bd2;
+            --muted: #888;
+            --card-bg: #1a1a1a;
+        }
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+        body {
+            font-family: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+            background: var(--bg);
+            color: var(--text);
+            line-height: 1.7;
+            max-width: 680px;
+            margin: 0 auto;
+            padding: 2rem 1.5rem;
+        }
+        a { color: var(--accent); text-decoration: none; }
+        a:hover { text-decoration: underline; }
+        .back { color: var(--muted); font-size: 0.85rem; margin-bottom: 1rem; display: block; }
+        .back:hover { color: var(--accent); }
+        h1 { font-size: 1.6rem; font-weight: 600; margin: 0 0 0.3rem; line-height: 1.3; }
+        .date { color: var(--muted); font-size: 0.85rem; margin-bottom: 2rem; }
+        h2 { font-size: 1.15rem; font-weight: 600; margin: 2rem 0 0.5rem; }
+        h3 { font-size: 1rem; font-weight: 600; margin: 1.5rem 0 0.3rem; }
+        p { margin-bottom: 1rem; }
+        ul, ol { margin-bottom: 1rem; padding-left: 1.5rem; }
+        li { margin-bottom: 0.3rem; }
+        code {
+            background: var(--card-bg);
+            padding: 0.15rem 0.4rem;
+            border-radius: 3px;
+            font-size: 0.9rem;
+        }
+        pre {
+            background: var(--card-bg);
+            padding: 1rem;
+            border-radius: 6px;
+            overflow-x: auto;
+            margin-bottom: 1.5rem;
+            font-size: 0.85rem;
+            line-height: 1.5;
+        }
+        em { color: var(--muted); }
+        blockquote {
+            border-left: 3px solid #333;
+            padding-left: 1rem;
+            margin: 1.5rem 0;
+            color: var(--muted);
+        }
+        table {
+            width: 100%;
+            border-collapse: collapse;
+            margin-bottom: 1.5rem;
+            font-size: 0.9rem;
+        }
+        th, td {
+            text-align: left;
+            padding: 0.5rem 0.75rem;
+            border-bottom: 1px solid #2a2a2a;
+        }
+        th { color: var(--muted); font-weight: 600; }
+        footer {
+            margin-top: 3rem;
+            padding-top: 1.5rem;
+            border-top: 1px solid #222;
+            color: var(--muted);
+            font-size: 0.8rem;
+        }
+    </style>
+</head>
+<body>
+    <a href="/blog/" class="back">← Blog</a>
+    <h1>The Observability Gap in Agent Systems</h1>
+    <div class="date">June 22, 2026</div>
+
+    <p>You built an agent. It works — mostly. When it doesn't, you stare at logs that say "tool call failed" or "context length exceeded" and try to reconstruct what happened from incomplete traces.</p>
+
+    <p>This is the observability gap: the distance between what your agent <em>did</em> and what you can <em>see</em> it did. It's not a logging problem. It's a structural one.</p>
+
+    <h2>What You Think You Need</h2>
+    <p>Most agent setups log three things: prompts, tool calls, and responses. That gives you a timeline — call A, then call B, then response. It looks like observability.</p>
+    <p>It isn't.</p>
+
+    <h2>What You Actually Need</h2>
+    <p>Agents fail in ways that timelines don't explain:</p>
+    <ul>
+        <li><strong>Context drift.</strong> The agent loaded 4k tokens of relevant context, then 12k of noise. The logs show the full context window. They don't show that 75% of it was wasted.</li>
+        <li><strong>Decision opacity.</strong> The agent chose tool X over tool Y. The logs show X was called. They don't show Y was considered, or why it was rejected, or that it wasn't considered at all.</li>
+        <li><strong>Retry cascades.</strong> The agent retried a failing call 5 times. The logs show 5 calls. They don't show that retry 3 changed the parameters in a way that made retry 4 certain to fail.</li>
+        <li><strong>Cost attribution.</strong> You spent $47 on an agent run. The logs show token counts. They don't show that $32 of it was re-processing context that hadn't changed since the last call.</li>
+    </ul>
+
+    <h2>The Fix Isn't More Logging</h2>
+    <p>Adding log lines is the instinct. Resist it. More logs mean more noise, and noise is exactly the problem — your agent already produces too much output for you to read.</p>
+    <p>Instead, build three observability primitives into your agent loop:</p>
+
+    <h3>1. Decision Checkpoints</h3>
+    <p>At every branching point, record <em>why</em> the agent chose its path. Not what it did — why it did it. This is typically 2–3 sentences of reasoning that would let you reconstruct the decision without replaying the full context.</p>
+
+<pre><code># Not this:
+log.info(f"Called {tool_name} with {args}")
+
+# This:
+log.info(f"Chose {tool_name} over {alternatives} because {reasoning}")</code></pre>
+
+    <h3>2. Context Budget Tracking</h3>
+    <p>Track what percentage of your context window is signal vs. noise. If your context is 80% retrieved documents and your task completion is failing, you don't need better retrieval — you need less context.</p>
+    <p>Implement a simple ratio: tokens that directly contributed to the final output / total tokens processed. If it drops below 0.3, your agent is drowning.</p>
+
+    <h3>3. Failure Classification</h3>
+    <p>Not all failures are equal. Classify them:</p>
+
+    <table>
+        <thead>
+            <tr><th>Type</th><th>Pattern</th><th>Response</th></tr>
+        </thead>
+        <tbody>
+            <tr><td>Tool error</td><td>API returns 500</td><td>Retry with backoff</td></tr>
+            <tr><td>Context error</td><td>Agent hallucinates from stale data</td><td>Refresh context</td></tr>
+            <tr><td>Decision error</td><td>Agent chooses wrong tool</td><td>Log decision, adjust prompt</td></tr>
+            <tr><td>System error</td><td>Rate limit, timeout</td><td>Circuit breaker</td></tr>
+        </tbody>
+    </table>
+
+    <p>Each class needs a different fix. Merging them into "agent failed" loses the signal.</p>
+
+    <h2>The Uncomfortable Truth</h2>
+    <p>Observability for agents means making the implicit explicit. Every agent makes dozens of implicit decisions per run — about what to retrieve, what to include, what to skip, when to stop. These decisions <em>are</em> the system. The prompts and tools are just the interface.</p>
+    <p>If you can't see the decisions, you can't improve the system. Period.</p>
+    <p>The teams that ship reliable agents aren't the ones with the most logs. They're the ones who made their agent's decision-making legible — to themselves, to their monitors, and to the next person who has to debug at 2 AM.</p>
+
+    <footer>
+        <a href="/">emil.aiadoption.cz</a>
+    </footer>
+</body>
+</html>
