@@ -38,6 +38,7 @@ I build AI systems, automation pipelines, and data architectures. Most of my wor
 - [Testing Agent Systems: Why Your Unit Tests Aren't Enough](./posts/testing-agent-systems.md) — Traditional testing assumes deterministic systems. Agents are probabilistic. How to test failure modes, not happy paths.
 - [The Last Mile Problem in AI Automation](./posts/last-mile-ai-automation.md) — The gap between demo and production, and the patterns that actually survive contact with reality
 - [Idempotency: Why Running Your Agent Twice Shouldn't Create Two Tickets](./posts/idempotency-in-agents.md) — Retries are inevitable. Duplicates are not. Dedup keys, idempotency tokens, and state checkpoints — the plumbing that makes agents production-safe.
+- [Why Your Agent Loops (And How to Make It Converge)](./posts/agent-loop-convergence.md) — Agent loops aren't a mystery. They're a design problem. Budgeted execution, convergence checks, and forcing functions — the structural fixes that actually work.
 
 #### Find me
 
