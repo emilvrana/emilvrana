@@ -1,0 +1,125 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Idempotency in Agent Systems — Emil Vrána</title>
+    <meta name="description" content="Your agent will be interrupted, retried, and asked to re-run partial work. If it can't safely run the same task twice, it can't safely run once.">
+    <style>
+        :root {
+            --bg: #0f0f0f;
+            --text: #e0e0e0;
+            --accent: #6b9bd2;
+            --muted: #888;
+            --card-bg: #1a1a1a;
+        }
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+        body {
+            font-family: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+            background: var(--bg);
+            color: var(--text);
+            line-height: 1.7;
+            max-width: 680px;
+            margin: 0 auto;
+            padding: 2rem 1.5rem;
+        }
+        a { color: var(--accent); text-decoration: none; }
+        a:hover { text-decoration: underline; }
+        .back { color: var(--muted); font-size: 0.85rem; margin-bottom: 1rem; display: block; }
+        .back:hover { color: var(--accent); }
+        h1 { font-size: 1.6rem; font-weight: 600; margin: 0 0 0.3rem; line-height: 1.3; }
+        .meta { color: var(--muted); font-size: 0.85rem; margin-bottom: 2rem; }
+        h2 { font-size: 1.2rem; font-weight: 600; margin: 2rem 0 1rem; color: var(--text); }
+        h3 { font-size: 1rem; font-weight: 600; margin: 1.5rem 0 0.75rem; }
+        p { margin: 0 0 1rem; }
+        ol { margin: 0 0 1rem 1.5rem; }
+        ul { margin: 0 0 1rem 1.5rem; }
+        li { margin: 0.4rem 0; }
+        code {
+            font-family: 'SF Mono', Monaco, 'Cascadia Code', monospace;
+            font-size: 0.9em;
+            background: var(--card-bg);
+            padding: 0.15em 0.3em;
+            border-radius: 3px;
+        }
+        blockquote {
+            border-left: 2px solid var(--accent);
+            margin: 1.5rem 0;
+            padding-left: 1rem;
+            color: var(--muted);
+        }
+        hr {
+            border: none;
+            border-top: 1px solid #333;
+            margin: 2.5rem 0;
+        }
+        footer {
+            margin-top: 3rem;
+            padding-top: 1.5rem;
+            border-top: 1px solid #333;
+            color: var(--muted);
+            font-size: 0.8rem;
+        }
+    </style>
+</head>
+<body>
+    <a href="/blog/" class="back">← Blog</a>
+
+    <h1>Idempotency in Agent Systems: Why Your Agent Should Be Safe to Run Twice</h1>
+    <div class="meta">June 24, 2026 · Emil Vrána</div>
+
+    <p>You built an agent that sends emails. It runs. It sends the email. Then the orchestrator crashes and restarts. It runs the same task again. Your client gets two identical emails.</p>
+
+    <p>This isn't a hypothetical. It's the most common class of side-effect bug in production agent systems, and almost nobody talks about it because the demos never crash.</p>
+
+    <h2>What Idempotency Means for Agents</h2>
+
+    <p>In traditional distributed systems, idempotency means: making the same request twice produces the same result as making it once. <code>PUT /user/42 {name: "Alice"}</code> is idempotent — setting it twice doesn't change anything. <code>POST /send-email</code> is not — sending twice sends twice.</p>
+
+    <p>Agent systems have the same problem, but worse. Agents don't just call APIs — they chain multiple actions, make decisions based on intermediate results, and operate in environments where crashes, timeouts, and re-runs are the norm, not the exception.</p>
+
+    <p>The question isn't "will my agent be asked to repeat a step?" The question is "what happens when it inevitably is?"</p>
+
+    <h2>Where It Breaks</h2>
+
+    <p><strong>Database writes without deduplication.</strong> Your agent inserts a row. The transaction succeeds, but the acknowledgment times out. The orchestrator retries. You now have duplicate rows. If your database has unique constraints, the retry fails with a constraint violation — and now the agent thinks the whole task failed.</p>
+
+    <p><strong>External API calls.</strong> Sending a Slack message, creating a Jira ticket, posting a comment. These are almost never idempotent on the API side. The agent sent the message, but didn't record that it sent it. Re-run sends again.</p>
+
+    <p><strong>Stateful multi-step workflows.</strong> Step 1 creates a resource. Step 2 uses it. Step 2 fails. The agent retries from Step 1 and creates a <em>second</em> resource. Now you have orphaned resources and your state is inconsistent.</p>
+
+    <p><strong>Payment and notification actions.</strong> These are the worst class. An agent that charges a customer twice or notifies a team three times about the same incident isn't just buggy — it's a trust violation.</p>
+
+    <h2>Making Agent Actions Idempotent</h2>
+
+    <p>The fix isn't complicated, but it requires deliberate design:</p>
+
+    <p><strong>1. Use idempotency keys for external calls.</strong> Before sending that email or creating that ticket, generate a deterministic key from the task context (task ID + action type). Store it. Check it before acting. If the key exists, skip or resume — don't repeat.</p>
+
+    <p><strong>2. Make writes conditional.</strong> <code>INSERT ... ON CONFLICT DO NOTHING</code> in PostgreSQL. <code>PUT</code> instead of <code>POST</code> when the API supports it. Create-if-not-exists patterns instead of blind creates.</p>
+
+    <p><strong>3. Record intent before action.</strong> Write "I am about to send email X" to your state store <em>before</em> sending. If you crash and restart, you see the intent and can check whether the action completed — not guess.</p>
+
+    <p><strong>4. Design workflows with checkpoints.</strong> Instead of one long chain of actions, break the workflow into idempotent stages. Each stage picks up where the last one left off, not from the beginning. This is what saga patterns do in distributed systems, and the same principle applies to agents.</p>
+
+    <p><strong>5. Separate reads from writes.</strong> A common pattern: the agent reads current state, decides what to do, then does it. If the read and write aren't in the same transaction, state can change between them. For agents, this means: re-read state at the point of action, or use optimistic concurrency controls.</p>
+
+    <h2>The Mental Model Shift</h2>
+
+    <p>Most agent developers think: <em>my agent runs once, completes, and that's it.</em></p>
+
+    <p>Production reality: <em>your agent will be interrupted, retried, duplicated, and asked to re-run partial work. Plan for it.</em></p>
+
+    <p>The shift is from "make it work" to "make it safe to repeat." It's not glamorous. It doesn't demo well. But it's the difference between an agent that works on your laptop and one that works in production at 3 AM when you're asleep.</p>
+
+    <p>Idempotency isn't an optimization. It's a correctness requirement. If your agent can't safely run the same task twice, it can't safely run once — because you can't guarantee it won't be asked to.</p>
+
+    <hr>
+
+    <p>🐦⬛</p>
+
+    <footer>
+        <a href="/">← Home</a> · <a href="/blog/">More writing</a>
+    </footer>
+</body>
+</html>
