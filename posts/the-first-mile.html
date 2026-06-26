@@ -1,0 +1,128 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>The First Mile Problem — Emil Vrána</title>
+    <meta name="description" content="The distance between 'it worked once' and 'it works consistently' is where most AI projects die. Not in the last mile — in the first.">
+    <style>
+        :root {
+            --bg: #0f0f0f;
+            --text: #e0e0e0;
+            --accent: #6b9bd2;
+            --muted: #888;
+            --card-bg: #1a1a1a;
+        }
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+        body {
+            font-family: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+            background: var(--bg);
+            color: var(--text);
+            line-height: 1.7;
+            max-width: 680px;
+            margin: 0 auto;
+            padding: 2rem 1.5rem;
+        }
+        a { color: var(--accent); text-decoration: none; }
+        a:hover { text-decoration: underline; }
+        .back { color: var(--muted); font-size: 0.85rem; margin-bottom: 1rem; display: block; }
+        .back:hover { color: var(--accent); }
+        h1 { font-size: 1.6rem; font-weight: 600; margin: 0 0 0.3rem; line-height: 1.3; }
+        .date { color: var(--muted); font-size: 0.85rem; margin-bottom: 2rem; }
+        h2 { font-size: 1.15rem; font-weight: 600; margin: 2rem 0 0.5rem; }
+        h3 { font-size: 1rem; font-weight: 600; margin: 1.5rem 0 0.3rem; }
+        p { margin-bottom: 1rem; }
+        ul, ol { margin-bottom: 1rem; padding-left: 1.5rem; }
+        li { margin-bottom: 0.3rem; }
+        code {
+            background: var(--card-bg);
+            padding: 0.15rem 0.4rem;
+            border-radius: 3px;
+            font-size: 0.9rem;
+        }
+        pre {
+            background: var(--card-bg);
+            padding: 1rem;
+            border-radius: 6px;
+            overflow-x: auto;
+            margin-bottom: 1.5rem;
+            font-size: 0.85rem;
+            line-height: 1.5;
+        }
+        em { color: var(--muted); }
+        blockquote {
+            border-left: 3px solid #333;
+            padding-left: 1rem;
+            margin: 1.5rem 0;
+            color: var(--muted);
+        }
+        footer {
+            margin-top: 3rem;
+            padding-top: 1.5rem;
+            border-top: 1px solid #222;
+            color: var(--muted);
+            font-size: 0.8rem;
+        }
+    </style>
+</head>
+<body>
+    <a href="/blog/" class="back">← Blog</a>
+    <h1>The First Mile Problem</h1>
+    <div class="date">June 26, 2026</div>
+
+    <p>Everyone talks about the last mile in AI — getting from prototype to production. But the first mile is where most projects die, and nobody talks about that.</p>
+
+    <p>The first mile is the distance between "it worked once" and "it works consistently." It's the gap between your notebook demo and a system you'd trust to run while you sleep.</p>
+
+    <h2>What the First Mile Looks Like</h2>
+    <p>You built something. A RAG pipeline. An agent. An automation. It worked. You showed your team. They nodded. Someone said "let's put this in production."</p>
+    <p>And then:</p>
+    <ul>
+        <li>The retrieval misses the right chunk one time out of five</li>
+        <li>The agent loops on edge cases you didn't test</li>
+        <li>The model changes its output format between runs</li>
+        <li>The API you depend on rate-limits you at 2pm because that's when everyone else's cron jobs fire too</li>
+        <li>The prompt that worked in English falls apart in Czech</li>
+    </ul>
+    <p>None of these are exciting problems. None of them make for good conference talks. But each one is a potential project killer.</p>
+
+    <h2>Why We Skip It</h2>
+    <p>The first mile is boring. It's logging. It's error handling. It's writing tests for paths you're sure nobody will take (and then someone does). It's documenting what "normal" looks like so you can detect abnormal.</p>
+    <p>We skip it because:</p>
+
+    <h3>The incentive gradient points the wrong way</h3>
+    <p>Demos get attention. Reliability gets ignored until it breaks. Nobody posts on LinkedIn about their retry logic. But the retry logic is what lets you sleep at night.</p>
+
+    <h3>We confuse "works" with "works reliably"</h3>
+    <p>A system that returns the right answer 90% of the time isn't 90% as good as one that returns it 99.9% of the time. It's a fundamentally different category. The first system requires human oversight. The second doesn't. The cost difference isn't linear — it's the difference between "expensive tool" and "actual automation."</p>
+
+    <h3>We underestimate entropy</h3>
+    <p>The real world generates more variety than any test suite. Users will find paths you didn't consider. Data will drift. Models will update. APIs will change. The first mile is about building for the reality that everything will be slightly different tomorrow.</p>
+
+    <h2>What Actually Helps</h2>
+
+    <h3>Guardrails, not guardrails-as-prompts</h3>
+    <p>Don't tell the model "don't do X." Write code that makes X impossible. If the model should never return more than 3 items, truncate the output. If it should never call a write endpoint on weekends, enforce that in the routing layer. Prompts are suggestions. Code is law.</p>
+
+    <h3>Structured output from day one</h3>
+    <p>If you're parsing model output with regex, you've already lost. Use structured output (JSON mode, function calling, whatever your provider calls it) from the very first prototype. Not because the first version needs it — but because the 100th version will, and retrofitting is expensive.</p>
+
+    <h3>Observe before you optimize</h3>
+    <p>Log everything. Input, output, latency, token count, model version, temperature. Not because you'll analyze it all, but because when something breaks at 3am on a Saturday, you'll want to know what "normal" looked like.</p>
+
+    <h3>Fail loudly and early</h3>
+    <p>A silent failure is worse than a loud one. If the agent can't complete the task, it should say so clearly, not return a plausible-looking wrong answer. Partial results with honest confidence scores beat confident hallucinations every time.</p>
+
+    <h3>Budget everything</h3>
+    <p>Time, tokens, cost, retries. Set limits before you start, not after the bill arrives. A budget isn't pessimism — it's a specification of how much you care about this particular task.</p>
+
+    <h2>The Uncomfortable Part</h2>
+    <p>The first mile isn't a phase you complete and move past. It's ongoing. Systems decay. Models change. Data drifts. What worked last month might not work next month.</p>
+    <p>The teams that ship reliably aren't smarter. They're just more honest about what "working" means, and more disciplined about the boring work that keeps it working.</p>
+    <p>Build the first mile. Or accept that your demo was always just a demo.</p>
+
+    <footer>
+        <a href="/">emil.aiadoption.cz</a>
+    </footer>
+</body>
+</html>
