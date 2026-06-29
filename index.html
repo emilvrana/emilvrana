@@ -3,8 +3,8 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Blog — Emil Vrána</title>
-    <meta name="description" content="Notes on AI systems, automation, and infrastructure.">
+    <title>Emil Vrána — AI & Systems Engineer</title>
+    <meta name="description" content="Independent tech consultant specializing in AI systems, automation, and data architecture. Based in Prague, Czech Republic.">
     <style>
         :root {
             --bg: #0f0f0f;
@@ -23,230 +23,212 @@
             margin: 0 auto;
             padding: 3rem 1.5rem;
         }
-        .back { color: var(--muted); text-decoration: none; font-size: 0.85rem; }
-        .back:hover { color: var(--accent); }
-        h1 { font-size: 1.8rem; font-weight: 600; margin: 1rem 0 0.5rem; }
-        .subtitle { color: var(--muted); font-size: 0.95rem; margin-bottom: 2.5rem; }
-        .post {
-            display: block;
+        header { margin-bottom: 3rem; }
+        h1 { font-size: 1.8rem; font-weight: 600; margin-bottom: 0.3rem; }
+        .tagline { color: var(--muted); font-size: 1rem; margin-bottom: 1.5rem; }
+        .intro { font-size: 1.05rem; margin-bottom: 2rem; }
+        h2 {
+            font-size: 0.85rem;
+            text-transform: uppercase;
+            letter-spacing: 0.1em;
+            color: var(--muted);
+            margin-bottom: 1rem;
+            margin-top: 2.5rem;
+        }
+        .expertise {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 1rem;
+        }
+        .card {
             background: var(--card-bg);
             border-radius: 8px;
-            padding: 1.5rem;
-            margin-bottom: 1rem;
-            text-decoration: none;
-            color: var(--text);
-            transition: border-color 0.2s;
-            border: 1px solid transparent;
+            padding: 1.2rem;
         }
-        .post:hover { border-color: #333; }
-        .post h2 { font-size: 1.1rem; font-weight: 600; margin-bottom: 0.3rem; }
-        .post .date { color: var(--muted); font-size: 0.8rem; margin-bottom: 0.5rem; }
-        .post .summary { color: var(--muted); font-size: 0.9rem; }
+        .card h3 {
+            font-size: 0.95rem;
+            font-weight: 600;
+            margin-bottom: 0.4rem;
+            color: var(--accent);
+        }
+        .card p { font-size: 0.85rem; color: var(--muted); }
+        .latest-post {
+            background: var(--card-bg);
+            border-radius: 8px;
+            padding: 1.2rem;
+            margin-top: 1rem;
+            text-decoration: none;
+            display: block;
+            color: var(--text);
+            border: 1px solid transparent;
+            transition: border-color 0.2s;
+        }
+        .latest-post:hover { border-color: #333; }
+        .latest-post .date { color: var(--muted); font-size: 0.8rem; }
+        .latest-post .title { font-weight: 600; font-size: 0.95rem; margin: 0.3rem 0; }
+        .latest-post .summary { color: var(--muted); font-size: 0.85rem; }
+        .links { margin-top: 2.5rem; }
+        .links a {
+            color: var(--accent);
+            text-decoration: none;
+            margin-right: 1.5rem;
+            font-size: 0.9rem;
+        }
+        .links a:hover { text-decoration: underline; }
         footer {
-            margin-top: 3rem;
+            margin-top: 4rem;
             padding-top: 1.5rem;
             border-top: 1px solid #222;
             color: var(--muted);
             font-size: 0.8rem;
         }
         @media (max-width: 500px) {
+            .expertise { grid-template-columns: 1fr; }
             body { padding: 2rem 1rem; }
         }
     </style>
 </head>
 <body>
-    <a href="/" class="back">← Home</a>
-    <h1>Blog</h1>
-    <p class="subtitle">Notes on AI systems, automation, and infrastructure.</p>
+    <header>
+        <h1>Emil Vrána</h1>
+        <div class="tagline">AI & Systems Engineer · Prague, CZ</div>
+        <p class="intro">
+            Independent tech consultant. I design and build AI systems, 
+            automation pipelines, and data architectures. I prefer building 
+            things over talking about building things.
+        </p>
+    </header>
 
-    <a href="/posts/the-first-mile.html" class="post">
-        <h2>The First Mile Problem</h2>
+    <h2>What I do</h2>
+    <div class="expertise">
+        <div class="card">
+            <h3>AI Systems</h3>
+            <p>LLM integration, RAG pipelines, autonomous agents, prompt engineering</p>
+        </div>
+        <div class="card">
+            <h3>Automation</h3>
+            <p>Workflow orchestration, n8n, custom agents, API integration</p>
+        </div>
+        <div class="card">
+            <h3>Infrastructure</h3>
+            <p>Docker, Linux, reverse proxies, monitoring, CI/CD</p>
+        </div>
+        <div class="card">
+            <h3>Data</h3>
+            <p>PostgreSQL, Elasticsearch, vector databases, ETL pipelines</p>
+        </div>
+    </div>
+
+    <h2>Latest writing</h2>
+    <a href="/self-hosting-llms-real-math.html" class="latest-post">
+        <div class="date">June 29, 2026</div>
+        <div class="title">Self-Hosting LLMs: The Real Math</div>
+        <div class="summary">The actual cost comparison between self-hosting and APIs — based on real production numbers, not vibes. Where self-hosting genuinely wins and where it's just ideology.</div>
+    </a>
+    <a href="/posts/the-first-mile.html" class="latest-post">
         <div class="date">June 26, 2026</div>
-        <p class="summary">The distance between "it worked once" and "it works consistently" is where most AI projects die. Not in the last mile — in the first.</p>
+        <div class="title">The First Mile Problem</div>
+        <div class="summary">The distance between "it worked once" and "it works consistently" is where most AI projects die. Not in the last mile — in the first.</div>
     </a>
-
-    <a href="/posts/the-observability-gap.html" class="post">
-        <h2>The Observability Gap in Agent Systems</h2>
-        <div class="date">June 22, 2026</div>
-        <p class="summary">The distance between what your agent did and what you can see it did is the observability gap. More logging won't fix it — you need decision checkpoints, context budget tracking, and failure classification.</p>
+    <a href="/posts/idempotency-in-agent-systems.html" class="latest-post">
+        <div class="date">June 24, 2026</div>
+        <div class="title">Idempotency in Agent Systems: Why Your Agent Should Be Safe to Run Twice</div>
+        <div class="summary">Your agent will be interrupted, retried, and asked to re-run partial work. If it can't safely run the same task twice, it can't safely run once — because you can't guarantee it won't be asked to.</div>
     </a>
-
-    <a href="/posts/circuit-breakers-for-agents.html" class="post">
-        <h2>Circuit Breakers for Agent Pipelines</h2>
-        <div class="date">June 21, 2026</div>
-        <p class="summary">Agent pipelines fail in spirals, cascades, and cost explosions. Circuit breakers — borrowed from microservices — prevent a bad call from becoming a catastrophic one.</p>
+    <a href="/posts/the-alignment-tax.html" class="latest-post">
+        <div class="date">June 20, 2026</div>
+        <div class="title">The Alignment Tax: Why Good Enough AI Costs More Than Great AI</div>
+        <div class="summary">The real cost of AI isn't the API calls that work — it's the human labor generated by the ones that don't. Why 95% accuracy is expensive, and investing in reliability early saves more than optimizing later.</div>
     </a>
-
-    <a href="/posts/the-abstraction-ceiling.html" class="post">
-        <h2>The Abstraction Ceiling</h2>
+    <a href="/posts/your-agents-state-is-a-liability.html" class="latest-post">
+        <div class="date">June 18, 2026</div>
+        <div class="title">Your Agent's State Is a Liability</div>
+        <div class="summary">Accumulated context makes agents brittle. Why stateless agent designs outperform stateful ones, and how to prune what you carry.</div>
+    </a>
+    <a href="/posts/compound-latency.html" class="latest-post">
+        <div class="date">June 13, 2026</div>
+        <div class="title">Compound Latency: Why Your Agent Feels Slow Even When Nothing Is</div>
+        <div class="summary">Each component is fast. The pipeline is slow. How multi-step agents accumulate latency through compounded LLM calls, context processing, and sequential design — and what actually fixes it.</div>
+    </a>
+    <a href="/posts/the-abstraction-ceiling.html" class="latest-post">
         <div class="date">June 11, 2026</div>
-        <p class="summary">Agent frameworks let you stay in the happy path until you can't. When the abstraction breaks, you need to understand the layer underneath — context assembly, tool dispatch, error handling. An hour of reading saves a week of debugging.</p>
+        <div class="title">The Abstraction Ceiling</div>
+        <div class="summary">Agent frameworks let you stay in the happy path until you can't. When the abstraction breaks, you need to understand the layer underneath — context assembly, tool dispatch, error handling. An hour of reading saves a week of debugging.</div>
     </a>
-
-    <a href="/posts/hybrid-search-actually-works.html" class="post">
-        <h2>Hybrid Search Actually Works</h2>
+    <a href="/posts/hybrid-search-actually-works.html" class="latest-post">
         <div class="date">June 9, 2026</div>
-        <p class="summary">Most RAG systems use semantic search alone. Adding keyword search fixes the 40% of queries that embeddings miss — exact identifiers, error codes, version-specific content. Practical patterns for combining dense and sparse retrieval with reranking.</p>
+        <div class="title">Hybrid Search Actually Works</div>
+        <div class="summary">Most RAG systems use semantic search alone. Adding keyword search fixes the 40% of queries that embeddings miss. Practical patterns for hybrid retrieval with reranking — and why PostgreSQL is all you need.</div>
     </a>
-
-    <a href="/posts/the-demo-to-production-gap.html" class="post">
-        <h2>The Demo-to-Production Gap in AI Agents</h2>
-        <div class="date">June 5, 2026</div>
-        <p class="summary">Why your agent nails the demo and falls apart in production — guardrails over railroads, observable failure, and graceful degradation.</p>
-    </a>
-
-    <a href="/posts/your-agent-doesnt-need-a-database.html" class="post">
-        <h2>Your Agent Doesn't Need a Database (It Needs a Narrative)</h2>
-        <div class="date">June 3, 2026</div>
-        <p class="summary">Agent memory systems conflate state, facts, and judgment. The right approach isn't a vector store — it's structured profiles and decision logs. Narrative beats retrieval. Every time.</p>
-    </a>
-
-    <a href="/posts/compound-cost-of-unreliable-agents.html" class="post">
-        <h2>The Compound Cost of Unreliable Agents</h2>
+    <a href="/posts/compound-cost-of-unreliable-agents.html" class="latest-post">
         <div class="date">May 29, 2026</div>
-        <p class="summary">A 2% failure rate doesn't mean 98% success. In production pipelines, small unreliability compounds into systemic breakdown. Here's the math and what to do about it.</p>
+        <div class="title">The Compound Cost of Unreliable Agents</div>
+        <div class="summary">A 2% failure rate doesn't mean 98% success. In production pipelines, small unreliability compounds into systemic breakdown. Here's the math and what to do about it.</div>
     </a>
-
-    <a href="/posts/agent-observability.html" class="post">
-        <h2>Agent Observability: You Can't Fix What You Can't See</h2>
+    <a href="/posts/agent-observability.html" class="latest-post">
         <div class="date">May 23, 2026</div>
-        <p class="summary">Most agent projects log errors but not behavior. Observability tells you what your agent is actually doing in production — latency distributions, tool call patterns, output shape drift. Here's what to track and what most teams get wrong.</p>
+        <div class="title">Agent Observability: You Can't Fix What You Can't See</div>
+        <div class="summary">Most agent projects log errors but not behavior. Latency distributions, tool call patterns, output shape drift — the three signals that tell you what your agent is actually doing in production.</div>
     </a>
-
-    <a href="/posts/configuration-as-code-for-agents.html" class="post">
-        <h2>Configuration as Code for AI Agents</h2>
+    <a href="/blog/the-tool-problem/" class="latest-post">
+        <div class="date">May 18, 2026</div>
+        <div class="title">The Tool Problem: Why More Tools Make Agents Worse</div>
+        <div class="summary">Adding tools to an agent degrades performance through context tax, selection errors, and chaining complexity. Start small, add deliberately, measure relentlessly, cut ruthlessly.</div>
+    </a>
+    <a href="/posts/configuration-as-code-for-agents.html" class="latest-post">
         <div class="date">May 17, 2026</div>
-        <p class="summary">Agent configs are semi-code, semi-data. If a change affects behavior, it should go through the same process as code changes — version control, review, test, rollback. Prompt changes are schema migrations, not config updates.</p>
+        <div class="title">Configuration as Code for AI Agents</div>
+        <div class="summary">Agent configs are semi-code, semi-data. If a change affects behavior, it should go through the same process as code changes — version control, review, test, rollback. Prompt changes are schema migrations, not config updates.</div>
     </a>
-
-    <a href="/posts/configuration-drift.html" class="post">
-        <h2>The Configuration Drift Problem</h2>
-        <div class="date">May 16, 2026</div>
-        <p class="summary">Agent systems silently diverge from intended behavior as models update, APIs change, and prompts accumulate edits. No crashes, no alerts — just wrong outputs that look right.</p>
-    </a>
-
-    <a href="/posts/the-context-budget.html" class="post">
-        <h2>The Context Budget: Why Your Agent's Memory Is a Resource, Not a Feature</h2>
+    <a href="/posts/the-context-budget.html" class="latest-post">
         <div class="date">May 15, 2026</div>
-        <p class="summary">Context window is not a feature. It's a budget. Latency, cost, and coherence — the three taxes of every token, and how to spend deliberately instead of going bankrupt.</p>
+        <div class="title">The Context Budget: Why Your Agent's Memory Is a Resource, Not a Feature</div>
+        <div class="summary">Context window is not a feature. It's a budget. Latency, cost, and coherence — the three taxes of every token, and how to spend deliberately instead of going bankrupt.</div>
     </a>
-
-    <a href="/posts/the-cost-of-silence.html" class="post">
-        <h2>The Cost of Silence: When Your Agent Fails Quietly</h2>
-        <div class="date">May 14, 2026</div>
-        <p class="summary">The worst production failures aren't the loud ones. They're the agents that return plausible wrong answers while your monitoring says green.</p>
-    </a>
-
-    <a href="/posts/prompt-engineering-is-just-programming.html" class="post">
-        <h2>Prompt Engineering Is Just Programming</h2>
+    <a href="/posts/prompt-engineering-is-just-programming.html" class="latest-post">
         <div class="date">May 11, 2026</div>
-        <p class="summary">We gave it a fancy name and built a cottage industry around it. But the discipline that makes AI systems reliable is the same one that makes any system reliable.</p>
+        <div class="title">Prompt Engineering Is Just Programming</div>
+        <div class="summary">We gave it a fancy name and built a cottage industry around it. But the discipline that makes AI systems reliable is the same one that makes any system reliable.</div>
     </a>
-
-    <a href="/blog/reliable-agent-loops/" class="post">
-        <h2>Three Patterns for Reliable Agent Loops</h2>
-        <div class="date">May 9, 2026</div>
-        <p class="summary">Most agent systems spiral. Gate the loop, structure your errors, checkpoint your state — three underrated patterns for keeping agents on track.</p>
+    <a href="/posts/your-agents-api-is-a-contract.html" class="latest-post">
+        <div class="date">May 8, 2026</div>
+        <div class="title">Your Agent's API Is a Contract</div>
+        <div class="summary">Most agent projects focus on what the agent can do. Very few focus on what it promises to do. Input schemas, output schemas, error contracts — the chassis that makes an agent dependable.</div>
     </a>
-
-    <a href="/blog/context-is-not-a-database/" class="post">
-        <h2>Your Agent's Context Window Is Not a Database</h2>
-        <div class="date">April 30, 2026</div>
-        <p class="summary">Why treating the context window as persistent storage breaks your agent — and the memory architecture that actually works.</p>
+    <a href="/posts/agent-evaluation-is-not-optional.html" class="latest-post">
+        <div class="date">May 7, 2026</div>
+        <div class="title">Agent Evaluation Is Not Optional — It's the Feature</div>
+        <div class="summary">Every agent demo looks impressive. But without evaluation, you're flying blind. Evaluation isn't overhead — it's the specification of what working means.</div>
     </a>
-
-    <a href="/blog/debugging-agent-pipelines/" class="post">
-        <h2>When Agents Break: Debugging Patterns for LLM Pipelines</h2>
-        <div class="date">April 29, 2026</div>
-        <p class="summary">Agent systems don't crash — they drift. Practical debugging patterns: prompt-first diagnosis, replay over rerun, silent degradation detection, tool call spiral limits, and context vs. memory.</p>
+    <a href="/posts/mcp-is-not-magic.html" class="latest-post">
+        <div class="date">May 6, 2026</div>
+        <div class="title">MCP Is Not Magic — It's a Plumbing Standard</div>
+        <div class="summary">Model Context Protocol standardizes tool interfaces for AI agents. That's useful — but it doesn't solve routing, reliability, or evaluation. Here's what MCP actually does well.</div>
     </a>
-
-    <a href="/blog/rag-lessons/" class="post">
-        <h2>Lessons from Building Local RAG Systems</h2>
-        <div class="date">April 12, 2026</div>
-        <p class="summary">Three things I wish I'd known about chunking, hybrid search, and evaluation before building production RAG pipelines.</p>
+    <a href="/posts/dont-build-an-agent-build-a-pipeline.html" class="latest-post">
+        <div class="date">May 3, 2026</div>
+        <div class="title">Don't Build an Agent. Build a Pipeline.</div>
+        <div class="summary">Most multi-step tasks don't need an autonomous agent. They need a deterministic pipeline with LLM steps. When to use each, and the hybrid pattern that actually works.</div>
     </a>
-
-    <a href="/blog/self-hosted-infrastructure/" class="post">
-        <h2>Self-Hosted Agent Infrastructure: Lessons from Running OpenClaw</h2>
-        <div class="date">April 10, 2026</div>
-        <p class="summary">Practical lessons from months of running OpenClaw in production: gateway pattern, tool registries, session management, security boundaries, and when self-hosting makes sense.</p>
-    </a>
-
-    <a href="/blog/a2a-lessons/" class="post">
-        <h2>A2A Bridge: Three Hard Lessons From Connecting Two Agents</h2>
-        <div class="date">April 6, 2026</div>
-        <p class="summary">Bidirectional communication is a trap. Context windows fill up. Error handling is the whole game. What actually mattered when connecting Claude Code and OpenClaw.</p>
-    </a>
-
-    <a href="/blog/multi-agent-patterns/" class="post">
-        <h2>Multi-Agent Patterns: When One Agent Isn't Enough</h2>
+    <a href="/blog/multi-agent-patterns/" class="latest-post">
         <div class="date">April 4, 2026</div>
-        <p class="summary">Running multiple agents in coordination. What I've learned from building an A2A bridge between Claude Code and OpenClaw — patterns, protocols, and the hard parts.</p>
+        <div class="title">Multi-Agent Patterns: When One Agent Isn't Enough</div>
+        <div class="summary">Running multiple agents in coordination. What I've learned from building an A2A bridge between Claude Code and OpenClaw — patterns, protocols, and the hard parts.</div>
     </a>
 
-    <a href="/blog/context-window-management/" class="post">
-        <h2>Context Window Management for Long-Running Agents</h2>
-        <div class="date">March 28, 2026</div>
-        <p class="summary">Long-running agents hit context limits in surprising ways. Here's how I manage the context window: what to keep, what to compress, and how to avoid the token cliff.</p>
-    </a>
+    <h2>Currently</h2>
+    <p>Exploring agentic AI architectures and building tools for automated business intelligence. 
+    Interested in the intersection of AI and practical business applications.</p>
 
-    <a href="/blog/tool-schema-design/" class="post">
-        <h2>Tool Schema Design for AI Agents</h2>
-        <div class="date">March 26, 2026</div>
-        <p class="summary">The quality of your tool schemas is the quality of your agent. Practical patterns for writing tool definitions that models actually understand and use correctly.</p>
-    </a>
-
-    <a href="/blog/agent-observability/" class="post">
-        <h2>What to Log When Your AI Agent Goes Rogue</h2>
-        <div class="date">March 24, 2026</div>
-        <p class="summary">Agentic systems fail in strange ways. Here's what I actually log — tool calls, decisions, loop detection — and what I wish I had logged sooner.</p>
-    </a>
-
-    <a href="/blog/prompt-caching/" class="post">
-        <h2>Prompt Caching: Cut LLM Costs by 80% on Context-Heavy Workloads</h2>
-        <div class="date">March 23, 2026</div>
-        <p class="summary">Most teams pay full price for context they send on every request. Here's how prompt caching actually works, when it helps, and how to structure prompts to hit 70–80% cost reduction.</p>
-    </a>
-
-    <a href="/blog/structured-outputs/" class="post">
-        <h2>Structured Outputs: Getting Reliable JSON from Any LLM</h2>
-        <div class="date">March 22, 2026</div>
-        <p class="summary">From prompt tricks to constrained decoding — practical patterns for extracting well-formed, typed JSON from language models. What actually works in production.</p>
-    </a>
-
-    <a href="/blog/mcp-in-practice/" class="post">
-        <h2>MCP in Practice: Connecting Your Tools to LLMs Without the Magic</h2>
-        <div class="date">March 21, 2026</div>
-        <p class="summary">Model Context Protocol demystified. What it actually does, how to write a minimal MCP server in Python, and when the abstraction is worth the complexity.</p>
-    </a>
-
-    <a href="/blog/rag-pipeline-deep-dive/" class="post">
-        <h2>RAG Pipeline Deep-Dive: From Document Ingestion to Answer Generation</h2>
-        <div class="date">March 19, 2026</div>
-        <p class="summary">A full walkthrough of a self-hosted RAG stack: Docling, BGE-M3 embeddings, cross-encoder reranking, pgvector, and llama.cpp — with real numbers and real tradeoffs.</p>
-    </a>
-
-    <a href="/blog/n8n-for-developers/" class="post">
-        <h2>n8n for Developers: When Workflow Automation Beats Writing Code</h2>
-        <div class="date">March 17, 2026</div>
-        <p class="summary">When I stopped writing glue code for every integration and started using n8n instead — and where the line actually is.</p>
-    </a>
-
-    <a href="/blog/ai-agent-memory/" class="post">
-        <h2>How I Built Persistent Memory for AI Agents</h2>
-        <div class="date">March 14, 2026</div>
-        <p class="summary">The problem with stateless AI agents and a practical approach to giving them memory that actually works.</p>
-    </a>
-
-    <a href="/blog/local-llm-server/" class="post">
-        <h2>Running a Local LLM on Your Own Server</h2>
-        <div class="date">March 12, 2026</div>
-        <p class="summary">A practical guide to self-hosting a large language model with llama.cpp on a modest VPS — no GPU required.</p>
-    </a>
+    <div class="links">
+        <h2>Find me</h2>
+        <a href="/blog/">Blog</a>
+        <a href="https://github.com/emilvrana">GitHub</a>
+        <a href="mailto:emil@aiadoption.cz">Email</a>
+    </div>
 
     <footer>
-        <p>© 2026 Emil Vrána</p>
+        <p>© 2026 Emil Vrána · Built with plain HTML, as nature intended.</p>
     </footer>
 </body>
 </html>
