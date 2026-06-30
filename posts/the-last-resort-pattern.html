@@ -1,0 +1,148 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>The Last Resort Pattern — Emil Vrána</title>
+    <meta name="description" content="The most reliable agent behavior follows a pattern: try the cheapest approach first, escalate only when cheaper options can't serve the request. The last resort pattern for production AI agents.">
+    <style>
+        :root {
+            --bg: #0f0f0f;
+            --text: #e0e0e0;
+            --accent: #6b9bd2;
+            --muted: #888;
+            --card-bg: #1a1a1a;
+        }
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+        body {
+            font-family: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+            background: var(--bg);
+            color: var(--text);
+            line-height: 1.7;
+            max-width: 680px;
+            margin: 0 auto;
+            padding: 2rem 1.5rem;
+        }
+        a { color: var(--accent); text-decoration: none; }
+        a:hover { text-decoration: underline; }
+        .back { color: var(--muted); font-size: 0.85rem; margin-bottom: 1rem; display: block; }
+        .back:hover { color: var(--accent); }
+        h1 { font-size: 1.6rem; font-weight: 600; margin: 0 0 0.3rem; line-height: 1.3; }
+        .date { color: var(--muted); font-size: 0.85rem; margin-bottom: 2rem; }
+        h2 { font-size: 1.15rem; font-weight: 600; margin: 2rem 0 0.5rem; }
+        h3 { font-size: 1rem; font-weight: 600; margin: 1.5rem 0 0.3rem; }
+        p { margin-bottom: 1rem; }
+        ul, ol { margin-bottom: 1rem; padding-left: 1.5rem; }
+        li { margin-bottom: 0.3rem; }
+        code {
+            background: var(--card-bg);
+            padding: 0.15rem 0.4rem;
+            border-radius: 3px;
+            font-size: 0.9rem;
+        }
+        pre {
+            background: var(--card-bg);
+            padding: 1rem;
+            border-radius: 6px;
+            overflow-x: auto;
+            margin-bottom: 1.5rem;
+            font-size: 0.85rem;
+            line-height: 1.5;
+        }
+        em { color: var(--muted); }
+        blockquote {
+            border-left: 3px solid #333;
+            padding-left: 1rem;
+            margin: 1.5rem 0;
+            color: var(--muted);
+        }
+        footer {
+            margin-top: 3rem;
+            padding-top: 1.5rem;
+            border-top: 1px solid #222;
+            color: var(--muted);
+            font-size: 0.8rem;
+        }
+    </style>
+</head>
+<body>
+    <a href="/" class="back">← Emil Vrána</a>
+    <h1>The Last Resort Pattern: Why Your Agent Should Try Nothing Before Trying Everything</h1>
+    <div class="date">June 30, 2026</div>
+
+    <p>Most agent systems I see are greedy. Given a task, they immediately reach for the most powerful tool available. Search the database, call the LLM, hit the API — do something, anything, to produce output.</p>
+
+    <p>This is backwards. The most reliable agent behavior I've built follows a pattern I call <strong>last resort</strong>: try the cheapest, most reliable approach first. Only escalate when cheaper options genuinely can't serve the request.</p>
+
+    <p>It sounds obvious. It isn't practiced.</p>
+
+    <h2>The Problem with Greedy Agents</h2>
+    <p>Here's what a typical agent does when asked "What's our Q3 revenue?"</p>
+    <ol>
+        <li>Formulate a database query</li>
+        <li>Execute it against the data warehouse</li>
+        <li>Parse the result</li>
+        <li>Format a response</li>
+    </ol>
+    <p>Four steps, each with a failure mode. The query might be wrong. The warehouse might be slow. The result might need interpretation. Total latency: 3–8 seconds.</p>
+    <p>Now here's what the same agent could do:</p>
+    <ol>
+        <li>Check a recent cache — the finance team updated this number 2 hours ago</li>
+        <li>Return the cached value with a staleness note</li>
+    </ol>
+    <p>One step. 50ms. More reliable because it has fewer failure modes.</p>
+    <p>The greedy path isn't wrong. But it should be the last resort, not the first.</p>
+
+    <h2>The Escalation Ladder</h2>
+    <p>The pattern works by defining an escalation ladder for each class of query:</p>
+
+<pre><code>Level 0: Cached/stale data (instant, may be outdated)
+Level 1: Local lightweight query (fast, limited scope)
+Level 2: Full database query (medium, comprehensive)
+Level 3: Multi-step pipeline with reasoning (slow, most capable)</code></pre>
+
+    <p>The agent starts at the lowest level that could satisfy the request. If the result is good enough — within the user's tolerance for recency and accuracy — it stops. If not, it escalates.</p>
+    <p>The key insight: <strong>"good enough" is defined by the user's context, not by the system's maximum capability</strong>. A CEO checking quarterly numbers wants the latest. An engineer doing a rough estimate for a proposal doesn't need real-time data.</p>
+
+    <h2>When Cheap Fails</h2>
+    <p>The pattern doesn't say "always use the cheapest option." It says "try cheap first, escalate when needed."</p>
+    <p>Cheap options fail in predictable ways:</p>
+    <ul>
+        <li><strong>Stale cache</strong>: The data is right but old. Fine for trends, wrong for real-time decisions.</li>
+        <li><strong>Local queries</strong>: Fast but limited to what's indexed. Won't find cross-system correlations.</li>
+        <li><strong>Heuristics</strong>: Fast but brittle. Break when inputs drift from training data.</li>
+    </ul>
+    <p>Each failure mode is transparent — you know exactly <em>why</em> it failed and <em>what to do next</em>. Compare this to a multi-step pipeline that silently produces a plausible but wrong answer because step 2 hallucinated a join condition.</p>
+
+    <h2>The Implementation</h2>
+    <p>Three components:</p>
+
+    <h3>1. A registry of strategies, ordered by cost.</h3>
+    <p>Each strategy knows its own reliability characteristics and freshness guarantees. The agent doesn't need to reason about which one to pick — it walks the ladder.</p>
+
+    <h3>2. A quality gate at each level.</h3>
+    <p>Before returning, the result passes through a lightweight check. Does this answer the question? Is the data fresh enough for the stated context? If yes, return. If no, escalate.</p>
+    <p>The quality gate doesn't need to be complex. Often it's just: "Is this timestamp within the user's tolerance?" or "Does this match the last known value within 5%?"</p>
+
+    <h3>3. A budget that forces escalation.</h3>
+    <p>If Level 0 hasn't been updated in 24 hours and the user asked for current data, skip it. The budget isn't just about latency — it's about <em>relevance</em>. Don't waste time on strategies that can't possibly satisfy the request.</p>
+
+    <h2>The Payoff</h2>
+    <p>In production, the last resort pattern gives you three things:</p>
+    <ul>
+        <li><strong>Speed.</strong> Most queries hit cache or a lightweight path. Average latency drops 5–10x compared to always running the full pipeline.</li>
+        <li><strong>Reliability.</strong> When the database is down, your agent still answers from cache for anything that doesn't need real-time data. Partial service beats total failure.</li>
+        <li><strong>Observability.</strong> You can track which level each query reaches. If everything escalates to Level 3, your cache is cold or your heuristics are weak. This is signal you wouldn't have if every query ran the full pipeline.</li>
+    </ul>
+
+    <h2>The Counter-Argument</h2>
+    <p>"The LLM is smart enough to decide which tool to use."</p>
+    <p>Maybe. But tool selection is itself a failure-prone step. Every time the agent reasons about <em>which</em> tool to use, it can reason wrong. The last resort pattern reduces the reasoning burden: try the obvious cheap thing first, and only engage the expensive reasoning when the cheap thing demonstrably isn't enough.</p>
+    <p>This isn't about trusting the model less. It's about giving it less rope to hang itself with.</p>
+
+    <footer>
+        <p><em>Part of a series on production agent patterns. Previously: <a href="/posts/graceful-degradation-agents.html">Graceful Degradation in Agent Systems</a>, <a href="/posts/the-tool-problem.html">The Tool Problem</a>.</em></p>
+        <p style="margin-top:0.5rem"><a href="/">emil.aiadoption.cz</a></p>
+    </footer>
+</body>
+</html>
