@@ -1,0 +1,147 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>The Prompt Isn't the Product — Emil Vrána</title>
+    <meta name="description" content="Everyone's got a prompt now. The distance between a clever instruction and something that works at scale is the entire engineering stack around it.">
+    <style>
+        :root {
+            --bg: #0f0f0f;
+            --text: #e0e0e0;
+            --accent: #6b9bd2;
+            --muted: #888;
+            --card-bg: #1a1a1a;
+        }
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+        body {
+            font-family: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+            background: var(--bg);
+            color: var(--text);
+            line-height: 1.7;
+            max-width: 680px;
+            margin: 0 auto;
+            padding: 2rem 1.5rem;
+        }
+        a { color: var(--accent); text-decoration: none; }
+        a:hover { text-decoration: underline; }
+        .back { color: var(--muted); font-size: 0.85rem; margin-bottom: 1rem; display: block; }
+        .back:hover { color: var(--accent); }
+        h1 { font-size: 1.6rem; font-weight: 600; margin: 0 0 0.3rem; line-height: 1.3; }
+        .date { color: var(--muted); font-size: 0.85rem; margin-bottom: 2rem; }
+        h2 { font-size: 1.15rem; font-weight: 600; margin: 2rem 0 0.5rem; }
+        h3 { font-size: 1rem; font-weight: 600; margin: 1.5rem 0 0.3rem; }
+        p { margin-bottom: 1rem; }
+        ul, ol { margin-bottom: 1rem; padding-left: 1.5rem; }
+        li { margin-bottom: 0.3rem; }
+        code {
+            background: var(--card-bg);
+            padding: 0.15rem 0.4rem;
+            border-radius: 3px;
+            font-size: 0.9rem;
+        }
+        pre {
+            background: var(--card-bg);
+            padding: 1rem;
+            border-radius: 6px;
+            overflow-x: auto;
+            margin-bottom: 1.5rem;
+            font-size: 0.85rem;
+            line-height: 1.5;
+        }
+        em { color: var(--muted); }
+        blockquote {
+            border-left: 3px solid #333;
+            padding-left: 1rem;
+            margin: 1.5rem 0;
+            color: var(--muted);
+        }
+        footer {
+            margin-top: 3rem;
+            padding-top: 1.5rem;
+            border-top: 1px solid #222;
+            color: var(--muted);
+            font-size: 0.8rem;
+        }
+    </style>
+</head>
+<body>
+    <a href="/blog/" class="back">← Blog</a>
+    <h1>The Prompt Isn't the Product</h1>
+    <div class="date">July 4, 2026</div>
+
+    <p>Everyone's got a prompt now. A clever system message. A few-shot template. A carefully tuned instruction that makes GPT-5 or Claude or whatever model du jour do something impressive.</p>
+
+    <p>And then they try to ship it.</p>
+
+    <p>Here's what happens: the demo works beautifully. The investor is nodding. The tweet goes viral. And then real users show up with real inputs, and the whole thing falls apart — not because the prompt is bad, but because the prompt was never the product.</p>
+
+    <p>The prompt is one function in a much larger system. And if you built your product as a prompt, you don't have a product. You have a demo that breaks on edge case #7.</p>
+
+    <h2>The Demo Illusion</h2>
+
+    <p>Demos are seductive because they operate in a narrow band of inputs that you curate yourself. You pick the question. You pick the context. You know the answer looks good because you designed the scenario where it looks good.</p>
+
+    <p>This isn't dishonesty — it's just how prototypes work. The problem is when you stop there.</p>
+
+    <p>A prompt that handles 90% of cases sounds great until you realize that 10% of your traffic is thousands of users. And that 10% isn't random — it's the hard cases, the ambiguous ones, the inputs that look nothing like your carefully crafted examples. These are exactly the cases where your users need you most, and exactly where a bare prompt falls apart.</p>
+
+    <h2>What You Actually Need</h2>
+
+    <p>The distance between "prompt" and "product" is roughly the distance between a recipe and a restaurant. The recipe matters, but so does the supply chain, the kitchen, the service, and the health inspection.</p>
+
+    <p>In AI terms, that means:</p>
+
+    <h3>Input validation and normalization</h3>
+    <p>Real users don't send clean JSON. They send typos, they paste entire documents when you asked for a URL, they upload files in formats you've never heard of. Before the prompt even sees the input, something needs to clean, validate, and reshape it into something the model can work with.</p>
+
+    <h3>Context management</h3>
+    <p>The prompt isn't just the instruction — it's everything in the context window. Retrieval results, conversation history, tool definitions, formatting instructions. Each of these is a system that needs its own engineering: your RAG pipeline, your summarization strategy, your tool selection logic.</p>
+
+    <h3>Error handling</h3>
+    <p>Models fail. They hallucinate, they refuse, they timeout, they return well-formatted nonsense. A product needs fallbacks: retries with different parameters, circuit breakers that switch to a cheaper model for simple cases, human escalation paths for when the model genuinely can't handle it.</p>
+
+    <h3>Observability</h3>
+    <p>You can't fix what you can't see. Every model call should be logged — not just the input and output, but the latency, the token count, the model version, the cost. You need dashboards. You need alerts. You need to know when your prompt is working and when it's not, in real time, across thousands of calls.</p>
+
+    <h3>Evaluation</h3>
+    <p>Not "vibes-based" testing where you try a few examples and nod. Systematic evaluation with defined metrics, test sets, and regression testing. If you change one sentence in your prompt, you should be able to measure the impact. Most teams can't.</p>
+
+    <h3>Cost and latency budgets</h3>
+    <p>A prompt that takes 15 seconds and costs $0.50 per call is fine for a demo. It's a business-killing disaster at scale. You need to know your per-call economics, and you need to design your system to hit them.</p>
+
+    <h2>The Stack Around the Prompt</h2>
+
+    <p>Here's what a production AI system actually looks like:</p>
+
+    <pre>User Input
+    ↓
+Input Pipeline (validation, normalization, classification)
+    ↓
+Context Assembly (retrieval, history management, tool selection)
+    ↓
+Model Call (the prompt, finally)
+    ↓
+Output Pipeline (validation, formatting, safety checks)
+    ↓
+Error Handling (retries, fallbacks, escalation)
+    ↓
+User Output</pre>
+
+    <p>The prompt is one step in the middle. It's an important step — the core of what makes the system intelligent — but it's surrounded by engineering on both sides. Engineering that turns a clever instruction into something that works reliably, at scale, for real users.</p>
+
+    <h2>Why This Matters Now</h2>
+
+    <p>Models are getting commoditized. The gap between the best and second-best model narrows every quarter. The prompt you spent weeks crafting for GPT-4 is table stakes when GPT-5 ships with that capability built in.</p>
+
+    <p>What doesn't get commoditized is the system around it. The pipeline that makes your product reliable. The evaluation suite that lets you swap models without fear. The observability that catches problems before your users do. The engineering discipline that turns a clever idea into something that runs at scale without burning money.</p>
+
+    <p>The prompt is the easy part. Everything else is the product.</p>
+
+    <p>Stop optimizing the prompt. Start building the system.</p>
+
+    <footer>
+        <a href="/">emil.aiadoption.cz</a>
+    </footer>
+</body>
+</html>

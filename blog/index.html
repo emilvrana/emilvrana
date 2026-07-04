@@ -1,0 +1,210 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Blog — Emil Vrána</title>
+    <meta name="description" content="Notes on AI systems, automation, and infrastructure.">
+    <style>
+        :root {
+            --bg: #0f0f0f;
+            --text: #e0e0e0;
+            --accent: #6b9bd2;
+            --muted: #888;
+            --card-bg: #1a1a1a;
+        }
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+        body {
+            font-family: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+            background: var(--bg);
+            color: var(--text);
+            line-height: 1.6;
+            max-width: 720px;
+            margin: 0 auto;
+            padding: 3rem 1.5rem;
+        }
+        .back { color: var(--muted); text-decoration: none; font-size: 0.85rem; }
+        .back:hover { color: var(--accent); }
+        h1 { font-size: 1.8rem; font-weight: 600; margin: 1rem 0 0.5rem; }
+        .subtitle { color: var(--muted); font-size: 0.95rem; margin-bottom: 2.5rem; }
+        .post {
+            display: block;
+            background: var(--card-bg);
+            border-radius: 8px;
+            padding: 1.5rem;
+            margin-bottom: 1rem;
+            text-decoration: none;
+            color: var(--text);
+            transition: border-color 0.2s;
+            border: 1px solid transparent;
+        }
+        .post:hover { border-color: #333; }
+        .post h2 { font-size: 1.1rem; font-weight: 600; margin-bottom: 0.3rem; }
+        .post .date { color: var(--muted); font-size: 0.8rem; margin-bottom: 0.5rem; }
+        .post .summary { color: var(--muted); font-size: 0.9rem; }
+        footer {
+            margin-top: 3rem;
+            padding-top: 1.5rem;
+            border-top: 1px solid #222;
+            color: var(--muted);
+            font-size: 0.8rem;
+        }
+        @media (max-width: 500px) {
+            body { padding: 2rem 1rem; }
+        }
+    </style>
+</head>
+<body>
+    <a href="/" class="back">← Home</a>
+    <h1>Blog</h1>
+    <p class="subtitle">Notes on AI systems, automation, and infrastructure.</p>
+
+    <a href="/blog/the-prompt-isnt-the-product/" class="post">
+        <h2>The Prompt Isn't the Product</h2>
+        <div class="date">July 4, 2026</div>
+        <p class="summary">Everyone's got a prompt now. The distance between a clever instruction and something that works at scale is the entire engineering stack around it.</p>
+    </a>
+
+    <a href="/blog/fallback-patterns/" class="post">
+        <h2>Fallback Patterns: What Happens When Your Agent Can't</h2>
+        <div class="date">July 3, 2026</div>
+        <p class="summary">Your agent will fail. The question isn't if — it's what happens next. Patterns for graceful degradation, human escalation, and circuit breakers in AI agent systems.</p>
+    </a>
+
+    <a href="/blog/the-specification-gap/" class="post">
+        <h2>The Specification Gap</h2>
+        <div class="date">July 1, 2026</div>
+        <p class="summary">The distance between your intent and your instruction is where most agent failures actually live. Not in the model, not in the tools — in the translation from thought to prompt.</p>
+    </a>
+
+    <a href="/self-hosting-llms-real-math.html" class="post">
+        <h2>Self-Hosting LLMs: The Real Math</h2>
+        <div class="date">June 29, 2026</div>
+        <p class="summary">The actual cost comparison between self-hosting and APIs — based on real production numbers, not vibes. Where self-hosting genuinely wins and where it's just ideology.</p>
+    </a>
+
+    <a href="/blog/structured-outputs/" class="post">
+        <h2>Structured Outputs Are the Skeleton, Not the Decoration</h2>
+        <div class="date">June 19, 2026</div>
+        <p class="summary">Most teams treat structured outputs as a nice-to-have formatting layer. In practice, they're the architecture that makes LLM integration reliable. Why schemas should come before prompts.</p>
+    </a>
+
+    <a href="/blog/context-engineering/" class="post">
+        <h2>Context Engineering > Prompt Engineering</h2>
+        <div class="date">June 17, 2026</div>
+        <p class="summary">Prompt engineering is yesterday's skill. The real leverage is in context engineering — assembling the right information, tools, and constraints before the model even starts generating.</p>
+    </a>
+
+    <a href="/blog/reranking-rag/" class="post">
+        <h2>Why Your RAG Pipeline Needs Reranking</h2>
+        <div class="date">June 16, 2026</div>
+        <p class="summary">Vector search retrieves broadly. Reranking narrows precisely. Why the two-stage retrieve-then-rerank pattern is the single highest-impact improvement you can make to a RAG system.</p>
+    </a>
+
+    <a href="/blog/stop-building-agents/" class="post">
+        <h2>Stop Building Agents. Start Building Protocols.</h2>
+        <div class="date">June 8, 2026</div>
+        <p class="summary">The most reliable agent systems aren't the most autonomous ones — they're the ones with clear contracts between components. Why protocols matter more than intelligence.</p>
+    </a>
+
+    <a href="/blog/tool-count-trap/" class="post">
+        <h2>The Tool Count Trap: Why More Tools Make Your Agent Worse</h2>
+        <div class="date">May 24, 2026</div>
+        <p class="summary">Giving an agent 30 tools feels powerful. In practice, it's a recipe for confusion, latency, and wrong choices. Why fewer tools often means better agents.</p>
+    </a>
+
+    <a href="/blog/silent-failures/" class="post">
+        <h2>When Your AI Agent Goes Quiet: Detecting Silent Failures</h2>
+        <div class="date">May 12, 2026</div>
+        <p class="summary">The most dangerous agent failures aren't crashes — they're silences. How to detect agents that stop doing their job without telling anyone.</p>
+    </a>
+
+    <a href="/blog/retry-trap/" class="post">
+        <h2>The Retry Trap: Why Retrying Failed AI Calls Makes Things Worse</h2>
+        <div class="date">May 10, 2026</div>
+        <p class="summary">Most LLM failures aren't transient — they're prompt or state failures. Naive retries compound cost and context without fixing the problem. Here's what to do instead.</p>
+    </a>
+
+    <a href="/blog/ai-agent-contract/" class="post">
+        <h2>Your Agent's API Is a Contract</h2>
+        <div class="date">May 8, 2026</div>
+        <p class="summary">Most agent projects focus on what the agent can do. Very few focus on what it promises to do. Input schemas, output schemas, error contracts — the chassis that makes an agent dependable.</p>
+    </a>
+
+    <a href="/blog/agent-eval/" class="post">
+        <h2>Agent Evaluation Is Not Optional — It's the Feature</h2>
+        <div class="date">May 7, 2026</div>
+        <p class="summary">Every agent demo looks impressive. But without evaluation, you're flying blind. Evaluation isn't overhead — it's the specification of what working means.</p>
+    </a>
+
+    <a href="/blog/mcp-in-practice/" class="post">
+        <h2>MCP Is Not Magic — It's a Plumbing Standard</h2>
+        <div class="date">May 6, 2026</div>
+        <p class="summary">Model Context Protocol standardizes tool interfaces for AI agents. That's useful — but it doesn't solve routing, reliability, or evaluation. Here's what MCP actually does well.</p>
+    </a>
+
+    <a href="/blog/dont-build-an-agent/" class="post">
+        <h2>Don't Build an Agent. Build a Pipeline.</h2>
+        <div class="date">May 3, 2026</div>
+        <p class="summary">Most multi-step tasks don't need an autonomous agent. They need a deterministic pipeline with LLM steps. When to use each, and the hybrid pattern that actually works.</p>
+    </a>
+
+    <a href="/blog/multi-agent-patterns/" class="post">
+        <h2>Multi-Agent Patterns: When One Agent Isn't Enough</h2>
+        <div class="date">April 4, 2026</div>
+        <p class="summary">Running multiple agents in coordination. What I've learned from building an A2A bridge between Claude Code and OpenClaw — patterns, protocols, and the hard parts.</p>
+    </a>
+
+    <a href="/blog/context-window-management/" class="post">
+        <h2>Context Window Management for Long-Running Agents</h2>
+        <div class="date">March 28, 2026</div>
+        <p class="summary">Long-running agents hit context limits in surprising ways. Here's how I manage the context window: what to keep, what to compress, and how to avoid the token cliff.</p>
+    </a>
+
+    <a href="/blog/tool-schema-design/" class="post">
+        <h2>Tool Schema Design for AI Agents</h2>
+        <div class="date">March 26, 2026</div>
+        <p class="summary">The quality of your tool schemas is the quality of your agent. Practical patterns for writing tool definitions that models actually understand and use correctly.</p>
+    </a>
+
+    <a href="/blog/agent-observability/" class="post">
+        <h2>What to Log When Your AI Agent Goes Rogue</h2>
+        <div class="date">March 24, 2026</div>
+        <p class="summary">Agentic systems fail in strange ways. Here's what I actually log — tool calls, decisions, loop detection — and what I wish I had logged sooner.</p>
+    </a>
+
+    <a href="/blog/prompt-caching/" class="post">
+        <h2>Prompt Caching: Cut LLM Costs by 80% on Context-Heavy Workloads</h2>
+        <div class="date">March 23, 2026</div>
+        <p class="summary">Most teams pay full price for context they send on every request. Here's how prompt caching actually works, when it helps, and how to structure prompts to hit 70–80% cost reduction.</p>
+    </a>
+
+    <a href="/blog/rag-pipeline-deep-dive/" class="post">
+        <h2>RAG Pipeline Deep-Dive: From Document Ingestion to Answer Generation</h2>
+        <div class="date">March 19, 2026</div>
+        <p class="summary">A full walkthrough of a self-hosted RAG stack: Docling, BGE-M3 embeddings, cross-encoder reranking, pgvector, and llama.cpp — with real numbers and real tradeoffs.</p>
+    </a>
+
+    <a href="/blog/n8n-for-developers/" class="post">
+        <h2>n8n for Developers: When Workflow Automation Beats Writing Code</h2>
+        <div class="date">March 17, 2026</div>
+        <p class="summary">When I stopped writing glue code for every integration and started using n8n instead — and where the line actually is.</p>
+    </a>
+
+    <a href="/blog/ai-agent-memory/" class="post">
+        <h2>How I Built Persistent Memory for AI Agents</h2>
+        <div class="date">March 14, 2026</div>
+        <p class="summary">The problem with stateless AI agents and a practical approach to giving them memory that actually works.</p>
+    </a>
+
+    <a href="/blog/local-llm-server/" class="post">
+        <h2>Running a Local LLM on Your Own Server</h2>
+        <div class="date">March 12, 2026</div>
+        <p class="summary">A practical guide to self-hosting a large language model with llama.cpp on a modest VPS — no GPU required.</p>
+    </a>
+
+    <footer>
+        <p>© 2026 Emil Vrána</p>
+    </footer>
+</body>
+</html>
