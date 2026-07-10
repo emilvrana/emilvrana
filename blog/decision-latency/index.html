@@ -1,0 +1,171 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Decision Latency: The Hidden Cost of Thinking Too Much — Emil Vrána</title>
+    <meta name="description" content="Your AI agent doesn't need to think about everything. The most reliable systems make fast, local decisions and save deliberation for where it actually matters.">
+    <style>
+        :root {
+            --bg: #0f0f0f;
+            --text: #e0e0e0;
+            --accent: #6b9bd2;
+            --muted: #888;
+            --card-bg: #1a1a1a;
+        }
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+        body {
+            font-family: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+            background: var(--bg);
+            color: var(--text);
+            line-height: 1.7;
+            max-width: 680px;
+            margin: 0 auto;
+            padding: 2rem 1.5rem;
+        }
+        a { color: var(--accent); text-decoration: none; }
+        a:hover { text-decoration: underline; }
+        .back { color: var(--muted); font-size: 0.85rem; margin-bottom: 1rem; display: block; }
+        .back:hover { color: var(--accent); }
+        h1 { font-size: 1.6rem; font-weight: 600; margin: 0 0 0.3rem; line-height: 1.3; }
+        .date { color: var(--muted); font-size: 0.85rem; margin-bottom: 2rem; }
+        h2 { font-size: 1.15rem; font-weight: 600; margin: 2rem 0 0.5rem; }
+        h3 { font-size: 1rem; font-weight: 600; margin: 1.5rem 0 0.3rem; }
+        p { margin-bottom: 1rem; }
+        ul, ol { margin-bottom: 1rem; padding-left: 1.5rem; }
+        li { margin-bottom: 0.3rem; }
+        code {
+            background: var(--card-bg);
+            padding: 0.15rem 0.4rem;
+            border-radius: 3px;
+            font-size: 0.9rem;
+        }
+        pre {
+            background: var(--card-bg);
+            padding: 1rem;
+            border-radius: 6px;
+            overflow-x: auto;
+            margin-bottom: 1.5rem;
+            font-size: 0.85rem;
+            line-height: 1.5;
+        }
+        em { color: var(--muted); }
+        blockquote {
+            border-left: 3px solid #333;
+            padding-left: 1rem;
+            margin: 1.5rem 0;
+            color: var(--muted);
+        }
+        footer {
+            margin-top: 3rem;
+            padding-top: 1.5rem;
+            border-top: 1px solid #222;
+            color: var(--muted);
+            font-size: 0.8rem;
+        }
+    </style>
+</head>
+<body>
+    <a href="/blog/" class="back">← Blog</a>
+    <h1>Decision Latency: The Hidden Cost of Thinking Too Much</h1>
+    <div class="date">July 10, 2026</div>
+
+    <p>Watch an AI agent "think" for 45 seconds to decide which of two tools to call. Watch it deliberate over a formatting choice. Watch it re-read the same context three times to answer a question it could have answered on the first pass.</p>
+
+    <p>This is decision latency — the time your system spends making choices that don't warrant deliberation. And it's killing your agent's usefulness far more reliably than any hallucination.</p>
+
+    <h2>The Latency Problem Nobody Measures</h2>
+
+    <p>Everyone tracks token cost. Almost nobody tracks decision latency — the cumulative time an agent spends on routing, tool selection, context assembly, and "thinking" before it produces output.</p>
+
+    <p>Here's what a typical agent request looks like in practice:</p>
+
+    <pre>User asks a question
+    ↓ 200ms — Input classification
+    ↓ 800ms — Context retrieval (RAG)
+    ↓ 1.5s — Agent "thinks" about which tool to use
+    ↓ 2.0s — Model generates the tool call
+    ↓ 500ms — Tool execution
+    ↓ 1.2s — Agent "thinks" about what to do with the result
+    ↓ 800ms — Final response generation
+    = 7 seconds total</pre>
+
+    <p>Of those 7 seconds, 3.7 seconds — more than half — are the model deliberating over decisions that are, in most cases, deterministic. The retrieval took 800ms. The tool execution took 500ms. The "thinking" added 3.7 seconds of latency for zero reliability gain.</p>
+
+    <p>This compounds brutally. An agent that makes 5 sequential tool calls doesn't just pay this tax once — it pays it on every loop iteration. A 35-second interaction where 20 seconds is model deliberation about routine decisions is 20 seconds your user spends watching a spinner.</p>
+
+    <h2>Fast Path, Slow Path</h2>
+
+    <p>The solution isn't to make the agent less intelligent. It's to recognize that most decisions don't require intelligence at all.</p>
+
+    <p>Google has been doing this for decades. Search queries go through a fast path — cache hits, spelling corrections, query classification — before they ever hit the ranking model. The model does the hard work. The fast path handles everything else in milliseconds.</p>
+
+    <p>Your agent should work the same way:</p>
+
+    <h3>Fast path: deterministic routing</h3>
+    <ul>
+        <li><strong>Input classification:</strong> Rule-based. "This looks like a search query" → retrieval pipeline. "This looks like a computation" → code execution. "This looks like a formatting request" → template renderer. No model call needed.</li>
+        <li><strong>Tool selection:</strong> If you have 3 tools, you don't need a model to pick one. You need a routing function — a simple classifier, keyword match, or intent tag.</li>
+        <li><strong>Context assembly:</strong> Most context is static or semi-static. Pre-assemble it. Cache it. Don't reconstruct it on every request.</li>
+    </ul>
+
+    <h3>Slow path: model deliberation</h3>
+    <ul>
+        <li><strong>Novel reasoning:</strong> Questions the classifier hasn't seen before.</li>
+        <li><strong>Ambiguous cases:</strong> Where multiple tools could apply and the tradeoffs are real.</li>
+        <li><strong>Multi-step planning:</strong> Where the agent genuinely needs to reason about sequencing.</li>
+    </ul>
+
+    <p>The trick is making the fast path cover as much ground as possible. Every request that hits the slow path is an opportunity to learn a new fast path rule.</p>
+
+    <h2>The Caching Principle</h2>
+
+    <p>If your agent sees the same type of request twice and handles it the same way both times, the second time should be faster. Not because the model is faster, but because you learned from the first time.</p>
+
+    <p>This is the caching principle applied to decisions:</p>
+
+    <ol>
+        <li><strong>Observe:</strong> Log every decision the model makes — routing, tool selection, output format.</li>
+        <li><strong>Pattern:</strong> After N observations of the same pattern, extract it into a rule.</li>
+        <li><strong>Automate:</strong> Route matching requests through the rule, bypassing the model entirely.</li>
+        <li><strong>Monitor:</strong> Track accuracy. If the rule degrades, fall back to the model and re-learn.</li>
+    </ol>
+
+    <p>This is how you go from an agent that takes 7 seconds per request to one that takes 1.5 seconds for 80% of requests and 5 seconds for the remaining 20% that actually need model intelligence.</p>
+
+    <h2>Decision Budget</h2>
+
+    <p>I use a concept I call the <em>decision budget</em> — the maximum number of non-trivial model decisions allowed per request. Not token budget. Decision budget.</p>
+
+    <p>A request to "summarize this document" gets a budget of 1: one model call to produce the summary. No tool selection deliberation. No "should I retrieve more context?" No "let me re-read the document to make sure." One call. If the result isn't good enough, the fallback is a more expensive second pass — but the first pass should be fast and cheap.</p>
+
+    <p>A complex research query gets a budget of 3-5: route, retrieve, synthesize, verify, respond. Each step is deliberate. Each step is justified by the complexity of the task.</p>
+
+    <p>The budget forces you to think about which decisions matter. And most decisions, it turns out, don't.</p>
+
+    <h2>The UX of Speed</h2>
+
+    <p>Here's the thing about latency: users don't experience it as "the model is thinking." They experience it as "this thing is broken."</p>
+
+    <p>The <a href="/blog/retry-trap/">3-second rule</a> from web UX applies to agents too. Under 3 seconds feels responsive. 3-10 seconds feels slow but acceptable. Over 10 seconds and your user is reaching for the close button, no matter how brilliant the answer.</p>
+
+    <p>This isn't about making agents faster for the sake of benchmarks. It's about making them usable. An agent that delivers a good answer in 2 seconds beats an agent that delivers a perfect answer in 15 seconds — because in 15 seconds, the user has already left, tabbed away, or asked the question somewhere else.</p>
+
+    <p>Speed is a feature. Not the only feature, but the one your users notice first.</p>
+
+    <h2>What to Do Monday</h2>
+
+    <ol>
+        <li><strong>Instrument decision latency.</strong> Add timing around every model call. Not just total response time — time per decision point within the agent loop.</li>
+        <li><strong>Identify the fast path.</strong> Look at your last 1000 requests. How many followed the same routing pattern? Those are your fast path candidates.</li>
+        <li><strong>Replace deliberation with rules.</strong> For the top 3 routing decisions, replace model calls with deterministic classifiers. Measure the accuracy difference. I'll bet it's smaller than you think.</li>
+        <li><strong>Set a decision budget.</strong> Cap the number of model turns per request type. Force yourself to get the same result with fewer decisions.</li>
+    </ol>
+
+    <p>Your agent doesn't need to think about everything. The most reliable systems make fast, local decisions and save deliberation for where it actually matters. Stop paying the latency tax on choices that should be free.</p>
+
+    <footer>
+        <a href="/">emil.aiadoption.cz</a>
+    </footer>
+</body>
+</html>
