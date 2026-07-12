@@ -1,0 +1,128 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>The Integration Surface: Why Your Agent Lives at the Edges — Emil Vrána</title>
+    <meta name="description" content="The model is the easy part. The integration surface — APIs, databases, queues, file systems — is where production agents really fail. How to design contracts at the boundaries.">
+    <style>
+        :root {
+            --bg: #0f0f0f;
+            --text: #e0e0e0;
+            --accent: #6b9bd2;
+            --muted: #888;
+        }
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+        body {
+            font-family: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+            background: var(--bg);
+            color: var(--text);
+            line-height: 1.7;
+            max-width: 720px;
+            margin: 0 auto;
+            padding: 3rem 1.5rem;
+        }
+        .back { color: var(--muted); text-decoration: none; font-size: 0.85rem; }
+        .back:hover { color: var(--accent); }
+        h1 { font-size: 1.8rem; font-weight: 700; margin: 1.5rem 0 0.5rem; line-height: 1.2; }
+        .meta { color: var(--muted); font-size: 0.85rem; margin-bottom: 2rem; }
+        h2 { font-size: 1.3rem; font-weight: 600; margin: 2rem 0 0.8rem; }
+        p { margin-bottom: 1rem; }
+        ul, ol { margin: 0.5rem 0 1rem 1.5rem; }
+        li { margin-bottom: 0.4rem; }
+        strong { color: #fff; }
+        code { background: #1a1a1a; padding: 0.15rem 0.4rem; border-radius: 3px; font-size: 0.9em; }
+        pre { background: #1a1a1a; padding: 1rem; border-radius: 6px; overflow-x: auto; margin: 1rem 0; font-size: 0.9em; }
+        a { color: var(--accent); }
+        hr { border: none; border-top: 1px solid #222; margin: 2rem 0; }
+        footer { margin-top: 2rem; color: var(--muted); font-size: 0.85rem; }
+        @media (max-width: 500px) {
+            body { padding: 2rem 1rem; }
+            h1 { font-size: 1.5rem; }
+        }
+    </style>
+</head>
+<body>
+    <a href="/blog/" class="back">← Blog</a>
+    <h1>The Integration Surface: Why Your Agent Lives at the Edges</h1>
+    <div class="meta">July 12, 2026</div>
+
+    <p>Everyone focuses on the model. Which LLM, what context window, how many parameters. But here's the thing: in production, the model is the least interesting part of your agent.</p>
+
+    <p>The interesting part is everything the model <strong>touches</strong>.</p>
+
+    <p>I call it the <strong>integration surface</strong> — the sum of all APIs, databases, file systems, message queues, and human interfaces your agent reads from and writes to. And in every production agent system I've worked on, the integration surface is where the real complexity lives, where the real failures happen, and where the real engineering is required.</p>
+
+    <h2>The Model Is the Easy Part</h2>
+
+    <p>You pick a model. You write a prompt. You wire up some tools. The agent works on the first demo. The model generates reasonable text. Tools get called. Results come back.</p>
+
+    <p>Then you deploy.</p>
+
+    <p>And suddenly the model is 5% of your problems. The other 95% are:</p>
+
+    <ul>
+        <li>The API you're calling changed its response format without versioning</li>
+        <li>The database connection pool is exhausted because your agent holds transactions open across LLM calls</li>
+        <li>The webhook your agent sends to has a 30-second timeout but your LLM takes 45 seconds to respond</li>
+        <li>The file your agent wrote has UTF-8 BOM and the downstream parser chokes</li>
+        <li>The user's timezone wasn't in the prompt and now the scheduled task fires at 3 AM their time</li>
+    </ul>
+
+    <p>None of these are model problems. They're integration problems. And they're the ones that keep you up at night.</p>
+
+    <h2>Why the Integration Surface Is Hard</h2>
+
+    <p><strong>Impedance mismatch.</strong> LLMs deal in natural language. APIs deal in schemas. The translation between "the user wants last month's revenue" and <code>GET /api/reports?period=2026-06&metric=revenue&format=json</code> is where things break. Not because the model can't construct the request — it usually can — but because the error handling, pagination, rate limits, and data normalization are where the real logic lives.</p>
+
+    <p><strong>State management.</strong> Most APIs are stateful. The agent needs to know that the order was already placed, that the file was already processed, that the user already confirmed. Where does that state live? In the agent's context window? In a database? In both? When they disagree, which wins?</p>
+
+    <p><strong>Failure modes multiply.</strong> A single agent with 5 integrations has 5 independent failure surfaces. An agent that chains 5 integrations in sequence has up to 2^5 failure combinations. Your retry logic needs to understand which failure means "try again" and which means "the whole pipeline is in an inconsistent state, roll back."</p>
+
+    <p><strong>Observability gaps.</strong> You can log the LLM's input and output. But can you see what happened at the boundary between your agent and the payment processor? Between the agent and the database? The integration surface is where agents go dark — and where you need the most visibility.</p>
+
+    <h2>The Contract Is the Architecture</h2>
+
+    <p>Here's the shift: stop thinking about your agent as "an LLM with tools." Start thinking about it as <strong>a system of contracts at the boundaries.</strong></p>
+
+    <p>Each integration point is a contract. It specifies:</p>
+
+    <ul>
+        <li><strong>Shape.</strong> What goes in, what comes out. Schemas, types, required fields.</li>
+        <li><strong>Semantics.</strong> What a successful response means. What an error means. What idempotency guarantees exist.</li>
+        <li><strong>Failure.</strong> What happens when it breaks. Timeouts, retries, fallbacks, partial states.</li>
+        <li><strong>Observability.</strong> What gets logged, when, and where.</li>
+    </ul>
+
+    <p>The LLM is the component that navigates between these contracts. It's a router, a translator, a decision engine. But the contracts are the architecture.</p>
+
+    <p>Design the contracts first. Then wire the model to them.</p>
+
+    <h2>Practical Patterns</h2>
+
+    <p><strong>Schema-first integration.</strong> Define the input/output schemas for every external call before you write a single prompt. JSON Schema, Zod, Pydantic — whatever your stack uses. The model's job is to produce data that conforms to the schema. The schema's job is to reject data that doesn't.</p>
+
+    <p><strong>Idempotent writes.</strong> Every write operation your agent performs should be idempotent. If the agent calls <code>POST /api/orders</code> twice with the same idempotency key, the second call should be a no-op. This isn't optional — it's the difference between "sometimes creates duplicate orders" and "never does."</p>
+
+    <p><strong>Circuit breakers at every boundary.</strong> If an external service is down, your agent shouldn't keep hammering it. A circuit breaker pattern at each integration point prevents cascade failures and gives you time to respond.</p>
+
+    <p><strong>Structured errors.</strong> When an integration fails, return a structured error that the model can reason about. "HTTP 500" tells the model nothing. <code>{ "error": "payment_provider_timeout", "retryable": true, "suggested_delay_seconds": 60 }</code> gives the model a path forward.</p>
+
+    <p><strong>Observability at the seams.</strong> Log every integration call: what went in, what came out, how long it took, whether it succeeded. Not the LLM's internal reasoning — the actual data that crossed the boundary. That's what you'll need when things break.</p>
+
+    <h2>The Uncomfortable Truth</h2>
+
+    <p>Most agent projects fail at the integration surface. Not because the model isn't smart enough, but because connecting an LLM to real systems is systems engineering, and systems engineering is harder than prompt engineering.</p>
+
+    <p>The teams that ship reliable agents are the ones that spend 80% of their time on the integration surface and 20% on the model. Not the other way around.</p>
+
+    <p>Your agent's intelligence lives in the model. Your agent's reliability lives at the edges.</p>
+
+    <p>Design accordingly.</p>
+
+    <hr>
+    <footer>
+        <p>© 2026 Emil Vrána · <a href="/blog/">← More posts</a> · <a href="mailto:emil@aiadoption.cz">emil@aiadoption.cz</a></p>
+    </footer>
+</body>
+</html>
