@@ -1,0 +1,173 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>The Context Window Trap — Emil Vrána</title>
+    <meta name="description" content="Bigger context windows don't solve your context problem. They make it worse — if you're not paying attention to what you're stuffing in.">
+    <style>
+        :root {
+            --bg: #0f0f0f;
+            --text: #e0e0e0;
+            --accent: #6b9bd2;
+            --muted: #888;
+            --card-bg: #1a1a1a;
+        }
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+        body {
+            font-family: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+            background: var(--bg);
+            color: var(--text);
+            line-height: 1.7;
+            max-width: 680px;
+            margin: 0 auto;
+            padding: 2rem 1.5rem;
+        }
+        a { color: var(--accent); text-decoration: none; }
+        a:hover { text-decoration: underline; }
+        .back { color: var(--muted); font-size: 0.85rem; margin-bottom: 1rem; display: block; }
+        .back:hover { color: var(--accent); }
+        h1 { font-size: 1.6rem; font-weight: 600; margin: 0 0 0.3rem; line-height: 1.3; }
+        .date { color: var(--muted); font-size: 0.85rem; margin-bottom: 2rem; }
+        h2 { font-size: 1.15rem; font-weight: 600; margin: 2rem 0 0.5rem; }
+        h3 { font-size: 1rem; font-weight: 600; margin: 1.5rem 0 0.3rem; }
+        p { margin-bottom: 1rem; }
+        ul, ol { margin-bottom: 1rem; padding-left: 1.5rem; }
+        li { margin-bottom: 0.3rem; }
+        code {
+            background: var(--card-bg);
+            padding: 0.15rem 0.4rem;
+            border-radius: 3px;
+            font-size: 0.9rem;
+        }
+        pre {
+            background: var(--card-bg);
+            padding: 1rem;
+            border-radius: 6px;
+            overflow-x: auto;
+            margin-bottom: 1.5rem;
+            font-size: 0.85rem;
+            line-height: 1.5;
+        }
+        em { color: var(--muted); }
+        blockquote {
+            border-left: 3px solid #333;
+            padding-left: 1rem;
+            margin: 1.5rem 0;
+            color: var(--muted);
+        }
+        footer {
+            margin-top: 3rem;
+            padding-top: 1.5rem;
+            border-top: 1px solid #222;
+            color: var(--muted);
+            font-size: 0.8rem;
+        }
+    </style>
+</head>
+<body>
+    <a href="/blog/" class="back">← Blog</a>
+    <h1>The Context Window Trap</h1>
+    <div class="date">July 14, 2026</div>
+
+    <p>Every few months, a new model ships with a bigger context window. 128K. 200K. 1M. 2M tokens. And every time, the same thing happens: people stuff more context in, get worse results, and blame the model.</p>
+
+    <p>Here's the uncomfortable truth: bigger context windows don't solve your context problem. They amplify it. If you weren't good at selecting what matters at 4K, you'll be even worse at 200K. You'll just do it more expensively.</p>
+
+    <h2>The Lost-in-the-Middle Effect Is Real</h2>
+
+    <p>The research is clear. Models recall information at the beginning and end of a context window reasonably well. The middle? That's a wasteland. Liu et al. (2023) showed this across multiple models and tasks, and the pattern hasn't fundamentally changed with newer architectures.</p>
+
+    <p>What this means in practice: if your critical instruction is buried at position 50K out of 100K tokens, the model will treat it as a suggestion, not a constraint. If your retrieved documents are in the middle of a long context dump, the model will hallucinate around them rather than through them.</p>
+
+    <p>The fix isn't a bigger window. The fix is putting things where the model can see them.</p>
+
+    <h2>The Stuffing Reflex</h2>
+
+    <p>Watch what happens when a team gets access to a 200K context window:</p>
+
+    <ol>
+        <li><strong>Week 1:</strong> "We should be more selective about what we include."</li>
+        <li><strong>Week 2:</strong> "Well, we have the space, let's include the full documentation just in case."</li>
+        <li><strong>Week 3:</strong> "Let's add the API reference too. And the style guide. And the last 50 messages."</li>
+        <li><strong>Week 4:</strong> "Why is the model ignoring our instructions?"</li>
+    </ol>
+
+    <p>I've seen this cycle in every team that crosses the context threshold. The window becomes a justification for laziness. Instead of curating context — which is hard, important work — you dump everything in and hope the model sorts it out.</p>
+
+    <p>The model doesn't sort it out. The model averages it out. And averaging over 200K tokens of mixed-signal context produces exactly what you'd expect: mediocrity at scale.</p>
+
+    <h2>Context Budget, Not Context Ceiling</h2>
+
+    <p>I wrote about <a href="/blog/decision-latency/">decision budgets</a> for latency. The same principle applies to context: set a budget, not a ceiling.</p>
+
+    <p>A context budget works like this:</p>
+
+    <ul>
+        <li><strong>Hard limit:</strong> The maximum tokens you'll ever send. This should be significantly below the model's actual context window. 50% or less.</li>
+        <li><strong>Target:</strong> What you aim for on a typical request. Maybe 20-30% of the hard limit.</li>
+        <li><strong>Priority order:</strong> When you exceed the target, what gets cut first? What never gets cut?</li>
+    </ul>
+
+    <p>The budget forces you to make the decisions the model can't make for you. Every token you include is a token you chose. Every token you exclude is a token you deliberately decided wasn't worth the attention cost.</p>
+
+    <h2>Positioning Matters</h2>
+
+    <p>If lost-in-the-middle is real, then position is a lever:</p>
+
+    <ul>
+        <li><strong>System instructions:</strong> Always first. Never buried.</li>
+        <li><strong>Retrieved context:</strong> Put it near the beginning, not the middle. Yes, even if it means your conversation history gets split.</li>
+        <li><strong>Conversation history:</strong> Recent turns matter more. Summarize or truncate old turns rather than keeping them verbatim.</li>
+        <li><strong>Output format instructions:</strong> Repeat them at the end. The recency effect is real and free.</li>
+    </ul>
+
+    <p>This isn't a hack. It's information architecture. You wouldn't bury the most important paragraph on page 47 of a document and expect a human to find it. Treat the context window like what it is: a limited attention resource.</p>
+
+    <h2>Retrieval Quality > Retrieval Quantity</h2>
+
+    <p>The real unlock isn't bigger windows. It's better retrieval.</p>
+
+    <p>A 4K context window with 3 highly relevant documents will outperform a 200K window with 30 marginally relevant ones. Every time. Not because the model is smarter with less context — but because less noise means more of the model's capacity goes to the signal.</p>
+
+    <p>Invest in your retrieval pipeline:</p>
+
+    <ul>
+        <li><strong>Hybrid search</strong> (keyword + semantic) beats pure semantic search for most production use cases.</li>
+        <li><strong>Re-ranking</strong> is worth the latency. A cross-encoder that cuts your 20 retrieved chunks down to 5 saves more quality than any context window increase.</li>
+        <li><strong>Chunk boundaries matter.</strong> A chunk that splits a concept across two pieces is worse than a slightly longer chunk that keeps it together.</li>
+    </ul>
+
+    <p>I've seen teams spend months chasing bigger context windows when 2 days of work on their retrieval pipeline would have solved their problem. The window is rarely the bottleneck. What you put in it usually is.</p>
+
+    <h2>The Compression Discipline</h2>
+
+    <p>Here's a practice that's changed how I build agent systems: before adding context, try removing it.</p>
+
+    <p>Take your current prompt. Cut it in half. Run your test suite. If it still works — which it probably will — you've just discovered that half your context was noise.</p>
+
+    <p>Cut it in half again. Keep going until it breaks. Now you know where the real information is. Build back up from that minimum, adding only what's demonstrably necessary.</p>
+
+    <p>This discipline does something important: it teaches you what your model actually needs. Not what you think it needs. Not what makes you feel safe. What it actually needs to produce the output you want.</p>
+
+    <p>MOST teams discover that the model needs far less context than they assumed. The "safety padding" of extra documents, redundant instructions, and full conversation history isn't helping. It's diluting.</p>
+
+    <h2>What to Do Monday</h2>
+
+    <ol>
+        <li><strong>Set a context budget.</strong> Pick a number 50% below your model's context window. That's your hard limit. Your target is half of that.</li>
+        <li><strong>Audit your current prompts.</strong> Measure how much context you're actually sending per request. I'll bet it's more than you think.</li>
+        <li><strong>Run the compression test.</strong> Cut your context in half. Then half again. Find the minimum viable context for your most common request types.</li>
+        <li><strong>Fix positioning.</strong> Move system instructions to the top. Move format instructions to the bottom. Summarize old conversation turns. Stop burying important things in the middle.</li>
+        <li><strong>Invest in retrieval.</strong> Before you ask for a bigger context window, ask whether better retrieval would solve the same problem with less noise.</li>
+    </ol>
+
+    <p>Bigger context windows are a tool, not a solution. Used well, they let you handle genuinely complex tasks that need extensive reference material. Used poorly — which is the default — they become a dumping ground that degrades every aspect of your system's performance.</p>
+
+    <p>Be deliberate about what goes in. Be ruthless about what stays out. The quality of your context is the quality of your output.</p>
+
+    <footer>
+        <a href="/">emil.aiadoption.cz</a>
+    </footer>
+</body>
+</html>
