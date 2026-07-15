@@ -1,0 +1,121 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Stop Optimizing the Happy Path — Emil Vrána</title>
+    <meta name="description" content="The happy path is the easy 20% of your engineering effort. The unhappy paths — error handling, fallbacks, validation — are the 80% that determines whether your agent is reliable or just impressive.">
+    <style>
+        :root {
+            --bg: #0f0f0f;
+            --text: #e0e0e0;
+            --accent: #6b9bd2;
+            --muted: #888;
+            --card-bg: #1a1a1a;
+        }
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+        body {
+            font-family: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+            background: var(--bg);
+            color: var(--text);
+            line-height: 1.7;
+            max-width: 680px;
+            margin: 0 auto;
+            padding: 2rem 1.5rem;
+        }
+        a { color: var(--accent); text-decoration: none; }
+        a:hover { text-decoration: underline; }
+        .back { color: var(--muted); font-size: 0.85rem; margin-bottom: 1rem; display: block; }
+        .back:hover { color: var(--accent); }
+        h1 { font-size: 1.6rem; font-weight: 600; margin: 0 0 0.3rem; line-height: 1.3; }
+        .date { color: var(--muted); font-size: 0.85rem; margin-bottom: 2rem; }
+        h2 { font-size: 1.15rem; font-weight: 600; margin: 2rem 0 0.5rem; }
+        p { margin-bottom: 1rem; }
+        ul, ol { margin-bottom: 1rem; padding-left: 1.5rem; }
+        li { margin-bottom: 0.3rem; }
+        strong { color: #fff; }
+        code {
+            background: var(--card-bg);
+            padding: 0.15rem 0.4rem;
+            border-radius: 3px;
+            font-size: 0.9rem;
+        }
+        blockquote {
+            border-left: 3px solid #333;
+            padding-left: 1rem;
+            margin: 1.5rem 0;
+            color: var(--muted);
+        }
+        footer {
+            margin-top: 3rem;
+            padding-top: 1.5rem;
+            border-top: 1px solid #222;
+            color: var(--muted);
+            font-size: 0.8rem;
+        }
+        @media (max-width: 500px) {
+            body { padding: 2rem 1rem; }
+            h1 { font-size: 1.4rem; }
+        }
+    </style>
+</head>
+<body>
+    <a href="/blog/" class="back">← Blog</a>
+    <h1>Stop Optimizing the Happy Path</h1>
+    <div class="date">July 15, 2026</div>
+
+    <p>Most AI agent engineering focuses on what happens when everything works. The prompt is clear, the model responds correctly, the tool returns what you expect, the output is valid. On that path, everything looks great.</p>
+
+    <p>But that's not where your agent lives most of the time.</p>
+
+    <h2>The happy path is the demo path</h2>
+
+    <p>Every agent demo follows the happy path. You show the prompt, the model calls the right tool, the result comes back clean, and the agent produces a polished answer. Impressive. Convincing. And fundamentally misleading.</p>
+
+    <p>Because in production, the happy path might be 60% of your traffic. Or 40%. Or less. The rest — the model calls the wrong tool, the API returns a 503, the context window fills up, the user asks something ambiguous — that's where your agent actually earns its keep.</p>
+
+    <h2>What breaks, and where</h2>
+
+    <p>The unhappy paths aren't random. They cluster into predictable categories:</p>
+
+    <p><strong>Model failures.</strong> The model misunderstands the intent, picks the wrong tool, or produces output that doesn't match your schema. These are the failures everyone worries about and few handle well.</p>
+
+    <p><strong>System failures.</strong> The tool is down, the database is slow, the API returns unexpected data. These are the failures everyone assumes someone else is handling.</p>
+
+    <p><strong>Edge cases.</strong> The user asks something just outside the agent's scope, provides incomplete information, or contradicts themselves mid-conversation. These are the failures that reveal whether your agent has graceful boundaries or just collapses.</p>
+
+    <p>Each category needs a different response. But they share one thing: the happy path code won't help you.</p>
+
+    <h2>The 80/20 inversion</h2>
+
+    <p>Here's the uncomfortable truth: the happy path is the easy 20% of your engineering effort. The unhappy paths — error handling, fallbacks, validation, retry logic, circuit breakers, observability — that's the 80% that determines whether your agent is reliable or just impressive.</p>
+
+    <p>Most teams get this backwards. They spend 80% of their time polishing the prompt, tuning the happy path, making the demo better. Then they bolt on error handling as an afterthought.</p>
+
+    <p>The result: an agent that looks great in testing and falls apart in production. Because production is where the unhappy paths live.</p>
+
+    <h2>What optimizing the unhappy path looks like</h2>
+
+    <p>Start with failure modes, not features:</p>
+
+    <p><strong>Define what "broken" means.</strong> Before you write a single prompt, write down the five most likely failure modes and what your agent should do in each. This is your failure spec, and it matters as much as your feature spec.</p>
+
+    <p><strong>Make failure visible.</strong> If your agent can fail silently, it will. Log decisions, not just outputs. Track whether each tool call succeeded, whether the output matched expectation, whether the response was delivered within your time budget.</p>
+
+    <p><strong>Design fallbacks, not just retries.</strong> Most LLM failures aren't transient — retrying a bad prompt with the same context produces the same bad result. Have a real fallback: degrade to a simpler response, escalate to a human, or return an honest "I can't do this" instead of a confident hallucination.</p>
+
+    <p><strong>Test the unhappy paths.</strong> Write tests for your failure modes. Not "does the agent work when everything is fine" — "does the agent handle a timeout, a malformed response, an ambiguous request." If you only test the happy path, you only know your agent works in demos.</p>
+
+    <h2>The real metric</h2>
+
+    <p>The measure of a production agent isn't how well it works when everything goes right. It's how gracefully it handles everything that goes wrong.</p>
+
+    <p>A reliable agent doesn't avoid failure — it's transparent about it, contains it, and recovers from it. The happy path is necessary but insufficient. The unhappy path is where reliability lives.</p>
+
+    <p>Stop optimizing the demo. Start optimizing for the 40% that actually tests your architecture.</p>
+
+    <footer>
+        <a href="/">emil.aiadoption.cz</a>
+    </footer>
+</body>
+</html>
