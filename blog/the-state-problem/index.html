@@ -1,0 +1,167 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>The State Problem: Why Your Agent Forgets — Emil Vrána</title>
+    <meta name="description" content="The model isn't the bottleneck. State management is. Most agent failures trace back to stale, missing, or contradictory state — and most teams treat it as an afterthought.">
+    <style>
+        :root {
+            --bg: #0f0f0f;
+            --text: #e0e0e0;
+            --accent: #6b9bd2;
+            --muted: #888;
+            --card-bg: #1a1a1a;
+        }
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+        body {
+            font-family: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+            background: var(--bg);
+            color: var(--text);
+            line-height: 1.7;
+            max-width: 680px;
+            margin: 0 auto;
+            padding: 2rem 1.5rem;
+        }
+        a { color: var(--accent); text-decoration: none; }
+        a:hover { text-decoration: underline; }
+        .back { color: var(--muted); font-size: 0.85rem; margin-bottom: 1rem; display: block; }
+        .back:hover { color: var(--accent); }
+        h1 { font-size: 1.6rem; font-weight: 600; margin: 0 0 0.3rem; line-height: 1.3; }
+        .date { color: var(--muted); font-size: 0.85rem; margin-bottom: 2rem; }
+        h2 { font-size: 1.15rem; font-weight: 600; margin: 2rem 0 0.5rem; }
+        h3 { font-size: 1rem; font-weight: 600; margin: 1.5rem 0 0.3rem; }
+        p { margin-bottom: 1rem; }
+        ul, ol { margin-bottom: 1rem; padding-left: 1.5rem; }
+        li { margin-bottom: 0.3rem; }
+        code {
+            background: var(--card-bg);
+            padding: 0.15rem 0.4rem;
+            border-radius: 3px;
+            font-size: 0.9rem;
+        }
+        pre {
+            background: var(--card-bg);
+            padding: 1rem;
+            border-radius: 6px;
+            overflow-x: auto;
+            margin-bottom: 1.5rem;
+            font-size: 0.85rem;
+            line-height: 1.5;
+        }
+        em { color: var(--muted); }
+        blockquote {
+            border-left: 3px solid #333;
+            padding-left: 1rem;
+            margin: 1.5rem 0;
+            color: var(--muted);
+        }
+        footer {
+            margin-top: 3rem;
+            padding-top: 1.5rem;
+            border-top: 1px solid #222;
+            color: var(--muted);
+            font-size: 0.8rem;
+        }
+    </style>
+</head>
+<body>
+    <a href="/blog/" class="back">← Blog</a>
+    <h1>The State Problem: Why Your Agent Forgets</h1>
+    <div class="date">July 16, 2026</div>
+
+    <p>Watch a production agent for a week and you'll notice something: the model rarely fails in isolation. What fails is <em>state</em>. The context that was supposed to be there but wasn't. The preference that was set three turns ago and silently dropped. The tool result that got truncated because something else consumed half the window.</p>
+
+    <p>We obsess over model quality — benchmarks, fine-tuning, prompt engineering. But the model is the easy part. The hard part is keeping the right state in front of it at the right time.</p>
+
+    <h2>The Three Kinds of State</h2>
+
+    <p>Every agent system deals with three distinct kinds of state, and conflating them is where most problems begin.</p>
+
+    <h3>1. Conversation state</h3>
+    <p>The message history. What the user said, what the agent replied, what tools were called. This is what the context window holds. Most teams think this is the only state that matters. It's not — it's the one that expires fastest.</p>
+
+    <h3>2. Task state</h3>
+    <p>Where we are in the current workflow. What step we're on, what's been completed, what's pending, what failed. This often lives in the agent's prompt as implicit context: "You are on step 3 of 5." When the prompt is truncated or rewritten, this state evaporates.</p>
+
+    <h3>3. World state</h3>
+    <p>Everything outside the conversation that the agent needs to know: user preferences, account settings, system status, recent events. This is the stuff that was true before the conversation started and will still be true after it ends. It's also the stuff most teams forget to inject consistently.</p>
+
+    <p>When an agent produces wrong output, the diagnosis usually looks like this: the model was fine, but it was working with stale conversation state, missing task state, or no world state at all.</p>
+
+    <h2>The Context Window Is Not a Database</h2>
+
+    <p>I've said this before, but it bears repeating: the context window is a <em>transmission medium</em>, not a storage layer. It's a pipe, not a tank.</p>
+
+    <p>The practical consequence: you cannot rely on the context window to maintain state across a long conversation. Not because the window is too small (it's often too large, which creates its own problems). Because the model processes the window fresh on every turn. There is no accumulated understanding. There is no learning within a session. There is only: "here's everything I've been given, what do I output now?"</p>
+
+    <p>This means your state management has to be <em>external</em> to the context window. The window carries state <em>into</em> the model. It does not store state <em>for</em> the model.</p>
+
+    <h2>The Staleness Curve</h2>
+
+    <p>State degrades predictably. The longer it sits without being refreshed, the less useful it becomes:</p>
+
+    <ul>
+        <li><strong>Conversation state:</strong> Useful for ~10-20 turns. After that, early turns add noise, not signal. The model re-reads old messages and over-weights them.</li>
+        <li><strong>Task state:</strong> Useful until the task changes. After a pivot or error recovery, stale task state is actively harmful — the agent tries to resume a task that no longer applies.</li>
+        <li><strong>World state:</strong> Useful until the world changes. This varies by domain — stock prices are stale in seconds, user preferences might be stable for months.</li>
+    </ul>
+
+    <p>The staleness curve means your state management needs to be <em>active</em>, not passive. You don't just write state once and hope. You refresh, compress, and prune on every relevant event.</p>
+
+    <h2>Practical State Management</h2>
+
+    <p>Here's what actually works, based on building and running agents in production:</p>
+
+    <h3>Separate storage from transmission</h3>
+    <p>Keep your authoritative state in a proper data store — a database, a key-value store, a file. The context window is a <em>view</em> of that state, assembled fresh on every turn. Never read state from the context window and assume it's current. Read it from your store.</p>
+
+    <h3>Summarize early, summarize often</h3>
+    <p>Instead of letting conversation history grow until it hits the token limit, summarize proactively. After every 5-10 turns, compress the history into a structured summary: what was requested, what was done, what's pending, what failed. The summary replaces the raw history in the context window, not supplements it.</p>
+
+    <p>The key discipline: the summary must be <em>structured</em>, not narrative. "User asked for X, I did Y, result was Z" is a summary. "We discussed several options and the user seemed interested in the first one" is not — it's noise that the model will misinterpret.</p>
+
+    <h3>Inject world state explicitly</h3>
+    <p>Don't assume the model knows anything about the world it didn't learn in this conversation. If the user's timezone matters, inject it. If their subscription tier limits which actions they can take, inject that. If there's a known incident affecting the system, inject that too.</p>
+
+    <p>This injection should happen on <em>every</em> turn, not just the first one. Because the model doesn't remember the first turn — it re-processes the entire context window from scratch. If world state was only in turn 1, it's competing with 20 turns of conversation for attention.</p>
+
+    <h3>Make task state explicit and mutable</h3>
+    <p>Don't embed task state in the prompt as prose ("You are on step 3"). Make it a structured object that the agent can read and update:</p>
+
+    <pre>task_state = {
+  current_step: "validate_input",
+  completed_steps: ["parse_request", "check_permissions"],
+  failed_steps: [],
+  pending: ["execute_action", "confirm_result"],
+  retries: 0
+}</pre>
+
+    <p>This does two things: it makes state inspectable from outside the agent (you can log it, alert on it, debug it), and it makes it replaceable (you can reset, rollback, or fork task state without rewriting the entire context window).</p>
+
+    <h2>The Litmus Test</h2>
+
+    <p>Here's a simple test for whether your agent has a state problem:</p>
+
+    <p>Open a conversation. Have the agent do something non-trivial — three or four tool calls, a multi-step task. Then ask: "What did you just do, and why?"</p>
+
+    <p>If the answer is wrong, incomplete, or contradicts what actually happened, you have a state problem. The model isn't failing. The state it's working from is wrong.</p>
+
+    <p>Most agents fail this test after 10+ turns. Not because the model is bad at summarizing — because the state was never being managed properly in the first place.</p>
+
+    <h2>What to Do Monday</h2>
+
+    <ol>
+        <li><strong>Audit your state surfaces.</strong> List every piece of state your agent relies on. Classify each as conversation, task, or world state. Note where it's stored and when it's refreshed. You'll find state that's never refreshed, state that's stored in the wrong place, and state that doesn't exist at all but the agent assumes it does.</li>
+        <li><strong>Move task state out of the prompt.</strong> Replace prose descriptions with structured state objects. Make them the single source of truth for where the agent is in a workflow.</li>
+        <li><strong>Add a state refresh step.</strong> Before every model call, explicitly refresh world state and validate task state. This costs a few milliseconds. It saves hours of debugging agent drift.</li>
+        <li><strong>Run the litmus test.</strong> After 10 turns, ask your agent what it did. If it can't tell you accurately, your state management needs work — not your model.</li>
+    </ol>
+
+    <p>The model is the least of your problems. State is where agent systems actually live or die. Treat it like the critical infrastructure it is — not like an afterthought you'll "get to later."</p>
+
+    <footer>
+        <a href="/">emil.aiadoption.cz</a>
+    </footer>
+</body>
+</html>
