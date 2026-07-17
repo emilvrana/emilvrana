@@ -1,0 +1,147 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>The Feedback Loop Tax — Emil Vrána</title>
+    <meta name="description" content="Every AI system generates feedback loops. Most are invisible, and most are expensive. How accidental loops degrade your agent over time — and how to break them.">
+    <style>
+        :root {
+            --bg: #0f0f0f;
+            --text: #e0e0e0;
+            --accent: #6b9bd2;
+            --muted: #888;
+            --card-bg: #1a1a1a;
+        }
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+        body {
+            font-family: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+            background: var(--bg);
+            color: var(--text);
+            line-height: 1.7;
+            max-width: 680px;
+            margin: 0 auto;
+            padding: 2rem 1.5rem;
+        }
+        a { color: var(--accent); text-decoration: none; }
+        a:hover { text-decoration: underline; }
+        .back { color: var(--muted); font-size: 0.85rem; margin-bottom: 1rem; display: block; }
+        .back:hover { color: var(--accent); }
+        h1 { font-size: 1.6rem; font-weight: 600; margin: 0 0 0.3rem; line-height: 1.3; }
+        .date { color: var(--muted); font-size: 0.85rem; margin-bottom: 2rem; }
+        h2 { font-size: 1.15rem; font-weight: 600; margin: 2rem 0 0.5rem; }
+        h3 { font-size: 1rem; font-weight: 600; margin: 1.5rem 0 0.3rem; }
+        p { margin-bottom: 1rem; }
+        ul, ol { margin-bottom: 1rem; padding-left: 1.5rem; }
+        li { margin-bottom: 0.3rem; }
+        code {
+            background: var(--card-bg);
+            padding: 0.15rem 0.4rem;
+            border-radius: 3px;
+            font-size: 0.9rem;
+        }
+        pre {
+            background: var(--card-bg);
+            padding: 1rem;
+            border-radius: 6px;
+            overflow-x: auto;
+            margin-bottom: 1.5rem;
+            font-size: 0.85rem;
+            line-height: 1.5;
+        }
+        em { color: var(--muted); }
+        blockquote {
+            border-left: 3px solid #333;
+            padding-left: 1rem;
+            margin: 1.5rem 0;
+            color: var(--muted);
+        }
+        footer {
+            margin-top: 3rem;
+            padding-top: 1.5rem;
+            border-top: 1px solid #222;
+            color: var(--muted);
+            font-size: 0.8rem;
+        }
+    </style>
+</head>
+<body>
+    <a href="/blog/" class="back">← Blog</a>
+    <h1>The Feedback Loop Tax</h1>
+    <div class="date">July 17, 2026</div>
+
+    <p>Every AI system generates feedback loops. Most of them are invisible, and most of them are expensive.</p>
+
+    <p>A feedback loop in an AI system is any cycle where the output of the system becomes part of its input. Some are intentional — reinforcement learning, RLHF, evaluation pipelines. Others are accidental — model outputs polluting training data, agents reading their own logs, users adapting to model quirks in ways that reinforce those quirks.</p>
+
+    <p>The intentional loops are expensive by design. The accidental loops are expensive by surprise. And both of them compound.</p>
+
+    <h2>The Tax You Don't See</h2>
+
+    <p>Here's a pattern I see repeatedly:</p>
+
+    <ol>
+        <li>Deploy an agent. It works well on the first 100 tasks.</li>
+        <li>The agent generates outputs — summaries, classifications, decisions — that get stored somewhere.</li>
+        <li>Those outputs become context for future runs. The agent starts seeing its own prior work.</li>
+        <li>Subtle biases in the initial outputs get reinforced. The agent converges on a narrower and narrower view of what "correct" looks like.</li>
+        <li>Nobody notices because the degradation is gradual and the agent still produces plausible-looking output.</li>
+    </ol>
+
+    <p>This is the feedback loop tax: the invisible cost of a system gradually eating its own tail.</p>
+
+    <p>It shows up in three places.</p>
+
+    <h3>Model output as training data</h3>
+    <p>You fine-tune a model on user interactions. The model gets better at what it already does well, and worse at edge cases it avoided. The next fine-tuning cycle amplifies this. After three cycles, you've built a model that's very confident and very narrow.</p>
+
+    <h3>Agent context as prior</h3>
+    <p>An agent reads its own past decisions to inform new ones. "Last time I classified this as X, so X is probably right again." This isn't reasoning — it's anchoring. The agent isn't learning from outcomes. It's learning from its own past guesses, treating them as ground truth.</p>
+
+    <h3>User behavior as signal</h3>
+    <p>Users adapt to your model's strengths. If the model is good at Python but weak at Rust, users stop asking it about Rust. Your evaluation metrics improve — not because the model got better at Rust, but because nobody asks anymore. The metrics lie.</p>
+
+    <h2>The Math of Loop Decay</h2>
+
+    <p>Feedback loops in AI systems don't cause catastrophic failure. They cause something worse: slow, invisible degradation.</p>
+
+    <p>Imagine your agent has a 5% error rate on a particular task type. Each time it processes that task type, there's a 5% chance it produces a wrong answer that gets stored and referenced later. That wrong answer becomes part of the context for future decisions.</p>
+
+    <p>After N cycles, the error rate isn't 5%. It's closer to 5% × (1 + decay factor). The decay factor depends on how often the agent references its own past outputs, how much weight it gives them, and how quickly wrong answers propagate through the system.</p>
+
+    <p>In practice, I've seen systems with 5% initial error rates degrade to 15–20% effective error rates over 3–6 months — entirely through feedback loops, with no change in the underlying model.</p>
+
+    <h2>Breaking the Loop</h2>
+
+    <p>The solution isn't to avoid feedback loops entirely. That's impossible in any system that learns. The solution is to make the loops visible and to inject correction signals.</p>
+
+    <h3>Separate generation from validation</h3>
+    <p>Never let the same system that produces an output be the sole judge of that output's quality. Build independent evaluation. This can be a simpler model, a rule-based system, or human review — but it has to be outside the loop.</p>
+
+    <h3>Audit what your agent reads</h3>
+    <p>Most agent systems I see have a context window that grows organically. The agent pulls in conversation history, tool results, prior decisions, documents, logs. Nobody audits what's in there. Start auditing. If your agent is reading its own past outputs without an explicit reason, you have an accidental feedback loop.</p>
+
+    <h3>Inject noise on purpose</h3>
+    <p>Counterintuitive but effective: deliberately introduce variation into your system. Don't always rank results by the same metric. Don't always select the top-k most similar documents. Don't always use the same model for the same task. A small amount of controlled randomness prevents convergence.</p>
+
+    <h3>Measure against held-out ground truth</h3>
+    <p>Keep a set of tasks with known correct answers. Run them regularly. Don't just check if the system produces plausible output — check if it produces correct output compared to a standard that doesn't change.</p>
+
+    <h3>Quarantine self-referential data</h3>
+    <p>If your agent's past decisions are stored as context, tag them as such. Then weight them lower than external, verified data. "The agent previously said X" should carry less weight than "the documentation says Y."</p>
+
+    <h2>The Meta-Pattern</h2>
+
+    <p>The feedback loop tax is a special case of a broader principle: any system that optimizes against its own output without external correction will converge. This is true for language models, recommendation engines, ranking algorithms, and economic markets.</p>
+
+    <p>In machine learning, we call this distribution shift. In economics, we call it a bubble. In AI systems, we call it "the model seems fine" — until it isn't.</p>
+
+    <p>The fix is always the same: external grounding. A system needs input from outside its own output loop. Not constantly, but regularly enough to prevent drift.</p>
+
+    <p>Build your AI systems with escape hatches — independent evaluation, external benchmarks, human review checkpoints, and data freshness policies. The loops will form whether you plan for them or not. The question is whether you've built in the mechanisms to break them before the tax compounds.</p>
+
+    <footer>
+        <a href="/">emil.aiadoption.cz</a>
+    </footer>
+</body>
+</html>
