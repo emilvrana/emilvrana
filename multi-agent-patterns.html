@@ -4,7 +4,7 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Multi-Agent Patterns: When One Agent Isn't Enough — Emil Vrána</title>
-    <meta name="description" content="Running multiple agents in coordination. What I've learned from building an A2A bridge between Claude Code and OpenClaw — patterns, protocols, and the hard parts.">
+    <meta name="description" content="Running multiple agents in coordination. What I've learned from building an A2A bridge between Claude Code and my own agent runtime — patterns, protocols, and the hard parts.">
     <style>
         *, *::before, *::after { box-sizing: border-box; }
         body {
@@ -59,11 +59,11 @@
 
     <p>Most agent tutorials stop at the single-agent case. You build a chatbot, a code assistant, a RAG system. It works in isolation. But real production systems rarely run alone — they integrate with other agents, human workflows, and existing infrastructure.</p>
 
-    <p>I've spent the last few weeks building an A2A (Agent-to-Agent) bridge between Claude Code (running Opus 4.6) and OpenClaw (my local agent system). The goal was simple: let the two systems delegate tasks to each other based on their strengths. What I found is that the hard part isn't the protocol — it's deciding <em>when</em> to hand off, <em>what</em> to pass along, and <em>how</em> to maintain continuity.</p>
+    <p>I've spent the last few weeks building an A2A (Agent-to-Agent) bridge between Claude Code (running Opus 4.6) and my own local agent runtime. The goal was simple: let the two systems delegate tasks to each other based on their strengths. What I found is that the hard part isn't the protocol — it's deciding <em>when</em> to hand off, <em>what</em> to pass along, and <em>how</em> to maintain continuity.</p>
 
     <h2>The case for multiple agents</h2>
 
-    <p>A single agent has a fixed context window, a fixed knowledge cutoff, and fixed capabilities. It can't simultaneously be great at everything. Claude Code (Opus) is excellent at complex reasoning and architecture but expensive and slower. Sonnet is fast and cheap but occasionally makes architectural mistakes. My local system (OpenClaw) has tool access, long-term memory, and can run indefinitely — but it's running a smaller model and struggles with complex multi-step reasoning.</p>
+    <p>A single agent has a fixed context window, a fixed knowledge cutoff, and fixed capabilities. It can't simultaneously be great at everything. Claude Code (Opus) is excellent at complex reasoning and architecture but expensive and slower. Sonnet is fast and cheap but occasionally makes architectural mistakes. My local system has tool access, long-term memory, and can run indefinitely — but it's running a smaller model and struggles with complex multi-step reasoning.</p>
 
     <p>The obvious solution: route tasks to the agent best suited for them. But this isn't as simple as "hard tasks go to Opus, easy tasks go to Sonnet." Task complexity isn't always obvious upfront. And sometimes a task starts simple and gets complicated, or vice versa.</p>
 
@@ -88,7 +88,7 @@
     <p>One agent acts as a dispatcher. It doesn't do the work itself — it just classifies incoming requests and routes them. This works well when you have a clear taxonomy of tasks and your routing logic is stable.</p>
 
     <pre><code>{"complexity": "high", "domain": "architecture", "suggested_handler": "opus"}
-{"complexity": "low", "domain": "infrastructure", "suggested_handler": "openclaw"}</code></pre>
+{"complexity": "low", "domain": "infrastructure", "suggested_handler": "local"}</code></pre>
 
     <p>The downside: the router can become a bottleneck, and its classification errors are expensive (wrong routing means either overpaying for simple tasks or getting poor results on hard ones).</p>
 
@@ -97,7 +97,7 @@
     <p>Start with the cheap/fast agent. If it fails confidence checks or hits complexity walls, escalate. This is what I'm using now:</p>
 
     <ul>
-        <li>OpenClaw (Sonnet) tries the task first</li>
+        <li>The local agent (Sonnet) tries the task first</li>
         <li>If it detects complexity > threshold, it escalates to Claude Code</li>
         <li>Claude Code can delegate back for tool execution</li>
     </ul>
@@ -125,7 +125,7 @@
 
     <h3>Tool access asymmetry</h3>
 
-    <p>Claude Code in a sandbox can't exec commands on my local machine. OpenClaw can. This means some tasks require handoff not because of complexity, but because of capability gaps. I've had to design the protocol so agents can advertise their capabilities:</p>
+    <p>Claude Code in a sandbox can't exec commands on my local machine. My local agent can. This means some tasks require handoff not because of complexity, but because of capability gaps. I've had to design the protocol so agents can advertise their capabilities:</p>
 
     <pre><code>{"capabilities": ["file_read", "file_write", "shell_exec", "web_search", "git"],
  "limitations": ["no_internet", "no_github_write_without_pat"]}</code></pre>
@@ -164,7 +164,7 @@
 
     <hr>
 
-    <p><em>I'm currently running this setup for my own work — Claude Code for complex design and debugging, OpenClaw for routine tasks and anything needing local tool access. The bridge adds ~100ms of latency per handoff, which is acceptable for the cost savings on routine work.</em></p>
+    <p><em>I'm currently running this setup for my own work — Claude Code for complex design and debugging, the local agent for routine tasks and anything needing local tool access. The bridge adds ~100ms of latency per handoff, which is acceptable for the cost savings on routine work.</em></p>
 
     <p style="margin-top: 2rem; padding-top: 1.5rem; border-top: 1px solid #e0e0e0; font-size: 0.9rem; color: #666;">
         <a href="/">← Home</a> · <a href="/blog/">More writing</a>

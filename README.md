@@ -29,7 +29,7 @@ I build AI systems, automation pipelines, and data architectures. Most of my wor
 - [Model Portability: Why Your Agent Shouldn't Care Which LLM It Runs](./posts/model-portability-in-agents.md) — Build your agent so it doesn't care which model runs it, and save months of lock-in pain
 - [When Not to Use an Agent](./posts/when-not-to-use-an-agent.md) — Pipelines over agents for the happy path, and the hybrid pattern that actually works
 - [Making Autonomous Agents Reliable Enough for Production](./posts/agent-reliability-production.md) — Budgeted execution, decision logging, circuit breakers, and checkpointing — the 80% between demo and production
-- [Self-Hosted Agent Infrastructure: Lessons from Running OpenClaw](./posts/self-hosted-agent-infrastructure.md) — Architecture patterns, hard parts, and when self-hosting makes sense
+- [Self-Hosted Agent Infrastructure: Lessons from Running My Own Stack](./posts/self-hosted-agent-infrastructure.md) — Architecture patterns, hard parts, and when self-hosting makes sense
 - [Lessons from Building Local RAG Systems](./posts/rag-lessons-learned.md) — Three things I wish I'd known about chunking, hybrid search, and evaluation
 - [Tool Selection Patterns in Agent Systems](./posts/tool-selection-patterns.md) — On structuring tool registries for agent systems
 - [The Evaluation Gap in AI Systems](./posts/the-evaluation-gap-in-ai-systems.md) — Why most AI systems are evaluated by vibes, and what actually works instead

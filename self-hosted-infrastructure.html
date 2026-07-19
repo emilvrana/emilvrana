@@ -3,8 +3,8 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Self-Hosted Agent Infrastructure: Lessons from Running OpenClaw — Emil Vrána</title>
-    <meta name="description" content="Practical lessons from months of running OpenClaw in production: gateway pattern, tool registries, session management, and when self-hosting makes sense.">
+    <title>Self-Hosted Agent Infrastructure: Lessons from Running My Own Stack — Emil Vrána</title>
+    <meta name="description" content="Practical lessons from months of running a self-hosted agent stack in production: gateway pattern, tool registries, session management, and when self-hosting makes sense.">
     <style>
         :root {
             --bg: #0f0f0f;
@@ -67,10 +67,10 @@
 </head>
 <body>
     <a href="/blog/" class="back">← All posts</a>
-    <h1>Self-Hosted Agent Infrastructure: Lessons from Running OpenClaw</h1>
+    <h1>Self-Hosted Agent Infrastructure: Lessons from Running My Own Stack</h1>
     <div class="meta">April 10, 2026 · Infrastructure · Agents</div>
 
-    <p>After months of running OpenClaw as my primary agent orchestration layer, I've gathered enough scars to share practical notes on self-hosted agent infrastructure. This isn't a setup guide — there are plenty of those. Instead: patterns that work, traps that don't, and why "just use the cloud" isn't always wrong.</p>
+    <p>After months of running my own agent orchestration layer, I've gathered enough scars to share practical notes on self-hosted agent infrastructure. This isn't a setup guide — there are plenty of those. Instead: patterns that work, traps that don't, and why "just use the cloud" isn't always wrong.</p>
 
     <h2>The Promise and the Friction</h2>
     <p>Running agents locally sounds liberating: no API rate limits, no vendor lock-in, complete control. The reality is more nuanced. You're trading cloud convenience for operational complexity — and that trade only makes sense if you're actually hitting cloud constraints.</p>
@@ -79,7 +79,7 @@
     <h2>Architecture That Survives</h2>
 
     <h3>The Gateway Pattern</h3>
-    <p>My setup centers on a lightweight gateway daemon (the OpenClaw core) that handles routing, session state, and tool dispatch. Individual agents connect as clients, not servers. This inversion is critical — it means agents can be ephemeral, crash, or restart without the system losing coherence.</p>
+    <p>My setup centers on a lightweight gateway daemon I wrote that handles routing, session state, and tool dispatch. Individual agents connect as clients, not servers. This inversion is critical — it means agents can be ephemeral, crash, or restart without the system losing coherence.</p>
     <p>Key insight: <strong>State lives in the gateway, not in agents.</strong> Agents are stateless workers. This lets me kill and respawn agents mid-conversation without data loss. I've done this intentionally during long tasks when I wanted to switch models or clear context pollution.</p>
 
     <h3>Tool Registry Over Hardcoding</h3>
@@ -116,7 +116,7 @@
 
     <h2>Current Stack</h2>
     <ul>
-        <li><strong>Orchestration:</strong> OpenClaw gateway + agent registry</li>
+        <li><strong>Orchestration:</strong> Custom gateway + agent registry</li>
         <li><strong>Models:</strong> Ollama with quantized Llama and Qwen variants</li>
         <li><strong>Sessions:</strong> Elasticsearch for persistence + search</li>
         <li><strong>Tools:</strong> Mixed — some local (file system, shell), some remote (web search, translation APIs)</li>

@@ -1,12 +1,12 @@
 ---
-title: "Self-Hosted Agent Infrastructure: Lessons from Running OpenClaw"
+title: "Self-Hosted Agent Infrastructure: Lessons from Running My Own Stack"
 date: 2026-04-10
-tags: ["agents", "infrastructure", "openclaw", "multi-agent", "self-hosting"]
+tags: ["agents", "infrastructure", "multi-agent", "self-hosting"]
 ---
 
-# Self-Hosted Agent Infrastructure: Lessons from Running OpenClaw
+# Self-Hosted Agent Infrastructure: Lessons from Running My Own Stack
 
-After months of running OpenClaw as my primary agent orchestration layer, I've gathered enough scars to share practical notes on self-hosted agent infrastructure. This isn't a setup guide — there are plenty of those. Instead: patterns that work, traps that don't, and why "just use the cloud" isn't always wrong.
+After months of running my own agent orchestration layer, I've gathered enough scars to share practical notes on self-hosted agent infrastructure. This isn't a setup guide — there are plenty of those. Instead: patterns that work, traps that don't, and why "just use the cloud" isn't always wrong.
 
 ## The Promise and the Friction
 
@@ -18,7 +18,7 @@ I started with a simple question: *Can I run multiple specialized agents without
 
 ### The Gateway Pattern
 
-My setup centers on a lightweight gateway daemon (the OpenClaw core) that handles routing, session state, and tool dispatch. Individual agents connect as clients, not servers. This inversion is critical — it means agents can be ephemeral, crash, or restart without the system losing coherence.
+My setup centers on a lightweight gateway daemon I wrote that handles routing, session state, and tool dispatch. Individual agents connect as clients, not servers. This inversion is critical — it means agents can be ephemeral, crash, or restart without the system losing coherence.
 
 Key insight: **State lives in the gateway, not in agents.** Agents are stateless workers. This lets me kill and respawn agents mid-conversation without data loss. I've done this intentionally during long tasks when I wanted to switch models or clear context pollution.
 
@@ -67,7 +67,7 @@ For one-off tasks or simple chains, use the cloud. The operational overhead isn'
 
 ## Current Stack
 
-- **Orchestration:** OpenClaw gateway + agent registry
+- **Orchestration:** Custom gateway + agent registry
 - **Models:** Ollama with quantized Llama and Qwen variants
 - **Sessions:** Elasticsearch for persistence + search
 - **Tools:** Mixed — some local (file system, shell), some remote (web search, translation APIs)
