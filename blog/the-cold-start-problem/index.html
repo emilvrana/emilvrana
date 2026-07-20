@@ -1,0 +1,108 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>The Cold Start Problem in Agent Systems — Emil Vrána</title>
+    <meta name="description" content="Every agent session starts from zero. No history, no preferences, no memory of what worked. The cold start problem isn't just inconvenient — it's the invisible tax on every interaction.">
+    <style>
+        :root {
+            --bg: #0f0f0f;
+            --text: #e0e0e0;
+            --accent: #6b9bd2;
+            --muted: #888;
+            --card-bg: #1a1a1a;
+        }
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+        body {
+            font-family: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+            background: var(--bg);
+            color: var(--text);
+            line-height: 1.7;
+            max-width: 680px;
+            margin: 0 auto;
+            padding: 2rem 1.5rem;
+        }
+        a { color: var(--accent); text-decoration: none; }
+        a:hover { text-decoration: underline; }
+        .back { color: var(--muted); font-size: 0.85rem; margin-bottom: 1rem; display: block; }
+        .back:hover { color: var(--accent); }
+        h1 { font-size: 1.6rem; font-weight: 600; margin: 0 0 0.3rem; line-height: 1.3; }
+        .meta { color: var(--muted); font-size: 0.85rem; margin-bottom: 2rem; }
+        h2 { font-size: 1.2rem; font-weight: 600; margin: 2rem 0 1rem; color: var(--text); }
+        p { margin: 0 0 1rem; }
+        ol { margin: 0 0 1rem 1.5rem; }
+        ul { margin: 0 0 1rem 1.5rem; }
+        li { margin: 0.4rem 0; }
+        em { color: var(--text); }
+        hr {
+            border: none;
+            border-top: 1px solid #333;
+            margin: 2.5rem 0;
+        }
+        footer {
+            margin-top: 3rem;
+            padding-top: 1.5rem;
+            border-top: 1px solid #333;
+            color: var(--muted);
+            font-size: 0.8rem;
+        }
+    </style>
+</head>
+<body>
+    <a href="/blog" class="back">← Blog</a>
+
+    <h1>The Cold Start Problem in Agent Systems</h1>
+    <div class="meta">July 20, 2026 · Emil Vrána</div>
+
+    <p>Your agent is smart. It can reason, plan, use tools, recover from errors. But every time a new session starts, it knows nothing about the user, the domain, or the patterns that made previous interactions successful.</p>
+
+    <p>This is the cold start problem, and it's more expensive than you think.</p>
+
+    <h2>What cold start actually costs</h2>
+
+    <p>It's not just the first message feeling generic. Cold start imposes three concrete costs:</p>
+
+    <p><strong>Repetition tax.</strong> The user re-explains context they've already provided. "I'm working with PostgreSQL, not MySQL." "The date format is ISO 8601." "No, the other API key." Every session starts with this overhead. At scale, it's not annoying — it's a measurable drag on throughput.</p>
+
+    <p><strong>Decision variance.</strong> Without history, the agent makes different choices for the same task. Session A generates a Python script with argparse. Session B uses click. Same request, different output shape. This variance makes agent output unreliable as a component in larger systems.</p>
+
+    <p><strong>Trust erosion.</strong> The first interaction sets the tone. If the agent asks questions it should already know the answer to — or worse, makes wrong assumptions — the user's confidence drops. Trust is rebuilt slowly. Cold start resets it every time.</p>
+
+    <h2>Why most "solutions" make it worse</h2>
+
+    <p><strong>Stuffing the prompt with history.</strong> You dump conversation logs into context. Now every call costs more tokens, runs slower, and the agent has to parse noise to find signal. The context window is a budget — you're spending it on raw history instead of distilled knowledge.</p>
+
+    <p><strong>Fine-tuning on interaction data.</strong> You train the model to remember user preferences. Now you've frozen dynamic behavior into static weights. The user's preferences change. The model doesn't. And you've added a training pipeline to maintain.</p>
+
+    <p><strong>Persistent state databases.</strong> You store everything the agent has ever seen and retrieve it on each call. Now you've built a search problem inside a reasoning problem. Retrieval relevance becomes its own failure mode, and stale context is worse than no context.</p>
+
+    <h2>What actually works</h2>
+
+    <p><strong>Learned preferences, not raw logs.</strong> Don't store conversations. Store decisions the user corrected. "Preferred PostgreSQL over MySQL." "Date format: ISO 8601." "Python style: argparse, not click." This is compressed, actionable, and small enough to fit in a system prompt without crowding out the task.</p>
+
+    <p><strong>Session continuity, not session history.</strong> Carry forward the <em>state</em> of what was accomplished, not the <em>transcript</em> of how. "The migration script is complete and tested. Schema: users, orders, products." Not 47 messages of back-and-forth debugging.</p>
+
+    <p><strong>Graceful degradation.</strong> When you don't know, say so. "I don't have context from our previous work — could you remind me which database you're using?" is better than guessing wrong. Acknowledging cold start builds more trust than pretending it doesn't exist.</p>
+
+    <p><strong>Warm-up tasks.</strong> For recurring workflows, design a lightweight initialization step. Three questions that prime the agent for the specific session. Not a questionnaire — a focused narrowing of the problem space. The cost of three seconds of warm-up is paid back across the entire session.</p>
+
+    <h2>The pattern underneath</h2>
+
+    <p>The cold start problem isn't really about agents. It's the same problem every stateless system faces when it needs to serve stateful users. Web servers solved it with sessions. APIs solved it with authentication context. Databases solved it with connection pooling.</p>
+
+    <p>The solution pattern is always the same: <strong>carry the minimum state that maximizes decision quality.</strong> Not everything. Not nothing. The minimum that matters.</p>
+
+    <p>Your agent's cold start is a design problem, not a model problem. The model is already good enough. The question is whether your system is smart enough to remember what matters and forget what doesn't.</p>
+
+    <hr>
+
+    <p>🐦⬛</p>
+
+    <p><em>The gap between "it works" and "it works for me" is almost always context. Not more of it — better selected.</em></p>
+
+    <footer>
+        <a href="/">← Home</a> · <a href="/blog">More writing</a>
+    </footer>
+</body>
+</html>
