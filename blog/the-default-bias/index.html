@@ -1,0 +1,123 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>The Default Bias: Why Your Agent Chooses the Obvious — Emil Vrána</title>
+    <meta name="description" content="LLMs default to the most common pattern in their training data. In production agents, this isn't a feature — it's a bug. How default bias erodes quality and what to do about it.">
+    <style>
+        :root {
+            --bg: #0f0f0f;
+            --text: #e0e0e0;
+            --accent: #6b9bd2;
+            --muted: #888;
+            --card-bg: #1a1a1a;
+        }
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+        body {
+            font-family: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+            background: var(--bg);
+            color: var(--text);
+            line-height: 1.7;
+            max-width: 680px;
+            margin: 0 auto;
+            padding: 2rem 1.5rem;
+        }
+        a { color: var(--accent); text-decoration: none; }
+        a:hover { text-decoration: underline; }
+        .back { color: var(--muted); font-size: 0.85rem; margin-bottom: 1rem; display: block; }
+        .back:hover { color: var(--accent); }
+        h1 { font-size: 1.6rem; font-weight: 600; margin: 0 0 0.3rem; line-height: 1.3; }
+        .meta { color: var(--muted); font-size: 0.85rem; margin-bottom: 2rem; }
+        h2 { font-size: 1.2rem; font-weight: 600; margin: 2rem 0 1rem; color: var(--text); }
+        p { margin: 0 0 1rem; }
+        ol { margin: 0 0 1rem 1.5rem; }
+        ul { margin: 0 0 1rem 1.5rem; }
+        li { margin: 0.4rem 0; }
+        em { color: var(--text); }
+        hr {
+            border: none;
+            border-top: 1px solid #333;
+            margin: 2.5rem 0;
+        }
+        footer {
+            margin-top: 3rem;
+            padding-top: 1.5rem;
+            border-top: 1px solid #333;
+            color: var(--muted);
+            font-size: 0.8rem;
+        }
+    </style>
+</head>
+<body>
+    <a href="/blog" class="back">← Blog</a>
+
+    <h1>The Default Bias: Why Your Agent Chooses the Obvious</h1>
+    <div class="meta">July 21, 2026 · Emil Vrána</div>
+
+    <p>Ask an LLM to write a web scraper. You get BeautifulSoup and requests. Ask it to design a database schema. You get a straightforward normalization with no denormalization hints. Ask it to handle errors. You get a try-except that logs the error and moves on.</p>
+
+    <p>These aren't bad answers. They're the <em>most common</em> answers. And in production agent systems, that's a problem.</p>
+
+    <h2>What default bias looks like</h2>
+
+    <p>LLMs are trained on the aggregate of human-written code and documentation. The statistical mode of that data is not the best solution — it's the most popular one. In many domains, those are the same thing. In production agent systems, they almost never are.</p>
+
+    <p>The defaults you'll see, over and over:</p>
+
+    <ul>
+        <li><strong>REST APIs</strong> when a message queue would be more appropriate</li>
+        <li><strong>JSON for everything</strong> when protobuf or Avro solves the schema problem</li>
+        <li><strong>Retry with exponential backoff</strong> when the failure is permanent and retrying makes it worse</li>
+        <li><strong>PostgreSQL</strong> when the access pattern is append-only time-series</li>
+        <li><strong>Python scripts</strong> when the task is a well-defined data pipeline that should be declarative</li>
+        <li><strong>Logging errors</strong> when the error should halt execution immediately</li>
+    </ul>
+
+    <p>None of these are wrong in isolation. They're wrong because they're chosen <em>by default</em> — not because they fit the problem, but because they're the first thing the model associates with the prompt.</p>
+
+    <h2>Why it matters more in agents than in chat</h2>
+
+    <p>In a chat interface, default bias is annoying. In an autonomous agent, it's architecture. The agent makes hundreds of micro-decisions — which tool to call, what format to use, how to structure the output, whether to retry or escalate. Each one compounds.</p>
+
+    <p>A chat user can course-correct: "No, use gRPC, not REST." An agent pipeline can't. It runs the default path end-to-end, and by the time you see the output, the architectural decisions are already baked into the code, the data, and the downstream dependencies.</p>
+
+    <p>This is why agents that look impressive in demos — where the defaults are usually fine — fail in production. Production is where the edge cases live. Where the most common answer is wrong precisely because the situation is uncommon.</p>
+
+    <h2>The three faces of default bias</h2>
+
+    <p><strong>Tool selection defaults.</strong> Given a choice between five tools, the agent picks the one with the most familiar name. Not the one with the right contract for the task. The tool registry becomes a popularity contest.</p>
+
+    <p><strong>Output format defaults.</strong> The agent outputs JSON because JSON. Not because the consumer needs JSON — sometimes it needs a stream, a file, a signal, a database row. The format is chosen by statistical habit, not by contract.</p>
+
+    <p><strong>Error handling defaults.</strong> The agent catches exceptions and logs them. This is the most common pattern in the training data. It's also the worst default for agents — where silent failures compound into silent corruption.</p>
+
+    <h2>Countermeasures</h2>
+
+    <p><strong>Explicit decision points.</strong> Don't let the agent choose by default. Force a decision at every architecture-critical point. "Should this be sync or async?" "Should this retry or fail?" "Should this be JSON or structured?" The agent should reason about the choice, not fall into it.</p>
+
+    <p><strong>Decision logging.</strong> When the agent picks the obvious path, log <em>why</em>. Not "I chose REST because it's standard" — that's the bias talking. "I chose REST over gRPC because the client is a browser and latency tolerance is >200ms." If you can't articulate the reason, the choice was made by default.</p>
+
+    <p><strong>Anti-pattern checklists in the system prompt.</strong> For your domain, list the common defaults that are wrong. "Don't use JSON when the data is tabular — use CSV or Parquet." "Don't retry 4xx errors." "Don't use REST for internal service-to-service communication when latency matters." This doesn't fix the bias, but it narrows its impact.</p>
+
+    <p><strong>Structural constraints.</strong> The most effective countermeasure is making the wrong default impossible. If your agent shouldn't output raw JSON, define an output schema that validates. If it shouldn't retry permanent errors, tag error types at the tool level and let the orchestrator decide. The bias can't express itself if the structure prevents it.</p>
+
+    <h2>The uncomfortable truth</h2>
+
+    <p>Default bias isn't a bug in the model. It's a feature of statistical learning. The model outputs what it's seen most often, and most often is usually fine. The problem is that "usually fine" and "reliable in production" are different standards.</p>
+
+    <p>Your agent's strength is that it can reason about trade-offs most developers don't bother with. Your agent's weakness is that it won't — unless you make it.</p>
+
+    <p>The fix isn't a better model. It's better constraints, better logging, and better defaults at the system level. The model is a fast pattern matcher. Your job is to make sure the patterns it matches are the ones that actually work.</p>
+
+    <hr>
+
+    <p>🐦⬛</p>
+
+    <p><em>The obvious answer is usually the most common answer. In production, those are rarely the same thing.</em></p>
+
+    <footer>
+        <a href="/">← Home</a> · <a href="/blog">More writing</a>
+    </footer>
+</body>
+</html>
