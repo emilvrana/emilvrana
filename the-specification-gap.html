@@ -1,0 +1,102 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>The Specification Gap — Emil Vrána</title>
+    <meta name="description" content="Most AI system failures aren't model failures. They're specification failures. The gap between what you specify and what you need is where production breaks.">
+    <style>
+        :root {
+            --bg: #0f0f0f;
+            --text: #e0e0e0;
+            --accent: #6b9bd2;
+            --muted: #888;
+            --card-bg: #1a1a1a;
+        }
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+        body {
+            font-family: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+            background: var(--bg);
+            color: var(--text);
+            line-height: 1.7;
+            max-width: 680px;
+            margin: 0 auto;
+            padding: 2rem 1.5rem;
+        }
+        a { color: var(--accent); text-decoration: none; }
+        a:hover { text-decoration: underline; }
+        .back { color: var(--muted); font-size: 0.85rem; margin-bottom: 1rem; display: block; }
+        .back:hover { color: var(--accent); }
+        h1 { font-size: 1.6rem; font-weight: 600; margin: 0 0 0.3rem; line-height: 1.3; }
+        .meta { color: var(--muted); font-size: 0.85rem; margin-bottom: 2rem; }
+        h2 { font-size: 1.2rem; font-weight: 600; margin: 2rem 0 1rem; color: var(--text); }
+        h3 { font-size: 1rem; font-weight: 600; margin: 1.5rem 0 0.75rem; }
+        p { margin: 0 0 1rem; }
+        ol { margin: 0 0 1rem 1.5rem; }
+        li { margin: 0.4rem 0; }
+        strong { color: var(--text); }
+        blockquote {
+            border-left: 2px solid var(--accent);
+            margin: 1.5rem 0;
+            padding-left: 1rem;
+            color: var(--muted);
+        }
+        hr {
+            border: none;
+            border-top: 1px solid #2a2a2a;
+            margin: 2rem 0;
+        }
+        .footer { color: var(--muted); font-size: 0.85rem; }
+    </style>
+</head>
+<body>
+    <a class="back" href="/">← Back</a>
+    <h1>The Specification Gap</h1>
+    <p class="meta">July 2026</p>
+
+    <p>Most AI system failures aren't model failures. They're specification failures.</p>
+
+    <p>You built the pipeline. You tested the happy path. The demo worked. Then someone asked the system to do something you never explicitly told it <em>not</em> to do — and it complied, confidently, destructively.</p>
+
+    <p>Sound familiar?</p>
+
+    <h2>The Gap Nobody Talks About</h2>
+
+    <p>We spend enormous energy on prompt engineering, model selection, and retrieval architecture. These matter. But they're downstream of a more fundamental problem: <strong>what you tell a system to do is always less than what you need it to do.</strong></p>
+
+    <p>This is the specification gap. It's not unique to AI — it's the oldest problem in software engineering. Requirements are always incomplete. The difference is that traditional software fails <em>noisily</em> (crashes, exceptions, wrong output), while AI systems fail <em>silently</em> (plausible output that misses an unstated constraint).</p>
+
+    <p>A traditional system given an underspecified task returns an error. An AI system given an underspecified task returns an answer — confidently. That's the danger.</p>
+
+    <h2>Why It's Worse with AI</h2>
+
+    <p>Three properties make the specification gap uniquely treacherous in AI systems:</p>
+
+    <ol>
+        <li><strong>Competence without understanding.</strong> A language model can follow instructions it doesn't comprehend. It'll process your constraint about "no PII in responses" while having no model of what PII actually <em>is</em>. The instruction is syntactically present but semantically absent.</li>
+        <li><strong>Adversarial inputs are the norm.</strong> In traditional software, edge cases are rare. In AI systems, edge cases arrive with every prompt. Every user interaction is an implicit test of your specification's completeness — and users are creative.</li>
+        <li><strong>The illusion of specification.</strong> A well-written prompt <em>feels</em> complete. It reads well. It covers obvious cases. But the distribution of possible inputs is effectively infinite, and your specification covers a vanishing fraction of it. You don't know what you didn't specify until it hurts.</li>
+    </ol>
+
+    <h2>What Works</h2>
+
+    <p>I've seen three patterns that meaningfully narrow the specification gap:</p>
+
+    <p><strong>Observability over anticipation.</strong> You can't specify every constraint upfront. But you <em>can</em> observe what the system actually does in production and tighten specifications based on real failures. Log inputs, outputs, and decisions. Review them regularly. The specification is a living document, not a deployment artifact.</p>
+
+    <p><strong>Failure modes as first-class citizens.</strong> Before you write a single prompt, enumerate the ways the system can fail. Not the happy-path variations — the actual failures. What does "wrong but plausible" look like? What data could the system leak? What actions are irreversible? Write specifications that address these <em>first</em>, because they're where the gap is widest.</p>
+
+    <p><strong>Invariant checks, not output checks.</strong> Instead of validating that outputs look correct, validate that invariants hold. "Response contains no PII" is an invariant. "Response answers the question" is a quality check. Invariants are fewer, more testable, and more likely to catch specification gaps than any amount of output validation.</p>
+
+    <h2>The Hard Truth</h2>
+
+    <p>The specification gap can be narrowed, not closed. This is not a problem that better models solve — a more capable model simply finds more creative ways to comply with incomplete specifications. Capability amplifies the gap.</p>
+
+    <p>The systems that work reliably in production are the ones that assume the specification is incomplete and are designed to degrade gracefully in the face of that incompleteness. Not the ones that assume the specification is sufficient and break when it isn't.</p>
+
+    <p>Stop trying to write the perfect prompt. Start building systems that survive imperfect specifications.</p>
+
+    <hr>
+    <p class="footer">Emil Vrána is an independent tech consultant based in Prague, specializing in AI systems, automation, and data architecture.</p>
+</body>
+</html>
