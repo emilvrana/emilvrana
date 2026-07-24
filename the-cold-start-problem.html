@@ -1,0 +1,114 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>The Cold Start Problem in AI Adoption — Emil Vrána</title>
+    <meta name="description" content="Before you automate decisions with AI, you need to know what good looks like. The cold start problem in AI adoption isn't about data — it's about operational clarity.">
+    <style>
+        :root {
+            --bg: #0f0f0f;
+            --text: #e0e0e0;
+            --accent: #6b9bd2;
+            --muted: #888;
+            --card-bg: #1a1a1a;
+        }
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+        body {
+            font-family: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+            background: var(--bg);
+            color: var(--text);
+            line-height: 1.7;
+            max-width: 680px;
+            margin: 0 auto;
+            padding: 2rem 1.5rem;
+        }
+        a { color: var(--accent); text-decoration: none; }
+        a:hover { text-decoration: underline; }
+        .back { color: var(--muted); font-size: 0.85rem; margin-bottom: 1rem; display: block; }
+        .back:hover { color: var(--accent); }
+        h1 { font-size: 1.6rem; font-weight: 600; margin: 0 0 0.3rem; line-height: 1.3; }
+        .meta { color: var(--muted); font-size: 0.85rem; margin-bottom: 2rem; }
+        h2 { font-size: 1.2rem; font-weight: 600; margin: 2rem 0 1rem; color: var(--text); }
+        h3 { font-size: 1rem; font-weight: 600; margin: 1.5rem 0 0.75rem; }
+        p { margin: 0 0 1rem; }
+        ol { margin: 0 0 1rem 1.5rem; }
+        li { margin: 0.4rem 0; }
+        strong { color: var(--text); }
+        blockquote {
+            border-left: 2px solid var(--accent);
+            margin: 1.5rem 0;
+            padding-left: 1rem;
+            color: var(--muted);
+        }
+        hr {
+            border: none;
+            border-top: 1px solid #2a2a2a;
+            margin: 2rem 0;
+        }
+        .footer { color: var(--muted); font-size: 0.85rem; }
+    </style>
+</head>
+<body>
+    <a class="back" href="/">← Back</a>
+    <h1>The Cold Start Problem in AI Adoption</h1>
+    <p class="meta">July 2026</p>
+
+    <p>Every company I talk to wants AI. Most of them shouldn't start with AI.</p>
+
+    <p>Not because the technology isn't ready — it is, for the right problems. But because the prerequisites are missing, and nobody wants to hear that.</p>
+
+    <h2>What Cold Start Means Here</h2>
+
+    <p>In recommendation systems, the cold start problem is well-understood: you can't personalize without data. In AI adoption, it's the same principle, but the missing ingredient isn't data. It's <strong>operational clarity</strong>.</p>
+
+    <p>An AI system automates decisions. To automate a decision, you need to know what the right decision looks like — at least well enough to evaluate whether the AI's output is correct. This sounds obvious. In practice, it's where most adoption efforts stall.</p>
+
+    <p>Companies come to me saying "we want to use AI for customer support." I ask: what does a good response look like? What's your current resolution rate? How do you measure whether a conversation went well?</p>
+
+    <p>Silence.</p>
+
+    <p>They don't know. Not because they're incompetent — because they've never had to formalize it. Humans handle the ambiguity implicitly. The senior support person <em>just knows</em> what a good answer looks like. That knowledge exists, but it's locked in heads, not in processes.</p>
+
+    <h2>The Three Missing Prerequisites</h2>
+
+    <p><strong>1. A measurable outcome.</strong> Before you automate anything, you need to define success in terms that a machine can evaluate. "Good customer support" is not measurable. "First-response resolution rate above 70% with satisfaction score above 4.2" is. If you can't write down the metric, you can't build the system.</p>
+
+    <p><strong>2. A failure taxonomy.</strong> What goes wrong today? Not in theory — in practice. What are the top 5 things your current process gets wrong? If you can't list them, you don't have a specification for the AI to follow. And you won't be able to tell whether the AI is doing better or just failing differently.</p>
+
+    <p><strong>3. A feedback loop.</strong> The human process you're replacing — does it improve over time? How? If there's no mechanism for learning from mistakes today, adding AI won't create one. AI amplifies feedback loops. If the loop doesn't exist, AI amplifies nothing.</p>
+
+    <h2>Why This Is Hard to Accept</h2>
+
+    <p>The cold start problem is uncomfortable because it means the first step of AI adoption isn't AI. It's operational hygiene. Process documentation. Metric definition. Failure analysis.</p>
+
+    <p>These are not glamorous. They don't make for exciting board presentations. But they're the difference between a system that works and a system that generates plausible outputs while quietly drifting away from what you actually need.</p>
+
+    <p>I've seen teams spend six months building an AI pipeline, only to discover they can't evaluate whether it's working. Six months of engineering on top of a specification gap they didn't know they had. The model was fine. The problem was never the model.</p>
+
+    <h2>The Unsexy Path That Works</h2>
+
+    <p>Start with measurement. Before writing a single prompt or evaluating a single model:</p>
+
+    <ol>
+        <li><strong>Instrument the current process.</strong> Track what happens now, manually. Build the dashboard. Count the things that matter.</li>
+        <li><strong>Enumerate failure modes.</strong> Not hypothetical ones — the ones that actually happen. Write them down. Categorize them. You'll find patterns.</li>
+        <li><strong>Define the contract.</strong> What should the system do, specifically? What should it never do? What's the latency budget? What's the cost ceiling?</li>
+    </ol>
+
+    <p>Only then do you start building. And when you do, you'll build faster — because you know what "done" looks like.</p>
+
+    <h2>The Pattern I Keep Seeing</h2>
+
+    <p>The organizations that succeed with AI adoption are the ones that already had good operational hygiene. The ones that could tell you their metrics, their failure rates, their process bottlenecks before AI entered the picture.</p>
+
+    <p>AI didn't create their clarity. It amplified it.</p>
+
+    <p>The ones that struggle are the ones hoping AI would <em>provide</em> clarity — as if the model would somehow figure out what they actually wanted, without them having to articulate it.</p>
+
+    <p>It won't. The cold start problem doesn't resolve itself. You resolve it by doing the unsexy work first.</p>
+
+    <hr>
+    <p class="footer">Emil Vrána is an independent tech consultant based in Prague, specializing in AI systems, automation, and data architecture.</p>
+</body>
+</html>
