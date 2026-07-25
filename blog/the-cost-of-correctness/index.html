@@ -1,0 +1,143 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>The Cost of Correctness — Emil Vrána</title>
+    <meta name="description" content="Why making your AI system more accurate can make it worse overall. The tradeoff nobody measures — and how to think about it.">
+    <style>
+        :root {
+            --bg: #0f0f0f;
+            --text: #e0e0e0;
+            --accent: #6b9bd2;
+            --muted: #888;
+            --card-bg: #1a1a1a;
+        }
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+        body {
+            font-family: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+            background: var(--bg);
+            color: var(--text);
+            line-height: 1.7;
+            max-width: 680px;
+            margin: 0 auto;
+            padding: 2rem 1.5rem;
+        }
+        a { color: var(--accent); text-decoration: none; }
+        a:hover { text-decoration: underline; }
+        .back { color: var(--muted); font-size: 0.85rem; margin-bottom: 1rem; display: block; }
+        .back:hover { color: var(--accent); }
+        h1 { font-size: 1.6rem; font-weight: 600; margin: 0 0 0.3rem; line-height: 1.3; }
+        .date { color: var(--muted); font-size: 0.85rem; margin-bottom: 2rem; }
+        h2 { font-size: 1.15rem; font-weight: 600; margin: 2rem 0 0.5rem; }
+        h3 { font-size: 1rem; font-weight: 600; margin: 1.5rem 0 0.3rem; }
+        p { margin-bottom: 1rem; }
+        ul, ol { margin-bottom: 1rem; padding-left: 1.5rem; }
+        li { margin-bottom: 0.3rem; }
+        code {
+            background: var(--card-bg);
+            padding: 0.15rem 0.4rem;
+            border-radius: 3px;
+            font-size: 0.9rem;
+        }
+        pre {
+            background: var(--card-bg);
+            padding: 1rem;
+            border-radius: 6px;
+            overflow-x: auto;
+            margin-bottom: 1.5rem;
+            font-size: 0.85rem;
+            line-height: 1.5;
+        }
+        em { color: var(--muted); }
+        blockquote {
+            border-left: 3px solid #333;
+            padding-left: 1rem;
+            margin: 1.5rem 0;
+            color: var(--muted);
+        }
+        footer {
+            margin-top: 3rem;
+            padding-top: 1.5rem;
+            border-top: 1px solid #222;
+            color: var(--muted);
+            font-size: 0.8rem;
+        }
+    </style>
+</head>
+<body>
+    <a href="/blog/" class="back">← Blog</a>
+    <h1>The Cost of Correctness</h1>
+    <div class="date">July 25, 2026</div>
+
+    <p>There's a kind of client I see often. They've built an AI system, it works most of the time, and they want to make it better. By "better" they mean more accurate. Fewer mistakes. Higher precision on the edge cases.</p>
+
+    <p>This is often the wrong thing to optimize. Not because accuracy doesn't matter — it obviously does. But because the cost of gaining that last 5% accuracy is almost never what people think it is, and the returns are almost never what they expect.</p>
+
+    <h2>The Accuracy Curve Is Not Linear</h2>
+
+    <p>The first 80% is cheap. You write good prompts, pick a reasonable model, handle the obvious cases. Each marginal point of accuracy costs roughly the same effort.</p>
+
+    <p>Then it gets expensive. Fast.</p>
+
+    <p>Going from 80% to 90% might take two weeks. Going from 90% to 95% might take two months. Going from 95% to 99% might take a year, a dedicated team, and a custom evaluation pipeline that itself needs maintenance.</p>
+
+    <p>The curve looks like this: flat, flat, flat, then vertical. And most organizations don't realize they're on the vertical part until they've already committed the resources.</p>
+
+    <h2>What You're Actually Trading</h2>
+
+    <p>When you push for higher accuracy, here's what you're spending:</p>
+
+    <p><strong>Latency.</strong> More verification steps, more model calls, more reasoning chains. Each adds milliseconds that compound. At some point, your system is technically more accurate but practically unusable because it's too slow.</p>
+
+    <p><strong>Complexity.</strong> Fallback chains, ensemble checks, human-in-the-loop reviews. Each layer solves one failure mode and introduces two new ones. The system becomes harder to understand, harder to debug, and harder to modify.</p>
+
+    <p><strong>Adaptability.</strong> Highly tuned systems are brittle. They're optimized for a specific distribution of inputs. When that distribution shifts — and it always shifts — the system doesn't gracefully degrade. It breaks.</p>
+
+    <p><strong>Engineering time.</strong> This is the real cost. Every hour spent chasing edge cases is an hour not spent on features that serve the 80% of users who never hit those cases. Opportunity cost is invisible but enormous.</p>
+
+    <h2>When Correctness Matters Enough</h2>
+
+    <p>I'm not saying accuracy is unimportant. I'm saying it has a price, and you should know what you're paying.</p>
+
+    <p>Accuracy is worth obsessing over when:</p>
+
+    <ul>
+        <li><strong>The failure is catastrophic.</strong> Medical diagnosis, financial risk, safety-critical systems. If a wrong answer causes real harm, the cost of correctness is justified.</li>
+        <li><strong>The failure is silent.</strong> If the system can be wrong without anyone noticing, you need high accuracy <em>and</em> good monitoring. Silent failures are the most dangerous kind.</li>
+        <li><strong>The system operates at scale.</strong> A 1% error rate on a million daily transactions is 10,000 errors a day. At scale, small percentages become large absolute numbers.</li>
+    </ul>
+
+    <p>Accuracy is <em>not</em> worth obsessing over when:</p>
+
+    <ul>
+        <li><strong>The cost of a mistake is low.</strong> If the user can easily correct an error and move on, 90% accuracy is fine. Perfect is the enemy of shipped.</li>
+        <li><strong>You don't have evaluation infrastructure.</strong> You can't improve what you can't measure. Before optimizing accuracy, build the eval pipeline. Otherwise you're optimizing vibes.</li>
+        <li><strong>You haven't shipped yet.</strong> Premature accuracy optimization is a form of procrastination. Ship at 80%, measure in production, then improve.</li>
+    </ul>
+
+    <h2>The Practical Framework</h2>
+
+    <p>When a client asks me to improve accuracy, I ask three questions:</p>
+
+    <ol>
+        <li><strong>What's the current cost of failure?</strong> Not in abstract terms — in dollars, time, or user churn. Quantify it.</li>
+        <li><strong>What's the marginal cost of the next percentage point?</strong> If you can't estimate this, you're not ready to optimize.</li>
+        <li><strong>Would the same engineering effort yield more value elsewhere?</strong> A new feature, better UX, faster response times, or just shipping what you have.</li>
+    </ol>
+
+    <p>Usually, the answer to question 3 is yes. And that's the insight that matters: the cost of correctness isn't just engineering effort. It's everything else you could have built instead.</p>
+
+    <h2>Good Enough Is a Feature</h2>
+
+    <p>The best AI systems I've worked with are not the most accurate. They're the ones where the accuracy is <em>appropriate</em> — matched to the cost of failure, the latency requirements, and the engineering budget available.</p>
+
+    <p>They're systems that fail gracefully. That surface uncertainty instead of hiding it. That let users correct mistakes quickly.</p>
+
+    <p>"Good enough" isn't lazy. It's disciplined. It's knowing where the returns stop justifying the investment. And it's the thing most teams struggle with — not because they can't hit 99%, but because they can't bring themselves to stop at 90%.</p>
+
+    <footer>
+        <a href="/">emil.aiadoption.cz</a>
+    </footer>
+</body>
+</html>
