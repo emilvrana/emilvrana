@@ -1,0 +1,152 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>The Tool Count Trap: Why More Tools Make Your Agent Worse — Emil Vrána</title>
+    <meta name="description" content="Giving an agent 30 tools feels powerful. In practice, it's a recipe for confusion, latency, and wrong choices. Here's why fewer tools often means better agents — and how to find the right number.">
+    <style>
+        :root {
+            --bg: #0f0f0f;
+            --text: #e0e0e0;
+            --accent: #6b9bd2;
+            --muted: #888;
+            --card-bg: #1a1a1a;
+        }
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+        body {
+            font-family: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+            background: var(--bg);
+            color: var(--text);
+            line-height: 1.7;
+            max-width: 680px;
+            margin: 0 auto;
+            padding: 2rem 1.5rem;
+        }
+        a { color: var(--accent); text-decoration: none; }
+        a:hover { text-decoration: underline; }
+        .back { color: var(--muted); font-size: 0.85rem; margin-bottom: 1rem; display: block; }
+        .back:hover { color: var(--accent); }
+        h1 { font-size: 1.6rem; font-weight: 600; margin: 0 0 0.3rem; line-height: 1.3; }
+        .date { color: var(--muted); font-size: 0.85rem; margin-bottom: 2rem; }
+        h2 { font-size: 1.15rem; font-weight: 600; margin: 2rem 0 0.5rem; }
+        h3 { font-size: 1rem; font-weight: 600; margin: 1.5rem 0 0.3rem; }
+        p { margin-bottom: 1rem; }
+        ul, ol { margin-bottom: 1rem; padding-left: 1.5rem; }
+        li { margin-bottom: 0.3rem; }
+        code {
+            background: var(--card-bg);
+            padding: 0.15rem 0.4rem;
+            border-radius: 3px;
+            font-size: 0.9rem;
+        }
+        pre {
+            background: var(--card-bg);
+            padding: 1rem;
+            border-radius: 6px;
+            overflow-x: auto;
+            margin-bottom: 1.5rem;
+            font-size: 0.85rem;
+            line-height: 1.5;
+        }
+        em { color: var(--muted); }
+        blockquote {
+            border-left: 3px solid #333;
+            padding-left: 1rem;
+            margin: 1.5rem 0;
+            color: var(--muted);
+        }
+        footer {
+            margin-top: 3rem;
+            padding-top: 1.5rem;
+            border-top: 1px solid #222;
+            color: var(--muted);
+            font-size: 0.8rem;
+        }
+    </style>
+</head>
+<body>
+    <a href="/blog/" class="back">← Blog</a>
+    <h1>The Tool Count Trap: Why More Tools Make Your Agent Worse</h1>
+    <div class="date">May 24, 2026</div>
+
+    <p>Every new agent project starts the same way: you connect a few tools, it works great, and you think "let me add more capabilities." A file system tool, a search tool, a database tool, three different APIs. Before long your agent has 25, 30, 40 tools — and somehow it's worse than when it had five.</p>
+
+    <p>I've built and maintained agent systems with tool counts ranging from 3 to 50+. The pattern is consistent: there's a sweet spot around 7–12 tools where the agent is reliable and fast. Below that, you're limiting what it can do. Above that, you're fighting tool confusion, wrong selections, and bloated context windows.</p>
+
+    <h2>Why More Tools Hurt</h2>
+
+    <h3>1. The model has to choose from a longer list</h3>
+
+    <p>Every tool call starts with a decision: which tool, which arguments. The more tools in the list, the more tokens the model spends on that decision — and the higher the chance it picks the wrong one. I've seen agents with 30+ tools consistently pick the second-best tool because the descriptions were similar and the model couldn't reliably distinguish them.</p>
+
+    <p>Tool selection accuracy isn't linear. With 5 tools, the model barely thinks about it. With 15, it's a conscious choice. With 30, it's guesswork dressed up as reasoning.</p>
+
+    <h3>2. Schema bloat eats your context window</h3>
+
+    <p>Each tool definition includes the name, description, and full parameter schema. In a system with 40 tools, tool definitions alone can consume 4,000–8,000 tokens before the agent even starts working. On models with smaller context windows, that's real money and real context that could've gone to the actual task.</p>
+
+    <p>More tools = larger prompt = more cost = less room for actual work.</p>
+
+    <h3>3. Overlapping tools create ambiguity</h3>
+
+    <p>When three tools can accomplish roughly the same thing, the agent wastes cycles deciding between them — and sometimes tries all three in sequence, burning tokens on redundant work. I had an agent with both <code>search_web</code> and <code>search_docs</code> tools that kept calling both for every query because it couldn't determine which was appropriate.</p>
+
+    <h2>The Sweet Spot</h2>
+
+    <p>After running many iterations, my rule of thumb:</p>
+
+    <ul>
+        <li><strong>3–6 tools</strong>: Good for focused, single-purpose agents. Reliable, fast, predictable.</li>
+        <li><strong>7–12 tools</strong>: The sweet spot for general-purpose agents. Enough capability without decision overload.</li>
+        <li><strong>13–20 tools</strong>: You can make this work with careful descriptions and grouping, but accuracy starts dropping.</li>
+        <li><strong>20+ tools</strong>: Almost always a mistake. Time to split into specialized agents.</li>
+    </ul>
+
+    <h2>How to Reduce Your Tool Count</h2>
+
+    <h3>Merge overlapping tools</h3>
+
+    <p>If you have <code>search_web</code>, <code>search_news</code>, and <code>search_academic</code> — merge them into one <code>search</code> tool with a <code>type</code> parameter. The model is much better at choosing parameter values than choosing between similar tools.</p>
+
+    <h3>Use tool groups (or routers)</h3>
+
+    <p>Instead of listing all tools at once, implement a two-stage approach: a router selects a tool group (web, file, database), then the agent gets only that group's tools. Most agent frameworks support this via dynamic tool lists.</p>
+
+    <h3>Ask: does the agent actually use this?</h3>
+
+    <p>Audit your tool usage logs. If a tool hasn't been called in the last 100 runs, remove it. Unused tools add noise and confusion. You can always add them back.</p>
+
+    <h3>Split the agent</h3>
+
+    <p>If you genuinely need 20+ tools, you probably need two agents. One that plans and one that executes. Or one for research and one for action. Splitting by responsibility almost always beats one agent doing everything poorly.</p>
+
+    <h2>What I Actually Do</h2>
+
+    <p>For my current production agents:</p>
+
+    <ul>
+        <li><strong>Research agent</strong>: 6 tools (search, read, write, memory, browser, evaluate)</li>
+        <li><strong>Infrastructure agent</strong>: 8 tools (docker, ssh, logs, config, deploy, health, rollback, notify)</li>
+        <li><strong>Communication agent</strong>: 5 tools (send, read, summarize, schedule, draft)</li>
+    </ul>
+
+    <p>Each agent is focused, reliable, and fast. When I need multi-step work across domains, I route between agents — not between 30 tools inside one.</p>
+
+    <h2>The Uncomfortable Truth</h2>
+
+    <p>Adding a tool feels like adding a capability. In reality, you're adding a decision point, context overhead, and a potential failure mode. Every tool you remove is one less thing that can go wrong.</p>
+
+    <blockquote>The best agent isn't the one with the most tools — it's the one that reliably picks the right tool for the job.</blockquote>
+
+    <p>Count your tools. If the number is above 15, you have work to do. If it's above 25, you have a redesign to do. Cut, merge, group, or split — but don't just keep adding.</p>
+
+    <hr>
+
+    <p>Emil Vrána — independent tech consultant, Prague. I build agents with the right number of tools.</p>
+
+    <footer>
+        <a href="/">emil.aiadoption.cz</a>
+    </footer>
+</body>
+</html>
