@@ -63,6 +63,9 @@ listed too, so the search is not repeated from scratch:
 | Remote git mirrors (2) | 0 — both fully contained in local history |
 | Web server: docroot, siblings, nightly backups, Docker volumes, filesystem snapshots, nginx cache | 0 — `/opt/www` was never a backup target and the host has no snapshot capability |
 | Search index / memory store (38 indices) | 0 — publish-event log lines and one-line summaries only, never article bodies |
-| Wayback Machine, archive.today, Cloudflare cache, web search for syndicated copies | 0 — the site was never archived; its HTML is served uncached |
+| Wayback Machine | 0 — the CDX index holds no captures at all for this host, so no snapshot of any page has ever been taken |
+| archive.today | 0 — no snapshot for the deleted URLs |
+| Cloudflare cache | 0 — this site's HTML is served `cf-cache-status: DYNAMIC`, so nothing is held at the edge to recover |
+| Web search for syndicated copies | 0 — the text was not republished anywhere else |
 
 *Recorded 2026-07-27.*
