@@ -60,6 +60,9 @@ listed too, so the search is not repeated from scratch:
 | This repository, full git history (all blobs, all refs) | no additional posts; no `blog/<slug>/` directory for any of the 22 ever existed here |
 | Two older working copies of this repo | 1 post (the 2026-07-01 "Specification Gap") |
 | Author's draft/scratch directories | 1 post ("The Tool Count Trap") |
+| Authoring-tool session transcripts on the author's machine (461 files, 204 MB) | 0 — publish-event log lines and index teasers only, no article bodies |
+| Time Machine / APFS snapshots on the author's machine | 0 — no backup destination is configured and no local snapshots exist |
+| Browser cache, Trash, and the rest of the author's home directory | 0 |
 | Remote git mirrors (2) | 0 — both fully contained in local history |
 | Web server: docroot, siblings, nightly backups, Docker volumes, filesystem snapshots, nginx cache | 0 — `/opt/www` was never a backup target and the host has no snapshot capability |
 | Search index / memory store (38 indices) | 0 — publish-event log lines and one-line summaries only, never article bodies |
