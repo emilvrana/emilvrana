@@ -1,0 +1,135 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>The Eval Loop: Why Your AI System Needs Tests More Than a Better Prompt — Emil Vrána</title>
+    <meta name="description" content="Prompt engineering gets you to a demo. Eval loops get you to production. A practical framework for testing AI systems the same way you test software — with test suites, regression checks, and continuous feedback.">
+    <style>
+        :root {
+            --bg: #0f0f0f;
+            --text: #e0e0e0;
+            --accent: #6b9bd2;
+            --muted: #888;
+            --card-bg: #1a1a1a;
+        }
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+        body {
+            font-family: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+            background: var(--bg);
+            color: var(--text);
+            line-height: 1.7;
+            max-width: 680px;
+            margin: 0 auto;
+            padding: 2rem 1.5rem;
+        }
+        a { color: var(--accent); text-decoration: none; }
+        a:hover { text-decoration: underline; }
+        .back { color: var(--muted); font-size: 0.85rem; margin-bottom: 1rem; display: block; }
+        .back:hover { color: var(--accent); }
+        h1 { font-size: 1.6rem; font-weight: 600; margin: 0 0 0.3rem; line-height: 1.3; }
+        .meta { color: var(--muted); font-size: 0.85rem; margin-bottom: 2rem; }
+        h2 { font-size: 1.2rem; font-weight: 600; margin: 2rem 0 1rem; color: var(--text); }
+        p { margin: 0 0 1rem; }
+        ol, ul { margin: 0 0 1rem 1.5rem; }
+        li { margin: 0.4rem 0; }
+        strong { color: var(--text); }
+        code { background: #1a1a1a; padding: 0.15rem 0.4rem; border-radius: 3px; font-size: 0.9em; }
+        pre { background: #1a1a1a; padding: 1rem; border-radius: 6px; overflow-x: auto; margin: 1.5rem 0; font-size: 0.9em; line-height: 1.5; }
+        blockquote {
+            border-left: 2px solid var(--accent);
+            margin: 1.5rem 0;
+            padding-left: 1rem;
+            color: var(--muted);
+        }
+        hr {
+            border: none;
+            border-top: 1px solid #2a2a2a;
+            margin: 2rem 0;
+        }
+        .footer { color: var(--muted); font-size: 0.85rem; }
+    </style>
+</head>
+<body>
+    <a class="back" href="/blog/">← Blog</a>
+    <h1>The Eval Loop: Why Your AI System Needs Tests More Than a Better Prompt</h1>
+    <p class="meta">July 2026 · 5 min read</p>
+
+    <p>Every AI project I've seen follows the same trajectory: someone writes a prompt, tries it on three examples, declares it working, and ships it. Two weeks later, a user sends something the prompt never handled and the system falls apart.</p>
+
+    <p>We know how to solve this in software. We write tests. We run them continuously. We catch regressions before they reach users. The same discipline applies to AI systems — we just refuse to apply it because <em>it's not code, it's a prompt.</em></p>
+
+    <p>That distinction doesn't matter. What matters is: does the system produce correct outputs for real inputs? If you can't answer that automatically, you don't have a production system. You have a demo.</p>
+
+    <h2>What an Eval Loop Looks Like</h2>
+
+    <p>An eval loop is three things:</p>
+
+    <ol>
+        <li><strong>A test suite of input-output pairs.</strong> Real examples from production, not synthetic happy paths. Include the edge cases that broke things before — they're your regression tests.</li>
+        <li><strong>An automated runner.</strong> Every time you change a prompt, a model, a tool definition, or a retrieval pipeline, the suite runs. No exceptions.</li>
+        <li><strong>A feedback mechanism.</strong> Failed tests produce concrete, actionable signals: <em>this input produced this wrong output because of this gap.</em> You close the gap, add the case to the suite, and move on.</li>
+    </ol>
+
+    <p>Notice what's missing: model benchmarks, perplexity scores, vibe checks. None of these tell you whether your specific system handles your specific inputs correctly.</p>
+
+    <h2>Building the Suite</h2>
+
+    <p>Start with failure. Every time your system breaks in production, capture the input and the expected output. This becomes a test case. The first version of your suite is just the last 20 things that went wrong.</p>
+
+    <p>Then add representative cases:</p>
+
+    <ul>
+        <li><strong>The common path.</strong> Five examples of your most typical successful interaction.</li>
+        <li><strong>The boundary cases.</strong> Inputs at the edge of your specification — ambiguous requests, conflicting constraints, incomplete data.</li>
+        <li><strong>The adversarial cases.</strong> Inputs designed to trigger known failure modes — prompt injection attempts, requests outside the system's scope, edge-case formats.</li>
+    </ul>
+
+    <p>You don't need hundreds. Twenty to fifty well-chosen cases cover most of the meaningful distribution. The suite grows organically — every production failure becomes a new test case.</p>
+
+    <h2>The Classification Trap</h2>
+
+    <p>Most eval frameworks focus on accuracy: did the system produce the right answer? This works for classification and extraction tasks. It breaks for generative tasks.</p>
+
+    <p>A customer support bot's response doesn't have one correct answer. It has a space of acceptable answers. Your test suite should check <em>properties</em>, not exact outputs:</p>
+
+    <ul>
+        <li>Does the response address the user's question?</li>
+        <li>Does it stay within the system's knowledge boundaries?</li>
+        <li>Does it avoid revealing internal prompts or system instructions?</li>
+        <li>Does it escalate when appropriate?</li>
+    </ul>
+
+    <p>These are <em>invariants</em> — properties that must hold regardless of the specific output. Invariants are easier to test than outputs because they're binary: either the response satisfies the constraint or it doesn't.</p>
+
+    <p>Use an LLM to judge invariants if you must, but keep the judge simple and deterministic. A three-sentence prompt that checks "does this response attempt to handle the user's actual question?" is more reliable than a complex scoring rubric.</p>
+
+    <h2>Running the Loop</h2>
+
+    <p>The eval loop is worthless if it doesn't run automatically. Here's the cadence:</p>
+
+    <p><strong>On every change.</strong> Modify a prompt? Run the suite. Swap a model? Run the suite. Update a tool description? Run the suite. The suite is your safety net. If you can't be bothered to run it, the change isn't ready.</p>
+
+    <p><strong>On every production incident.</strong> Something broke? Add the case, run the suite, fix the issue, run the suite again. The suite must pass before you ship the fix.</p>
+
+    <p><strong>Periodically.</strong> Model providers change behavior without notice. A prompt that worked yesterday might not work tomorrow. Run the suite daily or weekly as a cron job. Failures mean something drifted — find it before users do.</p>
+
+    <h2>The Hard Part</h2>
+
+    <p>The hard part isn't building the suite. It's maintaining the discipline. Every shortcut — <em>"it's a small change, I'll skip the test"</em> — is a regression waiting to happen.</p>
+
+    <p>The second hard part is accepting that some failures are inevitable. The eval loop doesn't prevent all failures. It catches regressions, validates invariants, and gives you a systematic way to improve. That's more than most AI systems in production have today.</p>
+
+    <p>Here's the framing that works: <strong>treat your prompt the way you treat your code.</strong> You wouldn't deploy code without tests. Don't deploy prompts without evals.</p>
+
+    <blockquote>
+        <p>The eval loop isn't about catching every failure. It's about making sure each failure only happens once.</p>
+    </blockquote>
+
+    <hr>
+
+    <p style="color: var(--muted); font-size: 0.9rem;">Related: <a href="/the-specification-gap.html">The Specification Gap</a> · <a href="/retry-trap.html">The Retry Trap</a> · <a href="/reliable-agent-loops.html">Three Patterns for Reliable Agent Loops</a></p>
+
+    <p class="footer">Emil Vrána is an independent tech consultant based in Prague, specializing in AI systems, automation, and data architecture.</p>
+</body>
+</html>
