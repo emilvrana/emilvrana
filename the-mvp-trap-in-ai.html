@@ -1,0 +1,107 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>The MVP Trap in AI Projects — Emil Vrána</title>
+    <meta name="description" content="Teams build elaborate AI pipelines before asking if the model can do the job at all. The real MVP isn't the pipeline — it's a single prompt on a single example. Start there.">
+    <style>
+        :root {
+            --bg: #0f0f0f;
+            --text: #e0e0e0;
+            --accent: #6b9bd2;
+            --muted: #888;
+            --card-bg: #1a1a1a;
+        }
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+        body {
+            font-family: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+            background: var(--bg);
+            color: var(--text);
+            line-height: 1.7;
+            max-width: 680px;
+            margin: 0 auto;
+            padding: 2rem 1.5rem;
+        }
+        a { color: var(--accent); text-decoration: none; }
+        a:hover { text-decoration: underline; }
+        .back { color: var(--muted); font-size: 0.85rem; margin-bottom: 1rem; display: block; }
+        .back:hover { color: var(--accent); }
+        h1 { font-size: 1.6rem; font-weight: 600; margin: 0 0 0.3rem; line-height: 1.3; }
+        .meta { color: var(--muted); font-size: 0.85rem; margin-bottom: 2rem; }
+        h2 { font-size: 1.2rem; font-weight: 600; margin: 2rem 0 1rem; color: var(--text); }
+        p { margin: 0 0 1rem; }
+        ol, ul { margin: 0 0 1rem 1.5rem; }
+        li { margin: 0.4rem 0; }
+        strong { color: var(--text); }
+        code { background: #1a1a1a; padding: 0.15rem 0.4rem; border-radius: 3px; font-size: 0.9em; }
+        pre { background: #1a1a1a; padding: 1rem; border-radius: 6px; overflow-x: auto; margin: 1.5rem 0; font-size: 0.9em; line-height: 1.5; }
+        blockquote {
+            border-left: 2px solid var(--accent);
+            padding: 0.5rem 1rem;
+            margin: 1.5rem 0;
+            color: var(--muted);
+            font-style: italic;
+        }
+        footer {
+            margin-top: 3rem;
+            padding-top: 1.5rem;
+            border-top: 1px solid #222;
+            color: var(--muted);
+            font-size: 0.8rem;
+        }
+        footer a { color: var(--muted); }
+    </style>
+</head>
+<body>
+
+<a href="/" class="back">← Back</a>
+
+<h1>The MVP Trap in AI Projects</h1>
+<div class="meta">July 2026 · Emil Vrána</div>
+
+<p>Here's a pattern I keep seeing: a team wants to "add AI" to their product. They spin up a vector database. They set up a RAG pipeline. They build a retrieval layer, a ranking layer, a guardrail layer, an observability dashboard. Three sprints in, they haven't yet tested whether the model can actually do the thing they hired it for.</p>
+
+<p>This is the MVP trap — but inverted. In software, the MVP strips everything down to test the core hypothesis. In AI projects, teams do the opposite: they build the scaffolding before checking if the building stands.</p>
+
+<h2>The real MVP is one prompt</h2>
+
+<p>Before you architect anything, answer one question: <strong>can the model produce a useful output for a real input?</strong></p>
+
+<p>Not a toy example. Not a cherry-picked demo. A real input — the kind your users will actually send, messy edge cases and all.</p>
+
+<p>Open a notebook. Paste the input. Write a prompt. Look at the output. If it's wrong, tweak the prompt. If it's still wrong after three honest attempts, the model can't do this task — and no amount of pipeline engineering will fix that.</p>
+
+<h2>Why this matters</h2>
+
+<p>Model capability is the <em>load-bearing wall</em>. Everything else — RAG, orchestration, guardrails — is interior decoration. If the model can't reliably transform your real inputs into acceptable outputs, the project doesn't work. You can't pipeline your way out of a capability gap.</p>
+
+<p>I've seen teams spend six weeks on infrastructure for a task the model gets right 40% of the time. That's not a pipeline problem. That's a "wrong tool for the job" problem.</p>
+
+<h2>A simple protocol</h2>
+
+<ol>
+    <li><strong>Write five real inputs.</strong> Not synthetic. Not idealized. The ugliest, longest, most ambiguous things your users will send.</li>
+    <li><strong>Prompt the model directly.</strong> No framework. No chain. Just the model, the input, and a clear instruction.</li>
+    <li><strong>Score the outputs honestly.</strong> Not "with a small fix this would work." Either it works or it doesn't.</li>
+    <li><strong>If ≥4/5 pass → proceed to infrastructure.</strong> If not → you have a research problem, not an engineering problem.</li>
+</ol>
+
+<h2>The uncomfortable truth</h2>
+
+<p>Sometimes the answer is "the model isn't good enough yet." That's a fine answer. It's better than discovering it after you've built the pipeline.</p>
+
+<p>The model landscape moves fast. What doesn't work today might work in three months. But you won't know unless you tested it honestly in the first place — and you won't remember what you tested unless you wrote it down.</p>
+
+<p>So write the prompt. Try the ugly inputs. Be brutal in your scoring. Then build.</p>
+
+<blockquote>
+The best AI architecture is the one you build after you know the model works. Not before.
+</blockquote>
+
+<footer>
+    <p><a href="/">emil.aiadoption.cz</a> · <a href="https://github.com/emilvrana">GitHub</a></p>
+</footer>
+
+</body>
+</html>
