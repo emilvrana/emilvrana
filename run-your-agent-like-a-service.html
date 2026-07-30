@@ -1,0 +1,106 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Run Your Agent Like You Run Your Production Service — Emil Vrána</title>
+    <meta name="description" content="An agent in production is a service. SRE principles — SLIs, SLOs, error budgets, runbooks — translate directly. If you can't measure it, you can't operate it.">
+    <style>
+        :root {
+            --bg: #0f0f0f;
+            --text: #e0e0e0;
+            --accent: #6b9bd2;
+            --muted: #888;
+            --card-bg: #1a1a1a;
+        }
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+        body {
+            font-family: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+            background: var(--bg);
+            color: var(--text);
+            line-height: 1.7;
+            max-width: 680px;
+            margin: 0 auto;
+            padding: 2rem 1.5rem;
+        }
+        a { color: var(--accent); text-decoration: none; }
+        a:hover { text-decoration: underline; }
+        .back { color: var(--muted); font-size: 0.85rem; margin-bottom: 1rem; display: block; }
+        .back:hover { color: var(--accent); }
+        h1 { font-size: 1.6rem; font-weight: 600; margin: 0 0 0.3rem; line-height: 1.3; }
+        .meta { color: var(--muted); font-size: 0.85rem; margin-bottom: 2rem; }
+        h2 { font-size: 1.2rem; font-weight: 600; margin: 2rem 0 1rem; color: var(--text); }
+        p { margin: 0 0 1rem; }
+        ol, ul { margin: 0 0 1rem 1.5rem; }
+        li { margin: 0.4rem 0; }
+        strong { color: var(--text); }
+        code { background: #1a1a1a; padding: 0.15rem 0.4rem; border-radius: 3px; font-size: 0.9em; }
+        pre { background: #1a1a1a; padding: 1rem; border-radius: 6px; overflow-x: auto; margin: 1.5rem 0; font-size: 0.9em; line-height: 1.5; }
+        blockquote {
+            border-left: 2px solid var(--accent);
+            padding: 0.5rem 1rem;
+            margin: 1.5rem 0;
+            color: var(--muted);
+            font-style: italic;
+        }
+        footer {
+            margin-top: 3rem;
+            padding-top: 1.5rem;
+            border-top: 1px solid #222;
+            color: var(--muted);
+            font-size: 0.8rem;
+        }
+        footer a { color: var(--muted); }
+    </style>
+</head>
+<body>
+
+<a href="/" class="back">← Back</a>
+
+<h1>Run Your Agent Like You Run Your Production Service</h1>
+<div class="meta">July 2026 · Emil Vrána</div>
+
+<p>You wouldn't deploy a web service without uptime targets, error budgets, or a runbook. But that's exactly how most AI agents go live.</p>
+
+<p>An agent in production is a service. It has callers, dependencies, failure modes, and users who depend on it. The fact that one of its dependencies is an LLM doesn't change the fundamentals. If anything, it makes operational discipline more important, not less.</p>
+
+<h2>The SRE playbook translates directly</h2>
+
+<p><strong>SLIs become agent metrics.</strong> Instead of p99 latency, track time-to-first-token, tool-call success rate, and response validity. Instead of error rate, track the percentage of interactions that require human intervention. These are your agent's service-level indicators.</p>
+
+<p><strong>SLOs become reliability targets.</strong> "The agent should produce a useful response" is not an SLO. "90% of queries resolved without escalation, within 30 seconds, with valid output format" is. Write them down. Make them measurable. Hold yourself to them.</p>
+
+<p><strong>Error budgets become release criteria.</strong> If your agent's SLO allows 5% degraded responses per week, you have an error budget. Spend it intentionally — on a new model version, a prompt change, a tool upgrade. When the budget is gone, freeze deployments until you're back in bounds. This gives you a framework for balancing velocity and reliability that "vibes-based testing" never will.</p>
+
+<p><strong>Runbooks become escalation paths.</strong> When the agent fails, what happens? Who gets paged? Is there a fallback, or does the user stare at a spinner? If you can't answer these questions, you don't have an operational agent — you have a demo.</p>
+
+<h2>What changes with LLMs</h2>
+
+<p>LLMs add a specific kind of nondeterminism that most services don't have. The same input can produce different outputs. Latency varies wildly. The "correct" output is often subjective.</p>
+
+<p>This doesn't break SRE principles — it sharpens them:</p>
+
+<ul>
+    <li><strong>Version your prompts like you version your code.</strong> Every prompt change is a deployment. Track it, roll it back if metrics degrade, and never change production prompts without measuring the impact.</li>
+    <li><strong>Canary your model upgrades.</strong> New model version? Route 5% of traffic, compare against baseline, promote or roll back. Same process you'd use for any dependency upgrade.</li>
+    <li><strong>Define "correct" before you need to.</strong> If you can't specify what a good response looks like in measurable terms, you can't measure whether your agent is working. Evaluation isn't optional — it's your monitoring.</li>
+</ul>
+
+<h2>The uncomfortable truth</h2>
+
+<p>Most teams treat agent operations as an afterthought. They focus on the prompt, the model, the tools — and then deploy to production with no metrics, no SLOs, no runbook, no rollback plan.</p>
+
+<p>The agent works. Until it doesn't. And when it doesn't, there's no framework for understanding why, no budget for deciding whether to push forward or pull back, no playbook for recovery.</p>
+
+<p>SRE isn't about preventing all failures. It's about making failures visible, contained, and recoverable. That's exactly what production agents need.</p>
+
+<blockquote>
+Run your agent like you run your production service — because that's what it is.
+</blockquote>
+
+<footer>
+    <p><a href="/">emil.aiadoption.cz</a> · <a href="https://github.com/emilvrana">GitHub</a></p>
+</footer>
+
+</body>
+</html>
