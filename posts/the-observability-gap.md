@@ -1,71 +1,43 @@
-# The Observability Gap in Agent Systems
+# The Observability Gap in AI Agents
 
-*June 22, 2026*
+Most teams can tell you exactly how many requests their API handled last Tuesday. Ask them what their agent did at 3 PM, and they'll open a JSON log file and start scrolling.
 
-You built an agent. It works — mostly. When it doesn't, you stare at logs that say "tool call failed" or "context length exceeded" and try to reconstruct what happened from incomplete traces.
+This is the observability gap. Your infrastructure is monitored. Your agent is not.
 
-This is the observability gap: the distance between what your agent *did* and what you can *see* it did. It's not a logging problem. It's a structural one.
+## What you're missing
 
-## What You Think You Need
+Traditional services produce structured telemetry. Request ID, latency, status code, error message. You can trace a request end-to-end, set alerts, build dashboards. Agents break this model in three ways:
 
-Most agent setups log three things: prompts, tool calls, and responses. That gives you a timeline — call A, then call B, then response. It looks like observability.
+**Nonlinear execution.** An agent doesn't follow a fixed path. It reasons, loops back, calls tools in sequences you didn't predict. A single "agent run" might involve 12 LLM calls, 7 tool invocations, and 3 self-corrections. Logging the final output tells you nothing about how it got there.
 
-It isn't.
+**Subjective failures.** A 200 status code doesn't mean the agent succeeded. It might have returned syntactically valid JSON that's semantically wrong. It might have called the right tool with subtly wrong arguments. It might have hallucinated a confident-sounding explanation. You need observability into the reasoning, not just the result.
 
-## What You Actually Need
+**Silent degradation.** Agents don't crash loudly. They drift. A model update makes the agent 15% more verbose. A tool API change introduces subtle errors in 5% of cases. Without baselines and anomaly detection, you won't notice until a user complains.
 
-Agents fail in ways that timelines don't explain:
+## What to instrument
 
-- **Context drift.** The agent loaded 4k tokens of relevant context, then 12k of noise. The logs show the full context window. They don't show that 75% of it was wasted.
-- **Decision opacity.** The agent chose tool X over tool Y. The logs show X was called. They don't show Y was considered, or why it was rejected, or that it wasn't considered at all.
-- **Retry cascades.** The agent retried a failing call 5 times. The logs show 5 calls. They don't show that retry 3 changed the parameters in a way that made retry 4 certain to fail.
-- **Cost attribution.** You spent $47 on an agent run. The logs show token counts. They don't show that $32 of it was re-processing context that hadn't changed since the last call.
+**Every LLM call.** Input, output, model, latency, token count. Yes, this is expensive to store. Sample if you must, but don't skip it. You'll thank yourself during your first real incident.
 
-## The Fix Isn't More Logging
+**Every tool call.** Name, arguments, result, duration, success/failure. This is your agent's dependency graph. When something breaks, this tells you where.
 
-Adding log lines is the instinct. Resist it. More logs mean more noise, and noise is exactly the problem — your agent already produces too much output for you to read.
+**Every decision point.** When the agent chooses between paths — search vs. compute, tool A vs. tool B — log the choice and the reasoning. This is how you debug unexpected behavior patterns.
 
-Instead, build three observability primitives into your agent loop:
+**Aggregate metrics.** Token cost per task, tool call distribution, retry rates, escalation frequency. Set baselines. Alert on drift.
 
-### 1. Decision Checkpoints
+## The practical framework
 
-At every branching point, record *why* the agent chose its path. Not what it did — why it did it. This is typically 2–3 sentences of reasoning that would let you reconstruct the decision without replaying the full context.
+Start simple. Add structured logging to every LLM call and tool invocation in your agent loop. Use a consistent schema: `run_id`, `step`, `type`, `input`, `output`, `duration`, `status`. Ship it to whatever you already use — Elasticsearch, Datadog, even a structured log file.
 
-```python
-# Not this:
-log.info(f"Called {tool_name} with {args}")
+Then add a dashboard. Token cost over time. Tool call success rates. Task completion rates by type. You don't need fancy tooling — you need visibility.
 
-# This:
-log.info(f"Chose {tool_name} over {alternatives} because {reasoning}")
-```
+Then set alerts. If tool failure rate exceeds 10%, page someone. If average tokens per task doubles overnight, investigate. If escalation rate climbs, something changed.
 
-### 2. Context Budget Tracking
+## The hard truth
 
-Track what percentage of your context window is signal vs. noise. If your context is 80% retrieved documents and your task completion is failing, you don't need better retrieval — you need less context.
+If you can't answer "what did my agent do yesterday and why," you don't have a production system. You have a prototype that happens to be running in production.
 
-Implement a simple ratio: tokens that directly contributed to the final output / total tokens processed. If it drops below 0.3, your agent is drowning.
-
-### 3. Failure Classification
-
-Not all failures are equal. Classify them:
-
-| Type | Pattern | Response |
-|------|---------|----------|
-| Tool error | API returns 500 | Retry with backoff |
-| Context error | Agent hallucinates from stale data | Refresh context |
-| Decision error | Agent chooses wrong tool | Log decision, adjust prompt |
-| System error | Rate limit, timeout | Circuit breaker |
-
-Each class needs a different fix. Merging them into "agent failed" loses the signal.
-
-## The Uncomfortable Truth
-
-Observability for agents means making the implicit explicit. Every agent makes dozens of implicit decisions per run — about what to retrieve, what to include, what to skip, when to stop. These decisions are the system. The prompts and tools are just the interface.
-
-If you can't see the decisions, you can't improve the system. Period.
-
-The teams that ship reliable agents aren't the ones with the most logs. They're the ones who made their agent's decision-making legible — to themselves, to their monitors, and to the next person who has to debug at 2 AM.
+Observability isn't optional. It's the difference between running an agent and being run by it.
 
 ---
 
-*Emil Vrána is an independent tech consultant based in Prague, working on AI systems and infrastructure.*
+*The best time to add observability was before launch. The second best time is now.*

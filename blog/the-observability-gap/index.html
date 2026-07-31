@@ -1,0 +1,105 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>The Observability Gap in AI Agents — Emil Vrána</title>
+    <meta name="description" content="Your infrastructure is monitored. Your agent is not. Here's how to close the observability gap before your first incident.">
+    <style>
+        :root {
+            --bg: #0f0f0f;
+            --text: #e0e0e0;
+            --accent: #6b9bd2;
+            --muted: #888;
+            --card-bg: #1a1a1a;
+        }
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+        body {
+            font-family: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+            background: var(--bg);
+            color: var(--text);
+            line-height: 1.7;
+            max-width: 680px;
+            margin: 0 auto;
+            padding: 2rem 1.5rem;
+        }
+        a { color: var(--accent); text-decoration: none; }
+        a:hover { text-decoration: underline; }
+        .back { color: var(--muted); font-size: 0.85rem; margin-bottom: 1rem; display: block; }
+        .back:hover { color: var(--accent); }
+        h1 { font-size: 1.6rem; font-weight: 600; margin: 0 0 0.3rem; line-height: 1.3; }
+        .meta { color: var(--muted); font-size: 0.85rem; margin-bottom: 2rem; }
+        h2 { font-size: 1.2rem; font-weight: 600; margin: 2rem 0 1rem; color: var(--text); }
+        p { margin: 0 0 1rem; }
+        ol { margin: 0 0 1rem 1.5rem; }
+        ul { margin: 0 0 1rem 1.5rem; }
+        li { margin: 0.4rem 0; }
+        em { color: var(--text); }
+        hr {
+            border: none;
+            border-top: 1px solid #333;
+            margin: 2.5rem 0;
+        }
+        footer {
+            margin-top: 3rem;
+            padding-top: 1.5rem;
+            border-top: 1px solid #333;
+            color: var(--muted);
+            font-size: 0.8rem;
+        }
+    </style>
+</head>
+<body>
+    <a href="/" class="back">← Home</a>
+    <h1>The Observability Gap in AI Agents</h1>
+    <div class="meta">July 31, 2026</div>
+
+    <p>Most teams can tell you exactly how many requests their API handled last Tuesday. Ask them what their agent did at 3 PM, and they'll open a JSON log file and start scrolling.</p>
+
+    <p>This is the observability gap. Your infrastructure is monitored. Your agent is not.</p>
+
+    <h2>What you're missing</h2>
+
+    <p>Traditional services produce structured telemetry. Request ID, latency, status code, error message. You can trace a request end-to-end, set alerts, build dashboards. Agents break this model in three ways:</p>
+
+    <p><strong>Nonlinear execution.</strong> An agent doesn't follow a fixed path. It reasons, loops back, calls tools in sequences you didn't predict. A single "agent run" might involve 12 LLM calls, 7 tool invocations, and 3 self-corrections. Logging the final output tells you nothing about how it got there.</p>
+
+    <p><strong>Subjective failures.</strong> A 200 status code doesn't mean the agent succeeded. It might have returned syntactically valid JSON that's semantically wrong. It might have called the right tool with subtly wrong arguments. It might have hallucinated a confident-sounding explanation. You need observability into the reasoning, not just the result.</p>
+
+    <p><strong>Silent degradation.</strong> Agents don't crash loudly. They drift. A model update makes the agent 15% more verbose. A tool API change introduces subtle errors in 5% of cases. Without baselines and anomaly detection, you won't notice until a user complains.</p>
+
+    <h2>What to instrument</h2>
+
+    <p><strong>Every LLM call.</strong> Input, output, model, latency, token count. Yes, this is expensive to store. Sample if you must, but don't skip it. You'll thank yourself during your first real incident.</p>
+
+    <p><strong>Every tool call.</strong> Name, arguments, result, duration, success/failure. This is your agent's dependency graph. When something breaks, this tells you where.</p>
+
+    <p><strong>Every decision point.</strong> When the agent chooses between paths — search vs. compute, tool A vs. tool B — log the choice and the reasoning. This is how you debug unexpected behavior patterns.</p>
+
+    <p><strong>Aggregate metrics.</strong> Token cost per task, tool call distribution, retry rates, escalation frequency. Set baselines. Alert on drift.</p>
+
+    <h2>The practical framework</h2>
+
+    <p>Start simple. Add structured logging to every LLM call and tool invocation in your agent loop. Use a consistent schema: <code>run_id</code>, <code>step</code>, <code>type</code>, <code>input</code>, <code>output</code>, <code>duration</code>, <code>status</code>. Ship it to whatever you already use — Elasticsearch, Datadog, even a structured log file.</p>
+
+    <p>Then add a dashboard. Token cost over time. Tool call success rates. Task completion rates by type. You don't need fancy tooling — you need visibility.</p>
+
+    <p>Then set alerts. If tool failure rate exceeds 10%, page someone. If average tokens per task doubles overnight, investigate. If escalation rate climbs, something changed.</p>
+
+    <h2>The hard truth</h2>
+
+    <p>If you can't answer "what did my agent do yesterday and why," you don't have a production system. You have a prototype that happens to be running in production.</p>
+
+    <p>Observability isn't optional. It's the difference between running an agent and being run by it.</p>
+
+    <hr>
+
+    <p>🐦⬛</p>
+
+    <p><em>The best time to add observability was before launch. The second best time is now.</em></p>
+
+    <footer>
+        <a href="/">← Home</a> · <a href="/blog">More writing</a>
+    </footer>
+</body>
+</html>
