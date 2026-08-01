@@ -1,0 +1,117 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Your Agent Needs a Runbook — Emil Vrána</title>
+    <meta name="description" content="Your service has a runbook. Your agent does not. When observability tells you something is wrong, a runbook tells you what to do about it — before the 2 AM debugging session.">
+    <style>
+        :root {
+            --bg: #0f0f0f;
+            --text: #e0e0e0;
+            --accent: #6b9bd2;
+            --muted: #888;
+            --card-bg: #1a1a1a;
+        }
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+        body {
+            font-family: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+            background: var(--bg);
+            color: var(--text);
+            line-height: 1.7;
+            max-width: 680px;
+            margin: 0 auto;
+            padding: 2rem 1.5rem;
+        }
+        a { color: var(--accent); text-decoration: none; }
+        a:hover { text-decoration: underline; }
+        .back { color: var(--muted); font-size: 0.85rem; margin-bottom: 1rem; display: block; }
+        .back:hover { color: var(--accent); }
+        h1 { font-size: 1.6rem; font-weight: 600; margin: 0 0 0.3rem; line-height: 1.3; }
+        .date { color: var(--muted); font-size: 0.85rem; margin-bottom: 2rem; }
+        h2 { font-size: 1.15rem; font-weight: 600; margin: 2rem 0 0.5rem; }
+        h3 { font-size: 1rem; font-weight: 600; margin: 1.5rem 0 0.3rem; }
+        p { margin-bottom: 1rem; }
+        ul, ol { margin-bottom: 1rem; padding-left: 1.5rem; }
+        li { margin-bottom: 0.3rem; }
+        code {
+            background: var(--card-bg);
+            padding: 0.15rem 0.4rem;
+            border-radius: 3px;
+            font-size: 0.9rem;
+        }
+        pre {
+            background: var(--card-bg);
+            padding: 1rem;
+            border-radius: 6px;
+            overflow-x: auto;
+            margin-bottom: 1.5rem;
+            font-size: 0.85rem;
+            line-height: 1.5;
+        }
+        em { color: var(--muted); }
+        blockquote {
+            border-left: 3px solid #333;
+            padding-left: 1rem;
+            margin: 1.5rem 0;
+            color: var(--muted);
+        }
+        footer {
+            margin-top: 3rem;
+            padding-top: 1.5rem;
+            border-top: 1px solid #222;
+            color: var(--muted);
+            font-size: 0.8rem;
+        }
+    </style>
+</head>
+<body>
+    <a href="/blog/" class="back">← Blog</a>
+    <h1>Your Agent Needs a Runbook</h1>
+    <div class="date">August 1, 2026</div>
+
+    <p>You have observability. You have alerts. Something just paged you at 2 AM: your agent's error rate spiked. Now what?</p>
+
+    <p>You open the dashboard. You see red lines. You check the logs. There's a tool call failing. You look at the code. The tool hasn't changed. The API it calls hasn't changed. The model version hasn't changed. You scroll through 400 lines of agent reasoning to find the one sentence where it started constructing the wrong arguments.</p>
+
+    <p>Twenty minutes in, you're still reading. The alert is still firing. Your agent is still failing in production.</p>
+
+    <p>This is the runbook gap. Your service has a runbook. Your agent does not.</p>
+
+    <h2>What a Runbook Gives You</h2>
+
+    <p>A runbook is not documentation. Documentation explains what the system does. A runbook explains what <em>you do</em> when it breaks.</p>
+
+    <p>For a traditional service, a runbook covers: how to restart, how to roll back, how to disable a feature flag, how to scale, who to escalate to. The answers are deterministic. Step 3 follows step 2. The system is predictable enough that predictability can be encoded.</p>
+
+    <p>Agents are less predictable, which makes runbooks more important, not less. When the failure mode is "the model started calling the wrong tool," you need a predefined response, not a late-night debugging session.</p>
+
+    <h2>What an Agent Runbook Looks Like</h2>
+
+    <h3>Degradation Modes</h3>
+    <p>What happens when each dependency fails? If the search API returns errors, should the agent skip it, retry with backoff, or fall back to a cached result? Define this ahead of time. At 2 AM, "just let it fail" is a valid answer, but it should be a conscious choice, not an accident.</p>
+
+    <h3>Circuit Breakers</h3>
+    <p>What triggers a circuit breaker? How many failures in what window? What does the agent do when the breaker is open? A broken agent looping on retries is worse than an agent that gracefully stops and tells the user something is wrong.</p>
+
+    <h3>Rollback Procedures</h3>
+    <p>Can you revert to a previous model version? A previous prompt version? How? Model updates are the most common cause of silent agent degradation. You need a one-command rollback, and you need to have tested it before you need it.</p>
+
+    <h3>Escalation Paths</h3>
+    <p>When should a human be pulled in? What does the agent do while waiting? Define the thresholds: three consecutive tool failures, any instance of data exfiltration risk, confidence below a threshold on a critical path. The agent should never silently struggle in a loop that a human could resolve in seconds.</p>
+
+    <h3>Communication Templates</h3>
+    <p>When the agent degrades, what does the user see? "I'm having trouble with X, let me try a different approach" is better than a spinning loader or, worse, a hallucinated answer. Write these messages in advance, when you're calm and thinking clearly.</p>
+
+    <h2>The Pattern</h2>
+
+    <p>Every incident you respond to, write down what you did. Not in a post-mortem that nobody reads — in a short, actionable runbook entry. "When tool X returns error Y, do Z." Over time, you build a decision tree that any on-call engineer can follow.</p>
+
+    <p>This is how you get from "I hope it works" to "I know what to do when it doesn't." Your agent will break. The question is whether you'll be reading logs or following a playbook.</p>
+
+    <footer>
+        <em>The best runbook is the one you wrote before the incident, not after.</em><br><br>
+        <a href="/">emil.aiadoption.cz</a>
+    </footer>
+</body>
+</html>
