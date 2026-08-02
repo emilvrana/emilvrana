@@ -1,0 +1,134 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Trust Budgets: Why Your AI System Gets One Chance to Be Wrong — Emil Vrána</title>
+    <meta name="description" content="Trust in AI systems behaves like a budget, not a faucet — you spend it down, you don't turn it up. A confident wrong answer costs more than an honest 'I don't know.'">
+    <style>
+        :root {
+            --bg: #0f0f0f;
+            --text: #e0e0e0;
+            --accent: #6b9bd2;
+            --muted: #888;
+            --card-bg: #1a1a1a;
+        }
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+        body {
+            font-family: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+            background: var(--bg);
+            color: var(--text);
+            line-height: 1.7;
+            max-width: 680px;
+            margin: 0 auto;
+            padding: 2rem 1.5rem;
+        }
+        a { color: var(--accent); text-decoration: none; }
+        a:hover { text-decoration: underline; }
+        .back { color: var(--muted); font-size: 0.85rem; margin-bottom: 1rem; display: block; }
+        .back:hover { color: var(--accent); }
+        h1 { font-size: 1.6rem; font-weight: 600; margin: 0 0 0.3rem; line-height: 1.3; }
+        .date { color: var(--muted); font-size: 0.85rem; margin-bottom: 2rem; }
+        h2 { font-size: 1.15rem; font-weight: 600; margin: 2rem 0 0.5rem; }
+        h3 { font-size: 1rem; font-weight: 600; margin: 1.5rem 0 0.3rem; }
+        p { margin-bottom: 1rem; }
+        ul, ol { margin-bottom: 1rem; padding-left: 1.5rem; }
+        li { margin-bottom: 0.3rem; }
+        code {
+            background: var(--card-bg);
+            padding: 0.15rem 0.4rem;
+            border-radius: 3px;
+            font-size: 0.9rem;
+        }
+        pre {
+            background: var(--card-bg);
+            padding: 1rem;
+            border-radius: 6px;
+            overflow-x: auto;
+            margin-bottom: 1.5rem;
+            font-size: 0.85rem;
+            line-height: 1.5;
+        }
+        em { color: var(--muted); }
+        blockquote {
+            border-left: 3px solid #333;
+            padding-left: 1rem;
+            margin: 1.5rem 0;
+            color: var(--muted);
+        }
+        footer {
+            margin-top: 3rem;
+            padding-top: 1.5rem;
+            border-top: 1px solid #222;
+            color: var(--muted);
+            font-size: 0.8rem;
+        }
+    </style>
+</head>
+<body>
+    <a href="/blog/" class="back">← Blog</a>
+    <h1>Trust Budgets: Why Your AI System Gets One Chance to Be Wrong</h1>
+    <div class="date">August 2, 2026</div>
+
+    <p>You shipped the agent. It worked in testing. The demo was flawless. Then a user asked it something slightly off-script, and it confidently returned garbage.</p>
+
+    <p>They won't use it again.</p>
+
+    <p>This isn't a technology problem. It's a trust problem. And trust in AI systems behaves like a budget, not a faucet — you spend it down, you don't turn it up.</p>
+
+    <h2>The Trust Curve</h2>
+
+    <p>Traditional software starts neutral. Users don't trust it, they don't distrust it — they just use it. Reliability builds trust gradually. Five successful logins, and the user trusts the auth system. A hundred, and they don't even think about it.</p>
+
+    <p>AI systems are different. They start with <em>negative trust</em>. Users have been burned by chatbots before. They've seen confident hallucinations. They've copy-pasted AI output into a report and been embarrassed. Your agent starts in a hole.</p>
+
+    <p>This means the trust curve is inverted. Your first interactions are the most critical. Not because they're the most complex — but because a failure at interaction one costs you ten times what a failure at interaction fifty would.</p>
+
+    <h2>How You Spend the Budget</h2>
+
+    <p>Every interaction is a withdrawal. The question is what you get for it:</p>
+
+    <ul>
+        <li><strong>Correct, useful answer.</strong> Small deposit. The user thinks "ok, it worked this time" — not "I trust this system." Trust builds slowly.</li>
+        <li><strong>Wrong answer, clearly wrong.</strong> Moderate withdrawal. The user can see it's wrong and correct course. Annoying, but survivable. This is the cost of doing business with probabilistic systems.</li>
+        <li><strong>Wrong answer, confidently presented.</strong> Large withdrawal. The user acts on the output before realizing it's wrong. This is the failure mode that kills adoption. Not because the answer was wrong — because the system didn't signal uncertainty.</li>
+        <li><strong>"I don't know, but here's how to find out."</strong> Moderate deposit. The user learns the system has boundaries and respects them. This is undervalued. Most teams optimize for always-having-an-answer, when they should optimize for always-being-honest-about-uncertainty.</li>
+        <li><strong>Silent failure.</strong> Bankrupt. The system returns something plausible but wrong, and the user doesn't realize until much later. Every subsequent interaction is now contaminated by doubt.</li>
+    </ul>
+
+    <h2>Designing for the Trust Budget</h2>
+
+    <h3>Signal uncertainty.</h3>
+    <p>When the model's confidence is low, say so. "I'm not confident about this — here's what I found, but you should verify" beats a confident hallucination every time. The user might still use the answer, but now they own the verification decision.</p>
+
+    <h3>Make failure loud.</h3>
+    <p>Silent failures are trust killers. If your agent can't complete a task, it should say so explicitly — not return partial results as if they're complete, not hallucinate to fill gaps, not silently skip steps.</p>
+
+    <h3>Invest the first interactions wisely.</h3>
+    <p>Your agent's first five interactions with a new user should be conservative. Don't try to be impressive — try to be reliable. Answer the simple questions perfectly. Don't overreach. The complex questions will come, and the user will still be there if you haven't burned the budget early.</p>
+
+    <h3>Separate confidence from correctness.</h3>
+    <p>A model can be confident and wrong. Your system should track calibration — when the model says 95% confident, is it actually right 95% of the time? If not, you're spending trust you don't have.</p>
+
+    <h2>The Compound Effect</h2>
+
+    <p>Systems that manage their trust budget compound positively. Users learn the boundaries, learn when to trust, learn when to verify. They become better users of the system, and the system becomes more valuable to them.</p>
+
+    <p>Systems that burn through their trust budget compound negatively. Users stop checking outputs — not because they trust them, but because they've given up. Or they stop using the system entirely, because the cost of verifying everything exceeds the value of the automation.</p>
+
+    <p>The difference between these outcomes isn't model quality. It's system design. How you handle uncertainty, how you signal confidence, how you fail — these are engineering decisions, not prompt engineering tricks.</p>
+
+    <h2>The Uncomfortable Accounting</h2>
+
+    <p>Most teams don't track trust. They track accuracy, latency, cost. All measurable, all optimizable. Trust is softer, slower, harder to quantify — until it's gone, and then it's the only metric that matters.</p>
+
+    <p>Add one question to your review process: "If this output is wrong, does the user know?" If the answer is no, you're spending trust you haven't earned.</p>
+
+    <p>Budget accordingly.</p>
+
+    <footer>
+        <em>Trust is earned in drops and lost in buckets.</em><br><br>
+        <a href="/">emil.aiadoption.cz</a>
+    </footer>
+</body>
+</html>
