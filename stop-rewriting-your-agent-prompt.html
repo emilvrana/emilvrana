@@ -1,0 +1,135 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Stop Rewriting Your Agent Prompt — Start Versioning It — Emil Vrána</title>
+    <meta name="description" content="Prompt drift is the same problem as config drift. The solution isn't discipline — it's version control. Put your prompts in Git, write commit messages for changes, and tag releases.">
+    <style>
+        :root {
+            --bg: #0f0f0f;
+            --text: #e0e0e0;
+            --accent: #6b9bd2;
+            --muted: #888;
+            --card-bg: #1a1a1a;
+            --code-bg: #1a1a1a;
+        }
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+        body {
+            font-family: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+            background: var(--bg);
+            color: var(--text);
+            line-height: 1.7;
+            max-width: 720px;
+            margin: 0 auto;
+            padding: 3rem 1.5rem;
+        }
+        .back { color: var(--muted); text-decoration: none; font-size: 0.85rem; }
+        .back:hover { color: var(--accent); }
+        h1 { font-size: 1.6rem; font-weight: 600; margin: 1.5rem 0 0.5rem; }
+        .meta { color: var(--muted); font-size: 0.85rem; margin-bottom: 2rem; }
+        h2 { font-size: 1.1rem; font-weight: 600; margin: 2rem 0 0.7rem; color: var(--accent); }
+        h3 { font-size: 0.95rem; font-weight: 600; margin: 1.5rem 0 0.5rem; }
+        p { margin-bottom: 1rem; }
+        ul, ol { padding-left: 1.5rem; margin-bottom: 1rem; }
+        li { margin-bottom: 0.4rem; }
+        pre {
+            background: var(--code-bg);
+            border: 1px solid #2a2a2a;
+            border-radius: 6px;
+            padding: 1.2rem;
+            overflow-x: auto;
+            margin: 1rem 0;
+            font-size: 0.85rem;
+            line-height: 1.5;
+        }
+        code {
+            font-family: 'JetBrains Mono', 'Fira Code', 'Courier New', monospace;
+            font-size: 0.88em;
+        }
+        p code, li code {
+            background: var(--code-bg);
+            padding: 0.15rem 0.4rem;
+            border-radius: 3px;
+            font-size: 0.85em;
+        }
+        strong { color: #fff; }
+        a { color: var(--accent); text-decoration: none; }
+        a:hover { text-decoration: underline; }
+        blockquote {
+            border-left: 3px solid var(--accent);
+            padding-left: 1rem;
+            margin: 1.5rem 0;
+            color: var(--muted);
+        }
+        hr {
+            border: none;
+            border-top: 1px solid #222;
+            margin: 2rem 0;
+        }
+        .cta {
+            background: var(--card-bg);
+            border-radius: 8px;
+            padding: 1.5rem;
+            margin: 2rem 0;
+        }
+        .cta p:last-child { margin-bottom: 0; }
+        @media (max-width: 500px) {
+            body { padding: 2rem 1rem; }
+            h1 { font-size: 1.3rem; }
+        }
+    </style>
+</head>
+<body>
+    <a href="/" class="back">← Back home</a>
+
+    <h1>Stop Rewriting Your Agent Prompt — Start Versioning It</h1>
+    <div class="meta">August 3, 2026</div>
+
+    <p>Your agent behaves differently in production than it did on your laptop. You change the prompt. It gets better. Then something else breaks. You change it again. Two weeks later, nobody remembers what the prompt said before — or why it changed.</p>
+    <p>This is prompt drift, and it's the same problem config drift posed for infrastructure. The solution isn't discipline. It's version control.</p>
+
+    <h2>The problem isn't laziness</h2>
+    <p>Most teams I work with have a <code>system_prompt</code> string somewhere in their codebase. Maybe it's in a config file, maybe it's hardcoded, maybe it lives in a database table that someone updates through an admin panel. What it almost never has is history.</p>
+    <p>When the agent starts returning verbose summaries instead of concise answers, someone edits the prompt to add "be concise." When it starts hallucinating tool outputs, someone adds "only report results you actually received." Each edit is reasonable in isolation. Together, they accrete into a prompt nobody can reason about — because nobody can see what it was last week, or why each line exists.</p>
+    <p>This isn't a prompt engineering problem. It's a software engineering problem.</p>
+
+    <h2>Treat prompts like code</h2>
+    <p>The fix is simple in principle and surprisingly effective in practice:</p>
+    <p><strong>Put your prompts in version-controlled files.</strong> Not in environment variables, not in database rows, not in that one <code>constants.py</code> that everyone avoids. Markdown files work well. They're readable, diffable, and Git tracks every change.</p>
+    <p><strong>Write commit messages for prompt changes.</strong> "Added 'be concise'" tells you nothing in six months. "Reduced average response length by 40% after adding conciseness constraint — see eval run #847" tells you everything.</p>
+    <p><strong>Tag releases.</strong> When you deploy an agent, tag the commit. When something goes wrong, you can check out exactly what the prompt was at that moment. This is basic infrastructure hygiene, applied to text.</p>
+
+    <h2>What this unlocks</h2>
+    <p>Once your prompts are versioned, patterns emerge:</p>
+    <p><strong>Regression testing becomes possible.</strong> You can run the same evaluation suite against prompt v1.3 and v1.4 and compare results. Without version pins, you're comparing against a ghost.</p>
+    <p><strong>A/B testing becomes safe.</strong> Deploy prompt variant B to 10% of traffic. If it's worse, roll back to the exact same prompt that was working. Not a hand-reconstructed approximation.</p>
+    <p><strong>Debugging becomes faster.</strong> "The agent started doing X on Tuesday" → check what changed Tuesday → find the commit → understand the intent. Five minutes instead of five hours of archaeology.</p>
+    <p><strong>Onboarding becomes easier.</strong> New team members can read the prompt history and understand why each constraint exists. The prompt becomes documentation, not just configuration.</p>
+
+    <h2>The practical setup</h2>
+    <p>You don't need a fancy prompt management platform. You need three things:</p>
+    <ol>
+        <li><strong>A <code>prompts/</code> directory</strong> in your repo with one file per prompt. Markdown, plain text, whatever your team reads easily.</li>
+        <li><strong>A deployment step</strong> that reads the current prompt from the tagged version and injects it into your agent. This can be a build script, a config map, or even a simple <code>cat prompts/system.md</code> in your CI pipeline.</li>
+        <li><strong>A discipline of recording why.</strong> Every prompt change gets a commit message explaining the observed behavior that motivated it and the expected outcome. No exceptions.</li>
+    </ol>
+    <p>That's it. No frameworks, no platforms, no dashboards. Just Git doing what it's good at.</p>
+
+    <h2>What about dynamic prompts?</h2>
+    <p>Some prompts have dynamic sections — few-shot examples retrieved from a database, context injected at runtime, user-specific instructions. That's fine. Version the static skeleton and the logic that assembles the dynamic parts. You'll still be able to trace what changed when behavior shifts.</p>
+    <p>The key insight: you're not versioning the final text that goes to the model. You're versioning the template and the rules that produce it. Those are the levers you pull; those are what need history.</p>
+
+    <h2>The broader pattern</h2>
+    <p>This is the same lesson infrastructure learned a decade ago. Config management wasn't about the tool — it was about making system state visible, auditable, and reversible. Prompt management is the same thing, applied to a different layer of the stack.</p>
+    <p>Your agent's behavior is determined by three things: the model, the tools, and the prompt. You version the model (checkpoints, API versions). You version the tools (your codebase). The prompt is the last unversioned piece. Fix that, and you've eliminated the biggest source of unexplained behavior changes in your system.</p>
+    <p>Stop rewriting. Start versioning.</p>
+
+    <hr>
+
+    <div class="cta">
+        <p>Related: <a href="/the-specification-gap.html">The Specification Gap</a></p>
+        <p>Related: <a href="/dont-build-an-agent-build-a-pipeline.html">Don't Build an Agent. Build a Pipeline.</a></p>
+    </div>
+</body>
+</html>
