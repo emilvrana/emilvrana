@@ -1,0 +1,125 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>The Feedback Gap — Emil Vrána</title>
+    <meta name="description" content="Most AI systems ship without any way to learn from production use. The feedback gap is why your agent stops improving the day you deploy it.">
+    <style>
+        :root {
+            --bg: #0f0f0f;
+            --text: #e0e0e0;
+            --accent: #6b9bd2;
+            --muted: #888;
+            --card-bg: #1a1a1a;
+        }
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+        body {
+            font-family: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+            background: var(--bg);
+            color: var(--text);
+            line-height: 1.7;
+            max-width: 680px;
+            margin: 0 auto;
+            padding: 2rem 1.5rem;
+        }
+        a { color: var(--accent); text-decoration: none; }
+        a:hover { text-decoration: underline; }
+        .back { color: var(--muted); font-size: 0.85rem; margin-bottom: 1rem; display: block; }
+        .back:hover { color: var(--accent); }
+        h1 { font-size: 1.6rem; font-weight: 600; margin: 0 0 0.3rem; line-height: 1.3; }
+        .date { color: var(--muted); font-size: 0.85rem; margin-bottom: 2rem; }
+        h2 { font-size: 1.15rem; font-weight: 600; margin: 2rem 0 0.5rem; }
+        h3 { font-size: 1rem; font-weight: 600; margin: 1.5rem 0 0.3rem; }
+        p { margin-bottom: 1rem; }
+        ul, ol { margin-bottom: 1rem; padding-left: 1.5rem; }
+        li { margin-bottom: 0.3rem; }
+        code {
+            background: var(--card-bg);
+            padding: 0.15rem 0.4rem;
+            border-radius: 3px;
+            font-size: 0.9rem;
+        }
+        pre {
+            background: var(--card-bg);
+            padding: 1rem;
+            border-radius: 6px;
+            overflow-x: auto;
+            margin-bottom: 1.5rem;
+            font-size: 0.85rem;
+            line-height: 1.5;
+        }
+        em { color: var(--muted); }
+        blockquote {
+            border-left: 3px solid #333;
+            padding-left: 1rem;
+            margin: 1.5rem 0;
+            color: var(--muted);
+        }
+        footer {
+            margin-top: 3rem;
+            padding-top: 1.5rem;
+            border-top: 1px solid #222;
+            color: var(--muted);
+            font-size: 0.8rem;
+        }
+    </style>
+</head>
+<body>
+    <a href="/blog/" class="back">← Blog</a>
+    <h1>The Feedback Gap</h1>
+    <div class="date">August 5, 2026</div>
+
+    <p>Here's a pattern I keep seeing: a team spends months building an AI system. They iterate on the prompt, tune the retrieval, build evals, run betas. The launch goes well. Then… nothing. The system stops getting better.</p>
+
+    <p>Not because the technology plateaued. Because the feedback stopped.</p>
+
+    <h2>What Happens at Launch</h2>
+
+    <p>Before deployment, you have tight feedback loops. You run the system, you see the output, you adjust. Every failure is visible. Every success is measurable. The system improves daily.</p>
+
+    <p>After deployment, the system produces outputs that real people see — and you hear about maybe 5% of the problems. The other 95% disappear into the void. Users don't file bug reports. They just leave.</p>
+
+    <p>This is the feedback gap: the chasm between what your system does in production and what you actually learn from.</p>
+
+    <h2>Why It Matters More for AI Than Traditional Software</h2>
+
+    <p>Traditional software breaks loudly. A null reference throws an exception. A missing route returns a 404. Monitoring catches it.</p>
+
+    <p>AI systems fail silently. They return a plausible-looking answer that happens to be wrong. No stack trace. No error code. The user might not even know it's wrong — they just act on bad information.</p>
+
+    <p>This means the standard observability playbook (logs, metrics, alerts) catches the infrastructure layer but misses the semantic layer. Your uptime is 99.9% and your answers are 60% correct, and you only know about the 60% because you ran a manual audit last quarter.</p>
+
+    <h2>The Three Signals You're Missing</h2>
+
+    <p>Most AI deployments are flying blind on three critical signals:</p>
+
+    <ol>
+        <li><strong>Implicit rejection.</strong> The user didn't accept the output. They rephrased, they started over, they went elsewhere. You see the query but not the outcome.</li>
+        <li><strong>Downstream effects.</strong> The answer was acted on. Was it right? Did it save time or create rework? You'll never know unless you close the loop.</li>
+        <li><strong>Drift.</strong> The distribution of inputs shifts over time. The system that worked in January degrades by July, and nobody notices because the queries still return 200 OK.</li>
+    </ol>
+
+    <h2>What Closing the Gap Looks Like</h2>
+
+    <p>You don't need a complex pipeline. You need three things:</p>
+
+    <p><strong>A thumbs-up/down on every answer.</strong> Not a survey. Not a five-star rating. One binary signal: was this useful or not? Make it frictionless. Make it visible to the person building the prompts.</p>
+
+    <p><strong>Sampling.</strong> Periodically review a random sample of production outputs. Not the ones flagged as problems — a random sample. This is the only way to measure actual quality, not just "complaint rate."</p>
+
+    <p><strong>A feedback-to-prompt path.</strong> When the signal says "this was wrong," someone needs the authority and the tools to fix it. If feedback goes into a backlog that nobody triages, you've built a suggestion box, not a feedback loop.</p>
+
+    <h2>The Uncomfortable Truth</h2>
+
+    <p>Most teams don't close the feedback gap because it's easier to add another feature than to instrument what they already have. Shipping a new capability feels like progress. Adding a thumbs-down button feels like admitting failure.</p>
+
+    <p>But here's the thing: a system that learns from 10% of its mistakes will outperform a system that never sees its mistakes at all. Not in theory. In practice. Within weeks.</p>
+
+    <p>The feedback gap isn't a technical problem. It's a design choice. And right now, most teams are choosing to fly blind.</p>
+
+    <footer>
+        <p><a href="/">Emil Vrána</a> · <a href="/blog/">Blog</a> · Independent tech consultant, Prague</p>
+    </footer>
+</body>
+</html>
