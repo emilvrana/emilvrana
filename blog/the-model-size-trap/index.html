@@ -1,0 +1,148 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>The Model Size Trap: Why Bigger Isn't Better for Agent Work — Emil Vrána</title>
+    <meta name="description" content="Teams default to the largest model for every agent step, burning budget and adding latency. Most agent work should run on smaller, cheaper models. Here's how to decide.">
+    <style>
+        :root {
+            --bg: #0f0f0f;
+            --text: #e0e0e0;
+            --accent: #6b9bd2;
+            --muted: #888;
+            --card-bg: #1a1a1a;
+        }
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+        body {
+            font-family: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+            background: var(--bg);
+            color: var(--text);
+            line-height: 1.7;
+            max-width: 680px;
+            margin: 0 auto;
+            padding: 2rem 1.5rem;
+        }
+        a { color: var(--accent); text-decoration: none; }
+        a:hover { text-decoration: underline; }
+        .back { color: var(--muted); font-size: 0.85rem; margin-bottom: 1rem; display: block; }
+        .back:hover { color: var(--accent); }
+        h1 { font-size: 1.6rem; font-weight: 600; margin: 0 0 0.3rem; line-height: 1.3; }
+        .date { color: var(--muted); font-size: 0.85rem; margin-bottom: 2rem; }
+        h2 { font-size: 1.15rem; font-weight: 600; margin: 2rem 0 0.5rem; }
+        h3 { font-size: 1rem; font-weight: 600; margin: 1.5rem 0 0.3rem; }
+        p { margin-bottom: 1rem; }
+        ul, ol { margin-bottom: 1rem; padding-left: 1.5rem; }
+        li { margin-bottom: 0.3rem; }
+        code {
+            background: var(--card-bg);
+            padding: 0.15rem 0.4rem;
+            border-radius: 3px;
+            font-size: 0.9rem;
+        }
+        pre {
+            background: var(--card-bg);
+            padding: 1rem;
+            border-radius: 6px;
+            overflow-x: auto;
+            margin-bottom: 1.5rem;
+            font-size: 0.85rem;
+            line-height: 1.5;
+        }
+        em { color: var(--muted); }
+        blockquote {
+            border-left: 3px solid #333;
+            padding-left: 1rem;
+            margin: 1.5rem 0;
+            color: var(--muted);
+        }
+        footer {
+            margin-top: 3rem;
+            padding-top: 1.5rem;
+            border-top: 1px solid #222;
+            color: var(--muted);
+            font-size: 0.8rem;
+        }
+    </style>
+</head>
+<body>
+    <a href="/blog/" class="back">← Blog</a>
+    <h1>The Model Size Trap: Why Bigger Isn't Better for Agent Work</h1>
+    <div class="date">August 6, 2026</div>
+
+    <p>Every AI agent team hits the same wall: the bill. You built a three-step pipeline — intent classification, tool selection, response generation — and each step hits GPT-4 or Claude Opus because that's what worked in the demo. Now you're paying $0.03 per query for a system where 80% of the tokens are boilerplate.</p>
+
+    <p>The instinct is to optimize the prompt. Trim tokens, cache completions, batch requests. All good. But you're optimizing the cost of the wrong decision — using the biggest model for every step.</p>
+
+    <h2>The Architecture Nobody Draws</h2>
+
+    <p>Agent pipelines have a shape that most teams don't explicitly design for. It looks like this:</p>
+
+    <ul>
+        <li><strong>Routing and classification.</strong> "What does the user want?" This is a sorting problem. A small model sorts just as well as a large one — often better, because it doesn't overthink. A 7B model classifies intent at 1/50th the cost.</li>
+        <li><strong>Structured extraction.</strong> "Pull the date, amount, and currency from this message." This is parsing, not reasoning. Your smallest capable model handles this. The big model doesn't extract dates more accurately — it just costs more to produce the same JSON.</li>
+        <li><strong>Tool selection and parameterization.</strong> "Which tool, which arguments." This requires understanding the tool schema and mapping user intent to it. Small models do this well when the tool surface is narrow. Medium models handle wider surfaces. You almost never need the frontier model here.</li>
+        <li><strong>Reasoning and judgment.</strong> "Should I refund this customer?" This is where the big model earns its cost. Multi-step reasoning, edge case handling, nuanced decisions — this is frontier territory. Use it here.</li>
+        <li><strong>Response generation.</strong> "Write a clear, helpful reply." Tone, formatting, empathy — a mid-size model handles this well. The frontier model writes slightly more polished prose, but the difference is marginal and the cost is 10x.</li>
+    </ul>
+
+    <p>The pattern: <em>most of your steps don't need the big model, and the one that does doesn't run on every query.</em></p>
+
+    <h2>The 80/20 of Model Selection</h2>
+
+    <p>Here's a practical tiering:</p>
+
+    <ul>
+        <li><strong>Tier 1 — Small (7B-class, ~$0.05/M tokens):</strong> Classification, extraction, routing, format conversion, simple guardrails. If the output schema is fixed and the input is structured, start here.</li>
+        <li><strong>Tier 2 — Medium (70B-class, ~$0.50/M tokens):</strong> Tool selection, response drafting, summarization, translation. When the task needs real language understanding but not deep reasoning.</li>
+        <li><strong>Tier 3 — Frontier ($5-15/M tokens):</strong> Complex reasoning, ambiguous decisions, multi-step planning, novel edge cases. The expensive seats at the table — use them when the question genuinely requires them.</li>
+    </ul>
+
+    <p>The math is brutal. A typical agent pipeline that routes everything through Tier 3 spends $15 per thousand queries. The same pipeline with proper tiering spends $2-3. Same accuracy — often better, because smaller models are more predictable on structured tasks.</p>
+
+    <h2>The Escalation Pattern</h2>
+
+    <p>You don't need to pick one tier per step upfront. Design for escalation:</p>
+
+    <ol>
+        <li>Start every step at the smallest model that could handle it.</li>
+        <li>If the small model's confidence is below threshold, escalate to the next tier.</li>
+        <li>If the medium model is uncertain, escalate to the frontier.</li>
+        <li>Log every escalation. The escalation rate tells you whether your tier assignments are right.</li>
+    </ol>
+
+    <p>This has a useful side effect: escalation data is the best way to discover where your pipeline needs more structure. If intent classification escalates 30% of the time, your intents are too ambiguous — fix the schema, not the model.</p>
+
+    <h2>Where This Goes Wrong</h2>
+
+    <h3>Testing on the big model, deploying on the small one.</h3>
+    <p>This is the classic failure. You build and validate everything on GPT-4, then swap to a smaller model for cost. The system breaks because you optimized the prompts for the big model's reasoning style. <em>Test on the model you'll deploy.</em> If it can't handle the step on the small model, redesign the step — don't upgrade the model.</p>
+
+    <h3>One model to rule them all.</h3>
+    <p>The monolithic agent that does everything in one call is architecturally simple and economically wasteful. It forces the most expensive computation through the most expensive model on every query, including the 70% that are trivial. Break it into steps. Not because microservices are trendy — because different steps have different cost-optimal models.</p>
+
+    <h3>Over-engineering the routing.</h3>
+    <p>Tiered models don't need a sophisticated meta-router. The routing itself is a Tier 1 task. If you're spending more on the routing logic than you save on model tiering, you've built the wrong abstraction. Keep the escalation simple: confidence threshold + fallback chain.</p>
+
+    <h2>The Real Cost Model</h2>
+
+    <p>Token cost is obvious. The hidden costs of over-modeling:</p>
+
+    <ul>
+        <li><strong>Latency.</strong> A frontier model adds 2-5 seconds per call. On a three-step pipeline, that's 6-15 seconds. The same pipeline on Tier 1/2/3 runs in 3-7 seconds. Users notice.</li>
+        <li><strong>Reliability.</strong> Bigger models are more creative, and creativity is the enemy of structured output. If you need JSON, the small model is more reliable — it doesn't decide to be helpful in a different format.</li>
+        <li><strong>Degradation visibility.</strong> When a frontier model gets worse, it gets <em>creatively</em> worse — plausible-sounding errors that are hard to catch. When a small model degrades, it fails obviously. Obvious failures are easier to detect and route around.</li>
+    </ul>
+
+    <h2>How to Start</h2>
+
+    <p>Audit your last 1,000 agent traces. For each step, ask: "Could a smaller model do this?" Run the same inputs through Tier 1 and compare. You'll find that 60-80% of your steps are over-modeled. Swap them. Measure the delta. If accuracy holds, keep the swap. If it drops, add an escalation path.</p>
+
+    <p>This isn't about being cheap. It's about not wasting frontier reasoning on sorting problems — and having budget left for the problems that actually need it.</p>
+
+    <footer>
+        <em>Use the model that matches the task. Save the big guns for the big problems.</em><br><br>
+        <a href="/">emil.aiadoption.cz</a>
+    </footer>
+</body>
+</html>
