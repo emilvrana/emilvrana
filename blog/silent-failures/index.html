@@ -1,0 +1,134 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Silent Failures: The Bugs Your Agent Won't Report — Emil Vrána</title>
+    <meta name="description" content="Your agent's error rate is 0.1% and your dashboard is green. Your users are still getting wrong answers. The class of bugs where your agent fails without knowing it failed.">
+    <style>
+        :root {
+            --bg: #0f0f0f;
+            --text: #e0e0e0;
+            --accent: #6b9bd2;
+            --muted: #888;
+            --card-bg: #1a1a1a;
+        }
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+        body {
+            font-family: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+            background: var(--bg);
+            color: var(--text);
+            line-height: 1.7;
+            max-width: 680px;
+            margin: 0 auto;
+            padding: 2rem 1.5rem;
+        }
+        a { color: var(--accent); text-decoration: none; }
+        a:hover { text-decoration: underline; }
+        .back { color: var(--muted); font-size: 0.85rem; margin-bottom: 1rem; display: block; }
+        .back:hover { color: var(--accent); }
+        h1 { font-size: 1.6rem; font-weight: 600; margin: 0 0 0.3rem; line-height: 1.3; }
+        .date { color: var(--muted); font-size: 0.85rem; margin-bottom: 2rem; }
+        h2 { font-size: 1.15rem; font-weight: 600; margin: 2rem 0 0.5rem; }
+        h3 { font-size: 1rem; font-weight: 600; margin: 1.5rem 0 0.3rem; }
+        p { margin-bottom: 1rem; }
+        ul, ol { margin-bottom: 1rem; padding-left: 1.5rem; }
+        li { margin-bottom: 0.3rem; }
+        code {
+            background: var(--card-bg);
+            padding: 0.15rem 0.4rem;
+            border-radius: 3px;
+            font-size: 0.9rem;
+        }
+        pre {
+            background: var(--card-bg);
+            padding: 1rem;
+            border-radius: 6px;
+            overflow-x: auto;
+            margin-bottom: 1.5rem;
+            font-size: 0.85rem;
+            line-height: 1.5;
+        }
+        em { color: var(--muted); }
+        blockquote {
+            border-left: 3px solid #333;
+            padding-left: 1rem;
+            margin: 1.5rem 0;
+            color: var(--muted);
+        }
+        footer {
+            margin-top: 3rem;
+            padding-top: 1.5rem;
+            border-top: 1px solid #222;
+            color: var(--muted);
+            font-size: 0.8rem;
+        }
+    </style>
+</head>
+<body>
+    <a href="/blog/" class="back">← Blog</a>
+    <h1>Silent Failures: The Bugs Your Agent Won't Report</h1>
+    <div class="date">August 7, 2026</div>
+
+    <p>Your agent's error handling works. It catches exceptions. It logs stack traces. It retries on 500s. Your monitoring dashboard shows a clean green line — error rate under 0.1%.</p>
+
+    <p>And yet your users are getting wrong answers. Not errors. Wrong answers. Confidently delivered, well-formatted, completely wrong.</p>
+
+    <p>Welcome to silent failures — the class of bugs where your agent fails without knowing it failed. No exception thrown. No retry triggered. No alert fired. Just a smooth, professional response built on bad data, missed context, or a misunderstanding that the system had no way to detect.</p>
+
+    <h2>Why Agents Fail Silently</h2>
+
+    <p>Traditional software has it easy. A database query returns null — you check for null. An API returns 404 — you handle 404. The contract is explicit: here's what success looks like, here's what failure looks like, and you can tell them apart.</p>
+
+    <p>Agents don't have that luxury. Their primary interface is natural language, which means:</p>
+
+    <p><strong>The contract is implicit.</strong> You ask the agent to "find all customers who haven't logged in for 30 days and send them a re-engagement email." If your database has 50 such customers and the agent finds 12 because it wrote a bad query, it won't error out. It'll send 12 emails and report success. The failure is in the gap between 12 and 50 — a gap nobody measured because nobody defined the expected answer.</p>
+
+    <p><strong>The model doesn't know what it doesn't know.</strong> An LLM will happily answer a question about your internal pricing with numbers it hallucinated from its training data. It won't say "I don't have this information." It'll give you a number. That number might even be close to right. That's what makes it dangerous.</p>
+
+    <p><strong>Tools return data, not truth.</strong> Your RAG pipeline retrieves documents. The retrieval succeeded — you got chunks back. But were they the right chunks? Were they current? Were they about the right entity? The tool API says "success." The agent trusts it. Nobody validates whether the retrieved information actually answers the question.</p>
+
+    <p><strong>Formatting masks failure.</strong> A well-structured answer looks correct. The agent gives you a table of results, or a numbered list of steps, or a confident summary. The formatting triggers your brain's "looks good" heuristic. You don't verify each item because the presentation implies verification already happened.</p>
+
+    <h2>The Common Patterns</h2>
+
+    <p><strong>The partial result.</strong> The agent was supposed to process all 100 items. It processed 85 — maybe the API paginated and it stopped after the first page, maybe a filter excluded 15 items silently, maybe it just decided 85 was "enough." No error. A partial answer delivered as a complete one.</p>
+
+    <p><strong>The stale data.</strong> The agent retrieved information from a knowledge base. The retrieval worked. But the knowledge base hasn't been updated since March, and it's August. The answer is technically grounded — there's a source for every claim — but the claims are outdated. The system has no timestamp validation built in.</p>
+
+    <p><strong>The context window trim.</strong> The conversation got too long. The system trimmed the oldest messages to fit the context window. The user's original requirement — specified 20 messages ago — is gone. The agent answers based on what it can see, which is now incomplete. It doesn't know information was removed. It can't say "I might be missing context."</p>
+
+    <p><strong>The tool misuse.</strong> The agent has access to a search tool and a database tool. For the user's query, it should have used the database. It used search instead — maybe the query was ambiguous, maybe the tool descriptions weren't clear enough. It returns web search results as if they were internal data. Confidently. Helpfully. Wrongly.</p>
+
+    <p><strong>The misinterpretation.</strong> The user asked about revenue in "Q2" meaning the second calendar quarter. The agent interpreted Q2 as the company's fiscal Q2, which starts in February. The numbers are real, the source is correct, the answer is for the wrong time period. Neither party noticed the ambiguity.</p>
+
+    <h2>Detection Strategies</h2>
+
+    <p>You can't prevent silent failures with more error handling, because they don't produce errors. You need different strategies:</p>
+
+    <p><strong>1. Define expected outputs, not just expected formats.</strong> For any agent task that processes data, define what a complete answer looks like. If the task is "find all customers matching X," the expected output isn't "a list" — it's "a list with exactly N entries where N matches the count from a separate query." Validate completeness, not just format.</p>
+
+    <p><strong>2. Add a verification step.</strong> After the agent produces its answer, have it — or a separate model call — verify key claims. "You said there were 12 customers. Run a count query to confirm." "You said the price is $49. Check the current price table." Verification is cheaper than being wrong.</p>
+
+    <p><strong>3. Monitor for anomalies, not errors.</strong> Track the distribution of answers. If the agent usually finds 40-60 matching customers and suddenly finds 3, that's not an error — it's an anomaly. Set alerts on statistical deviations, not just on exception types.</p>
+
+    <p><strong>4. Make uncertainty explicit.</strong> Require the agent to state its confidence and its sources. Not "The revenue was $2.4M" but "Based on the Q2 financial summary document (retrieved with 0.72 relevance), the revenue was $2.4M." Low retrieval scores, ambiguous sources, and hedged language are your early warning system.</p>
+
+    <p><strong>5. Log the full reasoning chain.</strong> When something goes wrong, you need to see every step the agent took — which tools it called, what it got back, what it decided, and why. Not just the final answer. The reasoning chain is your debugging tool, and you'll only need it when you discover a silent failure weeks after it started.</p>
+
+    <p><strong>6. Seed known-answer queries.</strong> Run a set of queries through your agent where you know the correct answer. If the agent starts returning wrong answers to your known queries, you've caught a silent failure before it reaches a user. This is essentially a test suite, but for an agent — and most teams don't have one.</p>
+
+    <h2>The Uncomfortable Truth</h2>
+
+    <p>Silent failures aren't rare. They're the default state of any agent system that hasn't been specifically designed to detect them. Every agent in production is failing silently right now — in small ways, in edge cases, in the gap between what the user meant and what the system understood.</p>
+
+    <p>The question isn't whether your agent has silent failures. It's whether you're measuring them.</p>
+
+    <p>If your error rate is 0.1% but you're only counting exceptions, you're measuring the wrong thing. Add verification. Add anomaly detection. Add known-answer queries. Start counting the failures that don't throw errors — because those are the ones eroding your users' trust while your dashboard stays green.</p>
+
+    <footer>
+        <em>This is part of an ongoing series on building AI agent systems that actually work in production. Related posts on <a href="/blog/retry-trap/">the retry trap</a>, <a href="/blog/compound-latency/">compound latency</a>, and <a href="/blog/your-agent-needs-a-runbook/">why your agent needs a runbook</a> cover different aspects of building reliable agent systems.</em><br><br>
+        <a href="/">emil.aiadoption.cz</a>
+    </footer>
+</body>
+</html>
