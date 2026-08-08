@@ -1,0 +1,116 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>The Graduation Problem — Emil Vrána</title>
+    <meta name="description" content="Your agent worked perfectly with 50 users. At 500, it falls apart. The graduation problem is the moment your architecture can't scale — and most teams hit it by accident.">
+    <style>
+        :root {
+            --bg: #0f0f0f;
+            --text: #e0e0e0;
+            --accent: #6b9bd2;
+            --muted: #888;
+            --card-bg: #1a1a1a;
+        }
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+        body {
+            font-family: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+            background: var(--bg);
+            color: var(--text);
+            line-height: 1.7;
+            max-width: 680px;
+            margin: 0 auto;
+            padding: 2rem 1.5rem;
+        }
+        a { color: var(--accent); text-decoration: none; }
+        a:hover { text-decoration: underline; }
+        .back { color: var(--muted); font-size: 0.85rem; margin-bottom: 1rem; display: block; }
+        .back:hover { color: var(--accent); }
+        h1 { font-size: 1.6rem; font-weight: 600; margin: 0 0 0.3rem; line-height: 1.3; }
+        .meta { color: var(--muted); font-size: 0.85rem; margin-bottom: 2rem; }
+        h2 { font-size: 1.2rem; font-weight: 600; margin: 2rem 0 1rem; color: var(--text); }
+        h3 { font-size: 1rem; font-weight: 600; margin: 1.5rem 0 0.75rem; }
+        p { margin: 0 0 1rem; }
+        ol, ul { margin: 0 0 1rem 1.5rem; }
+        li { margin: 0.4rem 0; }
+        strong { color: var(--text); }
+        blockquote {
+            border-left: 2px solid var(--accent);
+            margin: 1.5rem 0;
+            padding-left: 1rem;
+            color: var(--muted);
+        }
+        hr {
+            border: none;
+            border-top: 1px solid #2a2a2a;
+            margin: 2rem 0;
+        }
+        .footer { color: var(--muted); font-size: 0.85rem; }
+    </style>
+</head>
+<body>
+    <a class="back" href="/">← Back</a>
+    <h1>The Graduation Problem</h1>
+    <p class="meta">August 2026</p>
+
+    <p>Your agent worked perfectly with 50 users. At 500, it falls apart.</p>
+
+    <p>Not gradually — catastrophically. Response times triple. Context windows overflow. Costs explode. Errors you've never seen start appearing hourly. The dashboard that was solid green turns a color you didn't know monitoring systems could display.</p>
+
+    <p>This is the graduation problem: the moment your agent's architecture can no longer carry the load, and everything that was "fine for now" simultaneously stops being fine.</p>
+
+    <h2>Why Agents Graduate Badly</h2>
+
+    <p>Traditional web services graduate poorly too — that's what load testing is for. But agents have it worse for three reasons:</p>
+
+    <p><strong>State is unbounded.</strong> A REST API has predictable request shapes. An agent conversation can be 3 messages or 300. Your context window budget per user varies by 100x. You can't provision for the average when the tail is that heavy.</p>
+
+    <p><strong>Calls are recursive.</strong> One user request can trigger 5, 15, or 50 model calls depending on the task complexity and tool chain. That "simple" API you built? It's actually a compute graph with unpredictable depth. Your per-request cost model breaks the first time someone asks a question that requires 12 tool calls.</p>
+
+    <p><strong>Errors compound non-linearly.</strong> In a deterministic pipeline, one error breaks one request. In an agent system, one upstream error can cause the model to hallucinate a recovery strategy, which calls the wrong tool, which returns garbage data, which the model presents confidently to the user. One failure becomes three failures becomes an incident.</p>
+
+    <h2>The Inflection Points</h2>
+
+    <p>Graduation isn't one cliff — it's a series of them. Each one requires a different architectural response:</p>
+
+    <p><strong>10 → 100 concurrent users.</strong> The problem is <em>concurrency</em>. Your single-process, in-memory state management can't handle it. Context windows start colliding. Rate limits on model APIs become your bottleneck. <em>Fix:</em> Move state out of process (Redis, database). Add request queuing. Implement per-tenant rate limiting.</p>
+
+    <p><strong>100 → 1,000 concurrent users.</strong> The problem is <em>cost</em>. Your per-request token usage, which seemed reasonable in testing, now represents real money at scale. That 4,000-token average becomes $2,000/day in model costs. <em>Fix:</em> Implement model tiering (not every request needs the big model). Add response caching for repeated queries. Compress context aggressively.</p>
+
+    <p><strong>1,000 → 10,000 concurrent users.</strong> The problem is <em>reliability</em>. Model API outages, rate limits, and latency spikes that were occasional annoyances now happen constantly. Your retry logic, built for the happy path, creates thundering herds. <em>Fix:</em> Multi-model fallback chains. Circuit breakers. Graceful degradation (return cached answers instead of failing). Semantic rate limiting (not just per-tenant, but per-query-complexity).</p>
+
+    <h2>What Doesn't Work</h2>
+
+    <p><strong>"Just add more compute."</strong> Throwing GPU hours at an agent architecture problem is like adding lanes to a highway — it works until the next bottleneck. The real constraint is usually coordination overhead, not raw compute.</p>
+
+    <p><strong>"Just use a bigger context window."</strong> The 200K-token context window is a seductive trap. At 1,000 concurrent users, you're burning through context tokens at an rate that makes your billing team weep. Context window size doesn't solve state management — it just moves the cost problem from "we need better logic" to "we need a bigger budget."</p>
+
+    <p><strong>"Just cache everything."</strong> Caching agent responses is hard because similar queries can have different correct answers depending on context, time, and user state. A stale cache in an agent system is worse than no cache — it returns a confident, wrong answer.</p>
+
+    <h2>Architecture for Graduation</h2>
+
+    <p>The systems that graduate well share a few properties:</p>
+
+    <p><strong>Stateless orchestration.</strong> The orchestrator — the part that decides what to do next — should hold no state between turns. All state goes to a durable store. This lets you scale the orchestrator horizontally and restart it without losing conversations.</p>
+
+    <p><strong>Model tiering from day one.</strong> Even if you're small, route requests to the cheapest model that can handle them. This builds the routing logic you'll need at scale, and it saves money immediately. Most queries don't need GPT-4-class reasoning. Most tool calls don't even need a model — they need a conditional.</p>
+
+    <p><strong>Cost accounting per conversation.</strong> Track token usage per conversation, per user, per query type. You'll discover that 5% of your conversations consume 40% of your budget. That's not a usage problem — that's a routing problem. You can't fix what you don't measure.</p>
+
+    <p><strong>Graceful degradation as a feature.</strong> Design what happens when the model is slow, when the context window is full, when the rate limit is hit. Not as an error case — as a defined behavior. "If the primary model is unavailable, use the fast model with a disclaimer." "If context is too long, summarize and continue." This isn't a hack. It's how telephone networks stay up during peak hours.</p>
+
+    <p><strong>Backpressure from the start.</strong> When your system is overloaded, it should reject new requests immediately, not queue them until they time out. A fast 503 is better than a slow 500 — for the caller and for your infrastructure.</p>
+
+    <h2>The Uncomfortable Pattern</h2>
+
+    <p>The most reliable agent systems I've seen in production aren't the most sophisticated ones. They're the ones that graduated early — they hit their first inflection point fast, and had to build the architecture to handle it.</p>
+
+    <p>Systems that stay small for too long accumulate architectural debt. They optimize for the current scale, not the next one. When graduation hits, it hits all at once, and there's no time to refactor gracefully.</p>
+
+    <p>If you're building an agent system, don't wait for graduation to plan for it. The architecture that handles 10 users well and 1,000 users poorly is worse than one that handles 10 users adequately and 1,000 users well. Ship early, hit your limits early, and fix them while you still have time to think.</p>
+
+    <hr>
+    <p class="footer">Emil Vrána is an independent tech consultant based in Prague, specializing in AI systems, automation, and data architecture. Related posts on <a href="/blog/the-cost-of-correctness/">the cost of correctness</a>, <a href="/blog/the-observability-gap/">observability</a>, and <a href="/blog/the-state-problem/">the state problem</a>.</p>
+</body>
+</html>
