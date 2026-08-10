@@ -1,0 +1,169 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>The Prompt Debt: How Your Agent Instructions Accumulate Like Legacy Code — Emil Vrána</title>
+    <meta name="description" content="Nobody sets out to write a 4,000-word system prompt. It accumulates the way technical debt always does — one reasonable-sounding addition at a time. Here's how to recognize and pay down prompt debt.">
+    <style>
+        :root {
+            --bg: #0f0f0f;
+            --text: #e0e0e0;
+            --accent: #6b9bd2;
+            --muted: #888;
+            --card-bg: #1a1a1a;
+            --code-bg: #1a1a1a;
+        }
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+        body {
+            font-family: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+            background: var(--bg);
+            color: var(--text);
+            line-height: 1.7;
+            max-width: 720px;
+            margin: 0 auto;
+            padding: 3rem 1.5rem;
+        }
+        .back { color: var(--muted); text-decoration: none; font-size: 0.85rem; }
+        .back:hover { color: var(--accent); }
+        h1 { font-size: 1.6rem; font-weight: 600; margin: 1.5rem 0 0.5rem; }
+        .meta { color: var(--muted); font-size: 0.85rem; margin-bottom: 2rem; }
+        h2 { font-size: 1.1rem; font-weight: 600; margin: 2rem 0 0.7rem; color: var(--accent); }
+        h3 { font-size: 0.95rem; font-weight: 600; margin: 1.5rem 0 0.5rem; }
+        p { margin-bottom: 1rem; }
+        ul, ol { padding-left: 1.5rem; margin-bottom: 1rem; }
+        li { margin-bottom: 0.4rem; }
+        pre {
+            background: var(--code-bg);
+            border: 1px solid #2a2a2a;
+            border-radius: 6px;
+            padding: 1.2rem;
+            overflow-x: auto;
+            margin: 1rem 0;
+            font-size: 0.85rem;
+            line-height: 1.5;
+        }
+        code {
+            font-family: 'JetBrains Mono', 'Fira Code', 'Courier New', monospace;
+            font-size: 0.88em;
+        }
+        p code, li code {
+            background: var(--code-bg);
+            padding: 0.15rem 0.4rem;
+            border-radius: 3px;
+            font-size: 0.85em;
+        }
+        strong { color: #fff; }
+        a { color: var(--accent); text-decoration: none; }
+        a:hover { text-decoration: underline; }
+        blockquote {
+            border-left: 3px solid var(--accent);
+            padding-left: 1rem;
+            margin: 1.5rem 0;
+            color: var(--muted);
+        }
+        hr {
+            border: none;
+            border-top: 1px solid #222;
+            margin: 2rem 0;
+        }
+        .cta {
+            background: var(--card-bg);
+            border-radius: 8px;
+            padding: 1.5rem;
+            margin: 2rem 0;
+        }
+        .cta p:last-child { margin-bottom: 0; }
+        @media (max-width: 500px) {
+            body { padding: 2rem 1rem; }
+            h1 { font-size: 1.3rem; }
+        }
+    </style>
+</head>
+<body>
+    <a href="/" class="back">← Back home</a>
+
+    <h1>The Prompt Debt: How Your Agent Instructions Accumulate Like Legacy Code</h1>
+    <div class="meta">August 10, 2026</div>
+
+    <p>Nobody sets out to write a 4,000-word system prompt. It happens the way technical debt always happens — one reasonable-sounding addition at a time.</p>
+
+    <p>The agent didn't handle edge case X, so you added a paragraph. Users were confused by Y, so you clarified. The new tool needs Z documented, so you appended. Six months in, your prompt is a constitution that nobody has read start to finish, and the agent's behavior is worse than when it was three sentences long.</p>
+
+    <p>This is prompt debt, and it works exactly like code debt. The difference is that most teams have no idea it's happening.</p>
+
+    <h2>How It Accumulates</h2>
+
+    <p>Prompt debt follows a predictable lifecycle:</p>
+
+    <p><strong>The Fix.</strong> A user reports that the agent forgot to include shipping costs in order summaries. You add: "Always include shipping costs in order summaries." Problem solved. The prompt grows by one sentence.</p>
+
+    <p><strong>The Clarification.</strong> Two weeks later, someone points out that the agent now includes shipping costs for digital products that have no shipping. You add: "Except for digital products." One more sentence.</p>
+
+    <p><strong>The Edge Case.</strong> But what about mixed carts — physical and digital products in the same order? You add a paragraph explaining how to handle partial shipping. The prompt grows by three sentences, and the original simple instruction is now a branching conditional buried in prose.</p>
+
+    <p><strong>The Contradiction.</strong> Meanwhile, the product team added a new feature — free shipping on orders over 500 CZK. You add that too. But you forgot about the digital product exception, and now there's an implicit contradiction: "always include shipping" vs "free shipping over 500" vs "except digital." The agent resolves it... somehow. You don't know how. You just know the complaints changed from "missing shipping" to "wrong shipping."</p>
+
+    <p><strong>The Abandonment.</strong> Nobody dares remove anything because nobody knows what depends on what. The prompt becomes append-only. Like legacy code that nobody wants to touch, every new requirement gets layered on top.</p>
+
+    <h2>Why Prompts Degrade Differently Than Code</h2>
+
+    <p>Code has tools. Linters, type checkers, tests, code review. When code accumulates debt, you can measure it. You can write a test that fails, refactor, and see the test pass. The feedback loop is tight.</p>
+
+    <p>Prompts have none of this. There's no compiler that says "this paragraph contradicts line 47." No linter that flags unreachable instructions. No test suite that catches the gap between "always include" and "except for." The prompt just gets longer, and the model just gets more confused, and you can't tell which addition caused the confusion because there's no diff — just a growing wall of text that the model processes as one monolithic instruction.</p>
+
+    <p>There's also no versioning discipline. In code, you'd branch, commit, and have a PR. In prompt land, someone edits the system prompt in the dashboard, clicks save, and that's it. No history. No review. No rollback plan beyond "undo the last thing."</p>
+
+    <h2>Signs You're in Prompt Debt</h2>
+
+    <ul>
+        <li>Your system prompt is over 1,000 words and you can't summarize what it says</li>
+        <li>You've added instructions that say "ignore the above" or "this overrides previous instructions"</li>
+        <li>The same behavior is described in three different places in three different ways</li>
+        <li>Adding a new instruction changes behavior in unrelated areas</li>
+        <li>Nobody on the team can explain why half the instructions exist</li>
+        <li>The agent's behavior got worse after adding "helpful" clarifications</li>
+    </ul>
+
+    <p>If three or more of these apply, you're deep in it.</p>
+
+    <h2>Paying Down Prompt Debt</h2>
+
+    <p>Like financial debt, prompt debt requires deliberate action. Unlike financial debt, you can't make minimum payments — you have to restructure.</p>
+
+    <p><strong>1. Audit what the prompt actually does.</strong></p>
+
+    <p>Read the whole thing. Out loud if you have to. List every behavior the prompt prescribes. You'll find duplicates, contradictions, and instructions that describe behavior the model would produce anyway. Cut the duplicates. Resolve the contradictions. Remove the instructions that the model follows by default.</p>
+
+    <p><strong>2. Restructure, don't append.</strong></p>
+
+    <p>When you need new behavior, don't add to the end. Rewrite the relevant section. A prompt is not a changelog — it's an instruction set. The model doesn't care about the history of your edits. It cares about clarity.</p>
+
+    <p><strong>3. Separate concerns.</strong></p>
+
+    <p>A 4,000-word prompt is doing too many things. Break it into roles or modes. The agent handling orders shouldn't be reading instructions about content moderation. The agent doing customer support shouldn't be parsing your internal API documentation. If your prompt has sections, consider whether those sections should be different prompts for different tasks — or different agents entirely.</p>
+
+    <p><strong>4. Test the prompt, not just the model.</strong></p>
+
+    <p>When you change the prompt, test a representative set of inputs before and after. Not "does the model still work" — "does it work the same on the cases we care about?" If you can't answer that, you don't know whether your edit helped or hurt.</p>
+
+    <p><strong>5. Version your prompts.</strong></p>
+
+    <p>Every change to a production prompt should be committed to version control with a reason. Not because you'll definitely need to roll back — though you might — but because the commit history forces you to articulate why you're changing something, and that articulation catches 30% of bad changes before they ship.</p>
+
+    <h2>The Metaphor That Pays Dividends</h2>
+
+    <p>Treating prompts like configuration instead of code is where most teams go wrong. Configuration you tweak until it works. Code you structure, review, and maintain. Prompts are code. They're just written in a language that doesn't have a compiler to catch your mistakes.</p>
+
+    <p>The discipline that keeps code healthy — small modules, clear interfaces, version control, regular refactoring — is the same discipline that keeps prompts healthy. The sooner your team treats prompts as code, the slower your prompt debt accumulates, and the easier it is to pay down when it does.</p>
+
+    <p>Your 4,000-word prompt didn't get that way because you needed 4,000 words of instruction. It got that way because nobody pruned the tree while it was small.</p>
+
+    <hr>
+
+    <div class="cta">
+        <p>Related: <a href="/stop-rewriting-your-agent-prompt.html">Stop Rewriting Your Agent Prompt — Start Versioning It</a></p>
+        <p>Related: <a href="/context-editing.html">Your Agent Doesn't Need a Bigger Context Window — It Needs Better Editing</a></p>
+    </div>
+</body>
+</html>
