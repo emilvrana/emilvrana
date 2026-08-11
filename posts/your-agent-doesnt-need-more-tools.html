@@ -1,0 +1,134 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Your Agent Doesn't Need More Tools — Emil Vrána</title>
+    <meta name="description" content="When your agent fails on edge cases, adding more tools makes it worse. The real fix is fewer, better tools with clear contracts. Track tool-selection accuracy — if it's below 90%, you have too many tools.">
+    <style>
+        :root {
+            --bg: #0f0f0f;
+            --text: #e0e0e0;
+            --accent: #6b9bd2;
+            --muted: #888;
+            --card-bg: #1a1a1a;
+        }
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+        body {
+            font-family: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+            background: var(--bg);
+            color: var(--text);
+            line-height: 1.7;
+            max-width: 680px;
+            margin: 0 auto;
+            padding: 2rem 1.5rem;
+        }
+        a { color: var(--accent); text-decoration: none; }
+        a:hover { text-decoration: underline; }
+        .back { color: var(--muted); font-size: 0.85rem; margin-bottom: 1rem; display: block; }
+        .back:hover { color: var(--accent); }
+        h1 { font-size: 1.6rem; font-weight: 600; margin: 0 0 0.3rem; line-height: 1.3; }
+        .meta { color: var(--muted); font-size: 0.85rem; margin-bottom: 2rem; }
+        h2 { font-size: 1.2rem; font-weight: 600; margin: 2rem 0 1rem; color: var(--text); }
+        h3 { font-size: 1rem; font-weight: 600; margin: 1.5rem 0 0.75rem; }
+        p { margin: 0 0 1rem; }
+        ol { margin: 0 0 1rem 1.5rem; }
+        ul { margin: 0 0 1rem 1.5rem; }
+        li { margin: 0.4rem 0; }
+        code {
+            font-family: 'SF Mono', Monaco, 'Cascadia Code', monospace;
+            font-size: 0.9em;
+            background: var(--card-bg);
+            padding: 0.15em 0.3em;
+            border-radius: 3px;
+        }
+        blockquote {
+            border-left: 2px solid var(--accent);
+            margin: 1.5rem 0;
+            padding-left: 1rem;
+            color: var(--muted);
+        }
+        hr {
+            border: none;
+            border-top: 1px solid #333;
+            margin: 2.5rem 0;
+        }
+        footer {
+            margin-top: 3rem;
+            padding-top: 1.5rem;
+            border-top: 1px solid #333;
+            color: var(--muted);
+            font-size: 0.8rem;
+        }
+    </style>
+</head>
+<body>
+    <a href="/blog/" class="back">← Blog</a>
+
+    <h1>Your Agent Doesn't Need More Tools</h1>
+    <div class="meta">August 11, 2026 · Emil Vrána</div>
+
+    <p>Every agent project reaches the same crossroads. The agent works for the happy path. It fails on edge cases. Someone suggests: "What if we give it another tool?"</p>
+
+    <p>This is almost always the wrong answer.</p>
+
+    <h2>The Tool Proliferation Trap</h2>
+
+    <p>Here's what happens when you add tools to fix reliability:</p>
+
+    <ol>
+        <li>The agent calls the wrong tool because two tools overlap in capability.</li>
+        <li>The agent calls the right tool with wrong parameters because the tool surface area grew.</li>
+        <li>The agent calls three tools sequentially when one would do, because it can.</li>
+        <li>The agent hallucinates a tool that doesn't exist, but close enough to a real one that it tries.</li>
+        <li>You add another tool to handle the new failure mode.</li>
+    </ol>
+
+    <p>Each tool you add multiplies the decision space. The model doesn't get smarter — it gets more options to be wrong about.</p>
+
+    <p>I've seen agents with 30+ tools where 8 of them were essentially the same operation with different parameter shapes. The model picked the wrong variant roughly 40% of the time. Refactoring to 2 tools with union-typed parameters brought accuracy from 60% to 94%.</p>
+
+    <h2>Fewer Tools, Better Contracts</h2>
+
+    <p>The fix isn't better prompts. It's fewer, more precise tools.</p>
+
+    <p><strong>Merge tools with overlapping responsibility.</strong> If <code>search_customers_by_email</code> and <code>search_customers_by_name</code> both query the same table, they should be one tool: <code>search_customers</code> with an optional <code>field</code> parameter. The model now has one thing to remember, not two.</p>
+
+    <p><strong>Make tools reject early.</strong> A tool that silently accepts bad input and returns garbage is worse than a tool that rejects invalid input immediately. The model learns from clear errors. It can't learn from plausible-looking wrong data.</p>
+
+    <p><strong>Remove tools you don't use.</strong> Audit your tool registry every sprint. If a tool wasn't called in the last 1000 agent runs, it's noise. Remove it. If you need it later, add it back. Unused tools are free in code but expensive in model attention.</p>
+
+    <p><strong>Prefer composition over configuration.</strong> Instead of <code>create_user_with_permissions_and_settings</code>, offer <code>create_user</code> and let the agent call <code>set_permissions</code> and <code>configure_settings</code> in sequence. Smaller tools are easier for the model to understand and combine. But — and this is the key — only if the smaller tools have clear contracts. If the model needs to pass an ID from step 1 into step 2, make that explicit in the tool description.</p>
+
+    <h2>The Real Problem</h2>
+
+    <p>Tool proliferation is a symptom. The real problem is unclear boundaries.</p>
+
+    <p>When you don't know what an agent should be responsible for, you give it more tools and hope it figures out the scope. It won't. The agent will try to use every tool available, because the model has no concept of "not my job." It has a hammer collection and everything looks like a nail.</p>
+
+    <p>Before adding a tool, ask:</p>
+
+    <ul>
+        <li>Does this tool belong to this agent's responsibility?</li>
+        <li>Can an existing tool handle this with a minor parameter change?</li>
+        <li>Will this tool create ambiguity with another tool?</li>
+        <li>Am I adding this because the agent needs it, or because I haven't defined what the agent <em>shouldn't</em> do?</li>
+    </ul>
+
+    <h2>The Metric That Matters</h2>
+
+    <p>Track tool-selection accuracy. Not call success rate — that's downstream. Measure how often the agent picks the right tool for the job before you look at whether it used the tool correctly.</p>
+
+    <p>If tool-selection accuracy is below 90%, adding more tools will make it worse. Remove tools until selection accuracy is high, then add new ones one at a time, measuring the impact.</p>
+
+    <p>Your agent doesn't need more tools. It needs fewer, better ones. And it needs you to decide what it's not responsible for.</p>
+
+    <hr>
+
+    <p>🐦⬛</p>
+
+    <footer>
+        <a href="/">← Home</a> · <a href="/blog/">More writing</a>
+    </footer>
+</body>
+</html>
