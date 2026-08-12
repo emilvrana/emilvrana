@@ -1,0 +1,106 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>The Composition Gap — Emil Vrána</title>
+    <meta name="description" content="Your agent passes every test in isolation but fails in production. The composition gap is where agent projects actually break — and how to close it.">
+    <style>
+        :root {
+            --bg: #0f0f0f;
+            --text: #e0e0e0;
+            --accent: #6b9bd2;
+            --muted: #888;
+            --card-bg: #1a1a1a;
+            --code-bg: #1a1a1a;
+        }
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+        body {
+            font-family: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+            background: var(--bg);
+            color: var(--text);
+            line-height: 1.7;
+            max-width: 720px;
+            margin: 0 auto;
+            padding: 3rem 1.5rem;
+        }
+        .back { color: var(--muted); text-decoration: none; font-size: 0.85rem; }
+        .back:hover { color: var(--accent); }
+        h1 { font-size: 1.6rem; font-weight: 600; margin: 1.5rem 0 0.5rem; }
+        .meta { color: var(--muted); font-size: 0.85rem; margin-bottom: 2rem; }
+        h2 { font-size: 1.1rem; font-weight: 600; margin: 2rem 0 0.7rem; color: var(--accent); }
+        p { margin-bottom: 1rem; }
+        ul, ol { padding-left: 1.5rem; margin-bottom: 1rem; }
+        li { margin-bottom: 0.4rem; }
+        strong { color: #fff; }
+        a { color: var(--accent); text-decoration: none; }
+        a:hover { text-decoration: underline; }
+        em { color: var(--muted); }
+        hr {
+            border: none;
+            border-top: 1px solid #222;
+            margin: 2rem 0;
+        }
+        .cta {
+            background: var(--card-bg);
+            border-radius: 8px;
+            padding: 1.5rem;
+            margin: 2rem 0;
+        }
+        .cta p:last-child { margin-bottom: 0; }
+        @media (max-width: 500px) {
+            body { padding: 2rem 1rem; }
+            h1 { font-size: 1.3rem; }
+        }
+    </style>
+</head>
+<body>
+    <a href="/" class="back">← Back home</a>
+
+    <h1>The Composition Gap</h1>
+    <div class="meta">August 12, 2026</div>
+
+    <p>Your agent handles each task well in isolation. Task A passes tests. Task B passes tests. Ask it to do A then B in sequence, and things fall apart.</p>
+
+    <p>This is the composition gap — and it's where most agent projects actually fail.</p>
+
+    <h2>Why Isolation Lies</h2>
+    <p>Unit tests for agents are seductive. You verify the agent can search, can summarize, can format. Green across the board. Then you deploy, and the first real workflow — search, then summarize, then format — produces garbage.</p>
+
+    <p>The reason: each task leaves residue. Context window pollution, state mutations, tool call artifacts. The agent that starts task B is not the same agent that passed the test for task B.</p>
+
+    <h2>The Residue Problem</h2>
+    <p>Every action an agent takes changes its context:</p>
+    <ul>
+        <li><strong>Token residue.</strong> The output of task A fills the window, leaving less room for task B's reasoning.</li>
+        <li><strong>State residue.</strong> Variables, working memory, half-formed plans from the previous task bleed into the next.</li>
+        <li><strong>Tool residue.</strong> The agent remembers which tools it just used and reaches for them again, even when inappropriate.</li>
+    </ul>
+    <p>None of this shows up in isolated tests.</p>
+
+    <h2>How to Close the Gap</h2>
+
+    <p><strong>1. Test sequences, not just steps.</strong></p>
+    <p>Don't just test "can the agent search?" and "can the agent summarize?" Test "can it search <em>and then</em> summarize?" If your test suite only has single-task scenarios, you have a composition gap in your testing, too.</p>
+
+    <p><strong>2. Explicit state resets between phases.</strong></p>
+    <p>Between logical steps in a workflow, wipe the slate. Clear working memory. Summarize the prior step's output into a clean handoff document. The overhead is minimal; the reliability gain is massive.</p>
+
+    <p><strong>3. Design for decreasing context.</strong></p>
+    <p>Structure your workflows so that earlier tasks produce <em>smaller</em> outputs, not larger ones. A 200-word summary is a better input to the next step than a 2000-word raw dump. Compression isn't just efficiency — it's composability.</p>
+
+    <p><strong>4. Validate the seams.</strong></p>
+    <p>The boundary between task A and task B is where things break. Add assertions there: does the output of A match the expected input shape of B? If not, catch it before B runs.</p>
+
+    <h2>The Uncomfortable Truth</h2>
+    <p>Most agent failures aren't model failures. They're composition failures. The model is fine at each step. It's the transitions that kill you.</p>
+
+    <p>If your agent works in demos but fails in production, look at the seams. That's where the gap lives.</p>
+
+    <hr>
+
+    <div class="cta">
+        <p>Related: <a href="/the-tool-problem.html">The Tool Problem</a> · <a href="/posts/your-agents-state-is-a-liability.html">Your Agent's State Is a Liability</a> · <a href="/reliable-agent-loops.html">Reliable Agent Loops</a></p>
+    </div>
+</body>
+</html>
