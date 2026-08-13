@@ -1,0 +1,127 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>The Agent Error Budget — Emil Vrána</title>
+    <meta name="description" content="Your agent will fail. The question is whether you planned for it. Applying SRE error budgets to AI agent systems.">
+    <style>
+        :root {
+            --bg: #0f0f0f;
+            --text: #e0e0e0;
+            --accent: #6b9bd2;
+            --muted: #888;
+            --card-bg: #1a1a1a;
+        }
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+        body {
+            font-family: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+            background: var(--bg);
+            color: var(--text);
+            line-height: 1.7;
+            max-width: 680px;
+            margin: 0 auto;
+            padding: 2rem 1.5rem;
+        }
+        a { color: var(--accent); text-decoration: none; }
+        a:hover { text-decoration: underline; }
+        .back { color: var(--muted); font-size: 0.85rem; margin-bottom: 1rem; display: block; }
+        .back:hover { color: var(--accent); }
+        h1 { font-size: 1.6rem; font-weight: 600; margin: 0 0 0.3rem; line-height: 1.3; }
+        .date { color: var(--muted); font-size: 0.85rem; margin-bottom: 2rem; }
+        h2 { font-size: 1.15rem; font-weight: 600; margin: 2rem 0 0.5rem; }
+        h3 { font-size: 1rem; font-weight: 600; margin: 1.5rem 0 0.3rem; }
+        p { margin-bottom: 1rem; }
+        ul, ol { margin-bottom: 1rem; padding-left: 1.5rem; }
+        li { margin-bottom: 0.3rem; }
+        code {
+            background: var(--card-bg);
+            padding: 0.15rem 0.4rem;
+            border-radius: 3px;
+            font-size: 0.9rem;
+        }
+        pre {
+            background: var(--card-bg);
+            padding: 1rem;
+            border-radius: 6px;
+            overflow-x: auto;
+            margin-bottom: 1.5rem;
+            font-size: 0.85rem;
+            line-height: 1.5;
+        }
+        em { color: var(--muted); }
+        blockquote {
+            border-left: 3px solid #333;
+            padding-left: 1rem;
+            margin: 1.5rem 0;
+            color: var(--muted);
+        }
+        footer {
+            margin-top: 3rem;
+            padding-top: 1.5rem;
+            border-top: 1px solid #222;
+            color: var(--muted);
+            font-size: 0.8rem;
+        }
+    </style>
+</head>
+<body>
+    <a href="/blog/" class="back">← Blog</a>
+    <h1>The Agent Error Budget</h1>
+    <div class="date">August 13, 2026</div>
+
+    <p>Production teams have a concept from site reliability engineering: the error budget. If your SLA promises 99.9% uptime, you get 0.1% error budget — roughly 43 minutes of downtime per month. You can spend it on deployments, on experiments, on known risks. When it's gone, you stop shipping and focus on reliability.</p>
+
+    <p>Agent systems need the same concept. Here's why.</p>
+
+    <h2>You Already Have One</h2>
+    <p>Your agent fails. Not sometimes — regularly. It misclassifies intents, calls the wrong tool, produces plausible-sounding nonsense. Right now you treat every failure as an incident. You're living in permanent firefighting mode with no budget framework.</p>
+    <p>The error budget flips the question. Instead of "why did it fail?" you ask "do we still have budget left?" If yes, the failure is within tolerance. If no, it's time to harden.</p>
+
+    <h2>Setting the Budget</h2>
+    <p>Start with the business impact of a wrong action. Not the technical error rate — the actual cost.</p>
+    <ul>
+        <li>An agent that drafts internal summaries can tolerate 10% inaccuracy. A human reviews anyway.</li>
+        <li>An agent that sends customer emails can tolerate maybe 1%. Wrong message to wrong person is a trust violation.</li>
+        <li>An agent that executes financial transactions can tolerate near zero. One wrong transfer is a crisis.</li>
+    </ul>
+    <p>Your error budget isn't a percentage you pick from thin air. It's derived from who catches the mistake and what it costs when they don't.</p>
+
+    <h2>Spending the Budget</h2>
+    <p>Error budget is a resource. Spend it deliberately.</p>
+
+    <p><strong>Testing in production.</strong> Every A/B test on your agent prompt or model version costs budget. That's fine — that's what it's for. But track it. If your test caused 15 more errors this week and you only had 10 in budget, roll back.</p>
+
+    <p><strong>Known rough edges.</strong> Your agent can't handle edge cases in date parsing. You know this. It's in the budget. Document it. When budget runs out, fix it.</p>
+
+    <p><strong>New capabilities.</strong> Adding a new tool? New domain? The error rate will spike. Budget for it. Don't pretend the first week will be smooth.</p>
+
+    <h2>When the Budget Runs Out</h2>
+    <p>This is where most teams fail. They blow past the error budget and keep shipping. The SRE playbook is clear: when the budget is exhausted, you freeze non-essential changes and focus on reliability.</p>
+    <p>For agents this means:</p>
+    <ol>
+        <li>Stop adding features, tools, or prompt changes.</li>
+        <li>Run the failure analysis you've been deferring.</li>
+        <li>Fix the top three error patterns.</li>
+        <li>Re-measure. Only resume changes when you're back under budget.</li>
+    </ol>
+    <p>Most teams skip steps 2–4 and go straight back to shipping. The error budget becomes a suggestion, not a constraint. This is how you accumulate prompt debt.</p>
+
+    <h2>The Dashboard You Need</h2>
+    <p>Track these weekly:</p>
+    <ul>
+        <li><strong>Total agent actions</strong> (denominator)</li>
+        <li><strong>Actions that needed human correction</strong> (numerator)</li>
+        <li><strong>Budget remaining</strong> (target minus actual)</li>
+        <li><strong>Top 3 failure patterns</strong> (specific, not "it was wrong")</li>
+    </ul>
+    <p>One number on a dashboard changes the conversation from "the agent isn't working" to "we're at 73% of our error budget this month and the biggest pattern is tool selection on ambiguous queries." The second sentence leads to action. The first leads to frustration.</p>
+
+    <h2>The Point</h2>
+    <p>You can't eliminate agent errors. You can budget for them, track them, and decide when they matter. The error budget turns reliability from a vague aspiration into a management discipline. Your agent will fail. The question is whether you planned for it.</p>
+
+    <footer>
+        <a href="/">emil.aiadoption.cz</a>
+    </footer>
+</body>
+</html>
