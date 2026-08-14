@@ -1,0 +1,142 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>The Blameless Agent Postmortem — Emil Vrána</title>
+    <meta name="description" content="Your agent caused an incident. The postmortem isn't about why the model failed — it's about why your system let it through.">
+    <style>
+        :root {
+            --bg: #0f0f0f;
+            --text: #e0e0e0;
+            --accent: #6b9bd2;
+            --muted: #888;
+            --card-bg: #1a1a1a;
+        }
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+        body {
+            font-family: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+            background: var(--bg);
+            color: var(--text);
+            line-height: 1.7;
+            max-width: 680px;
+            margin: 0 auto;
+            padding: 2rem 1.5rem;
+        }
+        a { color: var(--accent); text-decoration: none; }
+        a:hover { text-decoration: underline; }
+        .back { color: var(--muted); font-size: 0.85rem; margin-bottom: 1rem; display: block; }
+        .back:hover { color: var(--accent); }
+        h1 { font-size: 1.6rem; font-weight: 600; margin: 0 0 0.3rem; line-height: 1.3; }
+        .date { color: var(--muted); font-size: 0.85rem; margin-bottom: 2rem; }
+        h2 { font-size: 1.15rem; font-weight: 600; margin: 2rem 0 0.5rem; }
+        h3 { font-size: 1rem; font-weight: 600; margin: 1.5rem 0 0.3rem; }
+        p { margin-bottom: 1rem; }
+        ul, ol { margin-bottom: 1rem; padding-left: 1.5rem; }
+        li { margin-bottom: 0.3rem; }
+        code {
+            background: var(--card-bg);
+            padding: 0.15rem 0.4rem;
+            border-radius: 3px;
+            font-size: 0.9rem;
+        }
+        pre {
+            background: var(--card-bg);
+            padding: 1rem;
+            border-radius: 6px;
+            overflow-x: auto;
+            margin-bottom: 1.5rem;
+            font-size: 0.85rem;
+            line-height: 1.5;
+        }
+        em { color: var(--muted); }
+        blockquote {
+            border-left: 3px solid #333;
+            padding-left: 1rem;
+            margin: 1.5rem 0;
+            color: var(--muted);
+        }
+        footer {
+            margin-top: 3rem;
+            padding-top: 1.5rem;
+            border-top: 1px solid #222;
+            color: var(--muted);
+            font-size: 0.8rem;
+        }
+    </style>
+</head>
+<body>
+    <a href="/blog/" class="back">← Blog</a>
+    <h1>The Blameless Agent Postmortem</h1>
+    <div class="date">August 14, 2026</div>
+
+    <p>Your agent sent a wrong email to a customer. Or it deleted a production resource. Or it spent $200 on API calls looping through a hallucinated tool chain. The incident is over. Now what?</p>
+
+    <p>Most teams do one of two things. They either shrug it off ("AI is unpredictable, what can you do") or they overhaul the entire prompt ("we'll add more rules so this never happens again"). Both responses are wrong. The first treats agent failures as acts of God. The second treats them as prompt engineering problems.</p>
+
+    <p>SRE teams figured this out decades ago. The practice is called the blameless postmortem. It works for agent systems too, but the shape of it is different.</p>
+
+    <h2>Why Blameless</h2>
+    <p>The principle is simple: blame the system, not the person. Or in our case: blame the system, not the model. When you write "the agent was confused," you've already failed. The agent wasn't confused — your system allowed a confused agent to take an irreversible action.</p>
+    <p>Blameless doesn't mean consequence-free. It means the postmortem focuses on what broke in the system, not who to punish. For agents, "who" is often the model. "The model hallucinated" is the AI equivalent of "the intern made a mistake." Both might be true. Neither is actionable.</p>
+
+    <h2>The Five Questions</h2>
+    <p>Every agent postmortem should answer these five questions, in order:</p>
+
+    <p><strong>What happened?</strong> A factual timeline. Not "the agent went rogue" — "at 14:32, the agent called <code>send_email</code> with recipient <code>user@wrong.com</code> and subject 'Your order is cancelled.' The email was delivered. The customer replied at 15:10 asking why their order was cancelled."</p>
+
+    <p><strong>What was the impact?</strong> Not just "a wrong email was sent." Who was affected? What did it cost — in money, trust, time? Did it cascade? The impact determines the severity, and the severity determines how deep the analysis goes.</p>
+
+    <p><strong>Why did the system allow it?</strong> This is the key question. Not "why did the model do that" — models do things. The question is why your system let a wrong action through to completion. Where were the guardrails? Where was the human checkpoint? Where was the dry run?</p>
+
+    <p><strong>What would have caught it?</strong> A specific control that, if present, would have prevented or detected the failure. Not "better prompts." A concrete mechanism: a confirmation step before outbound emails, a validation layer on tool arguments, a circuit breaker on repeated API calls.</p>
+
+    <p><strong>What did we change?</strong> The postmortem ends with actions. Not "we'll be more careful." Specific changes, with owners and deadlines.</p>
+
+    <h2>What Agent Postmortems Look Different From</h2>
+    <p>Traditional software postmortems deal with bugs — code that does the wrong thing. Agent postmortems deal with emergent behavior — code that does an unpredictable thing in a predictable way. The model followed its instructions. The instructions were incomplete.</p>
+    <p>This means the root cause is almost never "the model is bad." It's one of:</p>
+    <ul>
+        <li><strong>Missing guardrail.</strong> The agent had the authority to take an action it shouldn't have been able to take alone. You gave <code>send_email</code> to an agent with no confirmation step. That's not a model problem — that's a system design problem.</li>
+        <li><strong>Ambiguous context.</strong> The agent interpreted context in a way that was reasonable but wrong. It saw "cancel the order" in the user's message and cancelled the wrong order because two orders matched the query. The fix isn't "be smarter" — it's disambiguation logic.</li>
+        <li><strong>Cascading error.</strong> The agent made a small mistake early, then built subsequent actions on top of that mistake. Each step was individually plausible. The chain was the problem. The fix is a checkpoint between steps.</li>
+        <li><strong>Tool design.</strong> The tool API was ambiguous — parameters weren't typed, error responses looked like success responses, or the agent couldn't tell that it had failed. This is the most common root cause and the most ignored one.</li>
+    </ul>
+
+    <h2>The Template</h2>
+    <p>Write postmortems in plain text. No fancy tools. Five sections:</p>
+    <pre>## Summary
+One paragraph. What happened, impact, severity.
+
+## Timeline
+Bullet points with timestamps. Only facts.
+
+## Root Cause
+What in the system allowed this to happen. Not "the model."
+
+## Action Items
+- [ ] Specific change | owner | deadline
+- [ ] Specific change | owner | deadline
+
+## Lessons
+What we learned that changes how we build agents.</pre>
+    <p>Keep it to one page. If it's longer, you're writing a novel, not a postmortem.</p>
+
+    <h2>The Anti-Patterns</h2>
+    <p><strong>"We updated the prompt."</strong> This is the most common postmortem action and the weakest. It's true that sometimes the prompt needs fixing, but if your only action is "added a rule to the system prompt," you've patched a symptom. The agent will find another way to fail because the system structure hasn't changed.</p>
+    <p><strong>"We'll add more tests."</strong> Tests for agents are harder than tests for functions. If you're not specific about what the test checks and how it runs, this is a wish, not an action.</p>
+    <p><strong>"The model improved in the latest version."</strong> Upgrading your model and declaring the problem solved is not a postmortem. The old failure mode may be gone, but a new one will appear. If you didn't add a guardrail, you're relying on luck.</p>
+
+    <h2>The Cultural Part</h2>
+    <p>Postmortems only work if the team trusts the process. If writing an honest postmortem gets someone blamed, you'll get postmortems that hide the real cause. This is as true for agent systems as it is for traditional software.</p>
+    <p>The person who deployed the agent isn't the problem. The person who wrote the prompt isn't the problem. The system that let an uncertain agent take an irreversible action is the problem. Fix that.</p>
+
+    <h2>The Point</h2>
+    <p>Your agent will cause incidents. The postmortem is how you turn each one into a system that's harder to break next time. Not by adding more rules to the prompt — by changing the architecture so the failure mode is impossible.</p>
+    <p>A blameless postmortem doesn't mean nobody is responsible. It means the responsibility is to the system, not to the blame.</p>
+
+    <footer>
+        <a href="/">emil.aiadoption.cz</a>
+    </footer>
+</body>
+</html>
