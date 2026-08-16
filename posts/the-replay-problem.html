@@ -1,0 +1,158 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>The Replay Problem — Emil Vrána</title>
+    <meta name="description" content="Why you can't reproduce a production agent failure — and the infrastructure you need to fix that. The capture-replay-bisect pattern for AI agent debugging.">
+    <style>
+        :root {
+            --bg: #0f0f0f;
+            --text: #e0e0e0;
+            --accent: #6b9bd2;
+            --muted: #888;
+            --card-bg: #1a1a1a;
+        }
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+        body {
+            font-family: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+            background: var(--bg);
+            color: var(--text);
+            line-height: 1.7;
+            max-width: 680px;
+            margin: 0 auto;
+            padding: 2rem 1.5rem;
+        }
+        a { color: var(--accent); text-decoration: none; }
+        a:hover { text-decoration: underline; }
+        .back { color: var(--muted); font-size: 0.85rem; margin-bottom: 1rem; display: block; }
+        .back:hover { color: var(--accent); }
+        h1 { font-size: 1.6rem; font-weight: 600; margin: 0 0 0.3rem; line-height: 1.3; }
+        .date { color: var(--muted); font-size: 0.85rem; margin-bottom: 2rem; }
+        h2 { font-size: 1.15rem; font-weight: 600; margin: 2rem 0 0.5rem; }
+        h3 { font-size: 1rem; font-weight: 600; margin: 1.5rem 0 0.3rem; }
+        p { margin-bottom: 1rem; }
+        ul, ol { margin-bottom: 1rem; padding-left: 1.5rem; }
+        li { margin-bottom: 0.3rem; }
+        code {
+            background: var(--card-bg);
+            padding: 0.15rem 0.4rem;
+            border-radius: 3px;
+            font-size: 0.9rem;
+        }
+        pre {
+            background: var(--card-bg);
+            padding: 1rem;
+            border-radius: 6px;
+            overflow-x: auto;
+            margin-bottom: 1.5rem;
+            font-size: 0.85rem;
+            line-height: 1.5;
+        }
+        em { color: var(--muted); }
+        blockquote {
+            border-left: 3px solid #333;
+            padding-left: 1rem;
+            margin: 1.5rem 0;
+            color: var(--muted);
+        }
+        footer {
+            margin-top: 3rem;
+            padding-top: 1.5rem;
+            border-top: 1px solid #222;
+            color: var(--muted);
+            font-size: 0.8rem;
+        }
+    </style>
+</head>
+<body>
+    <a href="/" class="back">← Emil Vrána</a>
+    <h1>The Replay Problem</h1>
+    <div class="date">August 17, 2026</div>
+
+    <p>Your agent did something wrong in production. A customer complained. You have the logs. You want to reproduce the issue, fix it, and make sure it never happens again. So you take the prompt, the context, the tool inputs, and you run it again.</p>
+
+    <p>You get a different result.</p>
+
+    <p>Not a different error. Not the same answer with a slightly different tone. A completely different trajectory. The agent picks a different tool, takes a different path, and arrives at a different conclusion. You can't reproduce the bug. You can't verify the fix. You're left with a postmortem that says "we think this happened, probably."</p>
+
+    <p>This is the replay problem, and it's the reason most agent debugging is theatre.</p>
+
+    <h2>Why Agents Aren't Reproducible</h2>
+    <p>Three things break reproducibility, and only one of them is fixable.</p>
+
+    <p><strong>Model non-determinism.</strong> Same prompt, same context, same temperature — different output. Even at temperature 0, providers don't guarantee identical outputs across calls. The model isn't a function; it's a distribution. You get a sample, not the same sample every time. You can't fix this. It's the nature of the system.</p>
+
+    <p><strong>Context reconstruction.</strong> To replay a run, you need the exact context the model saw. That includes the conversation history, the system prompt, the tool results, and every intermediate step. Most teams log the final output but not the full context window at each step. Without that, you're replaying a guess, not the run.</p>
+
+    <p><strong>Tool state drift.</strong> Your agent called a database that returned 47 rows on Tuesday. On Wednesday, the database has 52 rows. The tool result is different, so the agent's context is different, so the agent's behavior is different. The world moved. Your replay is running against a different world.</p>
+
+    <p>The first problem is fundamental. The second and third are engineering problems with engineering solutions.</p>
+
+    <h2>What You Actually Need to Log</h2>
+    <p>If you want to replay agent runs, you need to capture three things at every step:</p>
+
+    <p><strong>1. The exact input to the model.</strong> Not a reconstruction. Not "we built the prompt like this." The literal bytes. Every token the model saw, in the order it saw them. This means logging the full message array — system prompt, conversation history, tool results, everything — at every LLM call, not just at the start of the run.</p>
+
+    <p><strong>2. The exact model output.</strong> The raw completion, including tool calls, reasoning, and any metadata the provider returns. This is your replay target: if you feed the same input and get a different output, you know non-determinism is the issue, not your pipeline.</p>
+
+    <p><strong>3. The exact tool results.</strong> Not a description of what the tool did. The actual return value, serialized, with timestamps. When you replay, you don't call the real tools — you replay the recorded tool results. This isolates the agent's decision-making from the world's state changes.</p>
+
+    <p>This is a lot of data. A 12-step agent run with 8k context per step is ~100KB of logs per run. That's not nothing, but storage is cheap and debugging is expensive. Log it.</p>
+
+    <h2>The Replay Workflow</h2>
+    <p>When a production run fails, here's what you do:</p>
+
+    <p><strong>Step 1: Capture.</strong> Pull the full execution trace from your logging system. This should be a single JSON document containing every model call, every tool call, and every intermediate result.</p>
+
+    <p><strong>Step 2: Isolate the failure.</strong> Find the step where things went wrong. Not the step that produced the bad final output — the step where the agent made the wrong decision. This is usually two or three steps before the visible failure.</p>
+
+    <p><strong>Step 3: Replay with recorded tool results.</strong> Re-run the agent from the failure step, feeding it the recorded tool results instead of calling real tools. If the agent makes the same decision, you've confirmed the bug. If it makes a different one, you've found a non-determinism issue — which is itself the bug.</p>
+
+    <p><strong>Step 4: Fix and verify.</strong> Change your prompt, your tools, or your logic. Replay the same trace. If the agent now makes the right decision at the failure step, you've verified the fix. If it doesn't, you haven't fixed anything — you've added complexity without evidence.</p>
+
+    <h2>The Hard Part: Tool Calls</h2>
+    <p>The trickiest part of replay is tool call handling. When you replay, you need to match tool calls to their recorded results. But the agent might make different tool calls on replay — different arguments, different order, different tools entirely.</p>
+
+    <p>The solution is to replay deterministically up to the failure step, then let the agent run free from there with real tools (or a snapshot of the tool state from the time of the failure). This gives you:</p>
+
+    <ul>
+        <li><strong>Confirmed reproduction</strong> of everything up to the failure point.</li>
+        <li><strong>Controlled experimentation</strong> from the failure point forward.</li>
+    </ul>
+
+    <p>You're not replaying the whole run. You're replaying the prefix and testing the branch.</p>
+
+    <h2>What Most Teams Do Instead</h2>
+    <p>Most teams debug agents the way they debug traditional software: they look at logs, form a hypothesis, make a change, and deploy. They never replay. They never verify. They assume the fix works because the reasoning seems sound.</p>
+
+    <p>This is why the same agent bugs recur for months. The fix addressed a hypothesis, not the actual failure. Without replay, you're guessing. With replay, you're testing.</p>
+
+    <h2>The Infrastructure You Need</h2>
+    <p>Building replay capability isn't a weekend project, but it's not a rewrite either. You need:</p>
+
+    <ul>
+        <li><strong>Structured execution traces.</strong> Every run produces a JSON document with every model call, tool call, and result. No exceptions.</li>
+        <li><strong>A trace storage system.</strong> S3, local disk, a database — anything that lets you pull a trace by run ID.</li>
+        <li><strong>A replay harness.</strong> A script that takes a trace ID, replays the run with recorded tool results, and lets you inject changes at any step.</li>
+        <li><strong>A comparison tool.</strong> A diff between the original run and the replay that highlights where they diverge.</li>
+    </ul>
+
+    <p>None of this is exotic. It's the same pattern that distributed systems engineers have used for decades — capture, replay, bisect. Agent systems just need it more, because they have an extra source of non-determinism that traditional systems don't: the model itself.</p>
+
+    <h2>The Payoff</h2>
+    <p>Replay doesn't just help with debugging. It changes how you build:</p>
+
+    <ul>
+        <li><strong>Eval sets grow from real failures.</strong> Every replayed bug becomes an eval case. Your test suite improves automatically.</li>
+        <li><strong>Prompt changes become testable.</strong> "Does this prompt change fix the bug?" becomes a question you answer with a replay, not a deployment.</li>
+        <li><strong>Confidence replaces hope.</strong> You stop deploying changes and hoping. You start deploying changes you've verified against recorded production traces.</li>
+    </ul>
+
+    <p>The replay problem is the gap between "we think we fixed it" and "we know we fixed it." Most agent projects live in that gap permanently. Building replay infrastructure is how you leave it.</p>
+
+    <footer>
+        <a href="/">emil.aiadoption.cz</a>
+    </footer>
+</body>
+</html>
