@@ -1,0 +1,93 @@
+# The Canary Pattern: Why You Should Never Deploy an Agent to 100% of Traffic
+
+You shadow-ran your agent. The agreement rate hit 92%. Latency is within budget. You pulled the trigger and routed all traffic to it. Monday morning, three customers complain. The agent is doing something nobody saw in four weeks of shadow runs.
+
+You didn't deploy too early. You deployed too much.
+
+The shadow run told you the agent was safe. It didn't tell you what happens when the agent is the only system running — when there's no fallback, no comparison layer, no safety net of the old system handling the cases the agent gets wrong.
+
+This is what canary deployment solves, and it's the step most agent projects skip.
+
+## The Gap Between Shadow and Production
+
+Shadow runs are safe because the agent's outputs go nowhere. The production system handles everything. The agent watches and learns. But when you promote the agent to production, three things change simultaneously:
+
+**The agent's outputs become real.** In shadow mode, a wrong answer is data. In production, it's a customer email, a database write, a triggered workflow. The cost of failure jumps from zero to real.
+
+**The comparison layer disappears.** In shadow mode, you compare the agent's output to the production system's output. In production, there's nothing to compare against. You're flying blind — relying on user feedback and downstream metrics, both of which are delayed.
+
+**The traffic pattern changes.** Shadow runs process 100% of inputs with zero impact, which means you see everything but the feedback loops. In production, the agent's outputs affect the system state, which affects future inputs. The agent is now in the loop, not just observing it.
+
+A canary deployment addresses all three by making the transition gradual. Not 0% to 100% in one step. 1%, 5%, 25%, 50%, 100% — with a stop condition at each stage.
+
+## How It Works
+
+The pattern is borrowed from service deployment, but agent systems add a twist: the canary isn't just about infrastructure stability, it's about behavioral correctness.
+
+**Stage 1: 1% — The smoke test.** Route 1% of traffic to the agent. This isn't enough to catch statistical patterns, but it catches catastrophic failures — the agent crashing, producing malformed output, calling tools that don't exist in production. If this stage fails, you stop and fix. No escalation.
+
+**Stage 2: 5% — The edge case harvest.** 5% is enough to start seeing the long tail. You'll find inputs the shadow run missed because shadow runs process all inputs but don't experience the feedback loops. At 5%, real users see the agent's output, and some of them will respond in ways that trigger new behaviors. Review every divergence manually at this stage.
+
+**Stage 3: 25% — The statistical signal.** At 25%, you have enough traffic to see patterns. Latency distributions stabilize. Failure rates become meaningful. Cost per request converges to a predictable number. This is where your metrics start working for you instead of being noise.
+
+**Stage 4: 50% — The point of no return.** If the agent handles half your traffic for 48 hours without incident, it's probably fine for the rest. But "probably" isn't "certainly" — 50% means half your users are still on the fallback. If something goes wrong, you can still route everyone back.
+
+**Stage 5: 100% — Full deployment.** Remove the fallback. The agent is the system. At this point, you should have days of production data, a stable error rate, and confidence built from evidence, not hope.
+
+## What Most Teams Do Instead
+
+Most agent deployments follow one of two patterns, both wrong:
+
+**Big bang.** Shadow run passes → deploy to 100% → discover problems in production → roll back → fix → redeploy to 100% → discover new problems. This cycle repeats for weeks, erodes user trust, and makes the team reluctant to change anything once it's working. Which leads to the second pattern.
+
+**Perma-shadow.** Shadow run passes → deploy to 100% → keep the shadow system running alongside → compare outputs → manually review divergences forever. This is expensive, doesn't scale, and means you're paying for two systems indefinitely. The agent never truly becomes the system.
+
+The canary pattern avoids both. You get the safety of gradual rollout without the permanent cost of running two systems.
+
+## The Agent-Specific Twist: Behavioral Canary
+
+Traditional canary deployment checks infrastructure metrics — error rates, latency, CPU. Agent canaries need something more: behavioral metrics.
+
+**Output quality drift.** The agent's outputs might be technically correct but qualitatively worse — more verbose, less helpful, subtly off-tone. This doesn't show up in error rates. It shows up in user satisfaction signals: response time to follow-up questions, session length, thumbs-down ratings if you have them.
+
+**Tool selection shift.** At 1% traffic, the agent might call the database tool 40% of the time and the cache tool 60%. At 25%, the distribution might flip. This happens because real traffic has different patterns than the shadow run's intercepted inputs. Track tool selection distributions at each stage and compare to shadow run baselines.
+
+**Compounding errors.** At low traffic, the agent's mistakes are isolated. At higher traffic, mistakes start to compound — the agent's wrong output becomes input context for the next interaction, which leads to another wrong output. This cascade effect doesn't appear until you have enough consecutive interactions from the same user. Canary stages surface this gradually instead of all at once.
+
+## Stop Conditions
+
+Every canary stage needs a stop condition — a metric that, if it crosses a threshold, halts the rollout. Define these before you start, not when something goes wrong.
+
+**Hard stops.** Error rate above 2%. Any data corruption. Any security incident. Any customer-visible failure that the previous system wouldn't have produced. Hard stops mean immediate rollback, no discussion.
+
+**Soft stops.** Latency p95 above budget for 1 hour. Output quality scores below baseline. Tool selection distribution shifted more than 15% from shadow run baseline. Soft stops mean pause, investigate, and decide: fix and continue, or rollback.
+
+The thresholds depend on your system. The principle doesn't: define them before you deploy, not after something breaks.
+
+## The Fallback
+
+A canary only works if you can route traffic back to the old system instantly. This means:
+
+- The fallback system stays running and warm through every stage.
+- The routing decision is a single config change, not a redeployment.
+- You test the fallback before you need it. Switch 5% of traffic back during stage 2 and confirm it works. If the fallback is broken when you need it, you don't have a canary — you have a commitment.
+
+The fallback comes down at stage 5, not before. I've seen teams decommission the fallback at 50% to save costs, then hit a problem at 75% and have nowhere to go. The fallback is insurance. You don't cancel insurance because you haven't filed a claim yet.
+
+## The Timeline Problem
+
+Canary deployments take time. Going from 1% to 100% in a day defeats the purpose — you're not giving each stage enough time to surface problems. My rule of thumb:
+
+- Stages 1-2: 24 hours each.
+- Stages 3-4: 48 hours each.
+- Stage 5: no time requirement — it's the end state.
+
+That's 8 days from start to full deployment. For most teams, this feels too slow. The pressure to ship faster is real, and the canary pattern doesn't eliminate that pressure — it channels it into evidence-based decisions instead of faith-based deployments.
+
+If you need to ship faster, shrink the canary stages, don't skip them. 12 hours per stage instead of 24. 4 days total. You accept more risk in exchange for speed, but you still get the gradual exposure that catches problems before they affect everyone.
+
+What you never do is skip from shadow run to 100% because the shadow run looked good. The shadow run is necessary but not sufficient. The canary is the step that turns shadow confidence into production confidence.
+
+---
+
+*Part of an ongoing series on building reliable AI systems. More at [emil.aiadoption.cz](https://emil.aiadoption.cz).*
