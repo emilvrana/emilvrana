@@ -1,0 +1,139 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>The Deadline Pattern — Emil Vrána</title>
+    <meta name="description" content="Why every agent operation needs a timeout. How deadlines turn slow into failed — and why that's better than waiting forever.">
+    <style>
+        :root {
+            --bg: #0f0f0f;
+            --text: #e0e0e0;
+            --accent: #6b9bd2;
+            --muted: #888;
+            --card-bg: #1a1a1a;
+        }
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+        body {
+            font-family: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+            background: var(--bg);
+            color: var(--text);
+            line-height: 1.7;
+            max-width: 680px;
+            margin: 0 auto;
+            padding: 2rem 1.5rem;
+        }
+        a { color: var(--accent); text-decoration: none; }
+        a:hover { text-decoration: underline; }
+        .back { color: var(--muted); font-size: 0.85rem; margin-bottom: 1rem; display: block; }
+        .back:hover { color: var(--accent); }
+        h1 { font-size: 1.6rem; font-weight: 600; margin: 0 0 0.3rem; line-height: 1.3; }
+        .date { color: var(--muted); font-size: 0.85rem; margin-bottom: 2rem; }
+        h2 { font-size: 1.15rem; font-weight: 600; margin: 2rem 0 0.5rem; }
+        h3 { font-size: 1rem; font-weight: 600; margin: 1.5rem 0 0.3rem; }
+        p { margin-bottom: 1rem; }
+        ul, ol { margin-bottom: 1rem; padding-left: 1.5rem; }
+        li { margin-bottom: 0.3rem; }
+        code {
+            background: var(--card-bg);
+            padding: 0.15rem 0.4rem;
+            border-radius: 3px;
+            font-size: 0.9rem;
+        }
+        pre {
+            background: var(--card-bg);
+            padding: 1rem;
+            border-radius: 6px;
+            overflow-x: auto;
+            margin-bottom: 1.5rem;
+            font-size: 0.85rem;
+            line-height: 1.5;
+        }
+        em { color: var(--muted); }
+        blockquote {
+            border-left: 3px solid #333;
+            padding-left: 1rem;
+            margin: 1.5rem 0;
+            color: var(--muted);
+        }
+        footer {
+            margin-top: 3rem;
+            padding-top: 1.5rem;
+            border-top: 1px solid #222;
+            color: var(--muted);
+            font-size: 0.8rem;
+        }
+    </style>
+</head>
+<body>
+    <a href="/" class="back">← Emil Vrána</a>
+    <h1>The Deadline Pattern: Why Every Agent Operation Needs a Timeout</h1>
+    <div class="date">August 18, 2026</div>
+
+    <p>Your agent makes an LLM call. The provider is slow today. The call takes 45 seconds. Your agent waits. The user waits. The upstream system that triggered the agent waits. By the time the response arrives, the user has closed the tab, the webhook has timed out, and the queue has backed up.</p>
+
+    <p>You didn't have a bug. You had a missing deadline.</p>
+
+    <p>Every operation in a production system has a deadline — except, apparently, in agent systems. LLM calls, tool executions, sub-agent delegations, multi-step pipelines: teams let them run without time bounds because "the model will respond eventually." Eventually is not a production SLA.</p>
+
+    <h2>The Problem With Indefinite Waits</h2>
+    <p>LLM latency is not predictable. The same prompt can return in 800ms or 40s depending on provider load, context length, model selection, and internal queuing. Most teams treat this as a fact of life — you can't control the provider's latency, so why set a deadline?</p>
+
+    <p>Because the deadline isn't for the provider. It's for your system.</p>
+
+    <p>When an LLM call runs without a deadline, every downstream component waits without a deadline. The tool call that follows the LLM response can't start. The user who initiated the request can't get a response. The queue worker processing the task is blocked. One slow LLM call cascades into a system-wide stall, and you won't know until something else breaks — a queue fills up, a health check fails, a user complains.</p>
+
+    <p>The deadline is the boundary that turns "slow" into "failed." Without it, slow and failed are indistinguishable, and your system can't tell the difference between "wait a bit longer" and "this will never complete."</p>
+
+    <h2>Where Deadlines Belong</h2>
+    <p>Every layer of your agent stack needs deadlines, at different granularities:</p>
+
+    <p><strong>LLM calls.</strong> Set a timeout on every API call to the model. Not the provider's default — your own, based on your latency budget. If your p95 response time is 3 seconds, a 30-second timeout is not conservative — it's negligent. A timeout of 8-10 seconds catches the pathological cases while allowing for normal variance. When the timeout fires, you retry once, then fall back.</p>
+
+    <p><strong>Tool executions.</strong> Every tool your agent calls — database query, web search, API request, file read — needs its own deadline. A database query that normally takes 50ms can hang for 30 seconds under load. If the agent waits for the tool, the agent is stuck. Set tool-level timeouts that match the tool's expected latency, not a global default. A web search can take 5 seconds. A cache lookup should take 50ms. Don't use the same budget for both.</p>
+
+    <p><strong>Multi-step pipelines.</strong> The pipeline itself needs an overall deadline. If step 1 is fast but step 4 hangs, the pipeline should have a top-level timeout that kills the entire run. Individual step timeouts catch local problems. The pipeline timeout catches cascading failures — when one slow step causes every subsequent step to miss its budget.</p>
+
+    <p><strong>Sub-agent delegations.</strong> If your agent delegates to another agent, set a deadline on the delegation. The sub-agent's internal deadlines are its business. Your deadline is for the parent: "I will wait this long for your result, and then I proceed without it." This is uncomfortable because it means designing for the case where the sub-agent doesn't return. But that case exists whether you design for it or not.</p>
+
+    <h2>The Fallback Question</h2>
+    <p>A deadline without a fallback is just a crash. When an operation times out, what happens?</p>
+
+    <p><strong>LLM call timeout → cached or degraded response.</strong> If the model doesn't respond in time, return the last cached response for this query type, or a pre-written fallback response that acknowledges the limitation. "I couldn't generate a full answer in time — here's what I know." Users tolerate honesty. They don't tolerate infinite spinners.</p>
+
+    <p><strong>Tool timeout → skip or default.</strong> If a tool doesn't return in time, the agent proceeds without that information. This means your agent needs to be designed for incomplete information — not every tool call is critical. Classify tools as critical or optional. A critical tool timing out means the agent should fail gracefully and report the error. An optional tool timing out means the agent continues with what it has.</p>
+
+    <p><strong>Pipeline timeout → partial result.</strong> If the pipeline doesn't complete in its overall budget, return what you have. A partial answer from 3 completed steps is more useful than no answer from a pipeline that's still running step 4. This requires designing your pipeline so intermediate results are usable, not just final ones.</p>
+
+    <p><strong>Sub-agent timeout → proceed independently.</strong> The parent agent continues without the sub-agent's contribution. This is the hardest to implement because it means the parent's logic must work without the sub-agent's output. But if the parent can't work without it, the sub-agent isn't a delegation — it's a dependency, and dependencies need to be reliable, not just deadline-bounded.</p>
+
+    <h2>The Cascade Problem</h2>
+    <p>Deadlines cascade. If your LLM call has a 10-second timeout and your tool call has a 5-second timeout, the maximum pipeline time is 15 seconds — assuming sequential execution. But what if the LLM call takes 9.5 seconds and the tool call takes 4.5 seconds? You're within individual budgets but the combined time is 14 seconds, which might exceed the user's tolerance.</p>
+
+    <p>The solution is hierarchical deadlines. Each layer has its own budget, and the parent layer's budget constrains the child. The pipeline has 12 seconds total. The LLM call gets 8. The tool call gets 3. The remaining 1 second is for processing and response formatting. If the LLM call takes 7 seconds, the tool call still gets 3 — but if the LLM call takes 9 (exceeding its 8-second budget), the tool call's budget shrinks to 2, not 3. The parent deadline propagates downward.</p>
+
+    <p>This is standard in distributed systems — it's called deadline propagation. Agent systems are distributed systems. The fact that one of the nodes is an LLM doesn't change the math.</p>
+
+    <h2>What Your Monitoring Should Show</h2>
+    <p>Once you have deadlines, you need to track them:</p>
+
+    <p><strong>Timeout rate.</strong> What percentage of operations hit the deadline? This should be low — under 1% for a healthy system. If it's higher, either your deadlines are too tight or your provider is degraded. Both are fixable, but only if you know which one it is.</p>
+
+    <p><strong>Deadline utilization.</strong> How close do operations get to the deadline, on average? If your deadline is 10 seconds and your p99 latency is 9.5 seconds, you're riding the edge. A small provider degradation will push you over. Track the ratio of actual latency to deadline — if it's consistently above 80%, widen the deadline or improve the operation.</p>
+
+    <p><strong>Fallback frequency.</strong> How often are you serving cached or degraded responses because of timeouts? This is the user-visible metric. If 5% of users get a fallback response, that's a 5% degraded experience. Track it, alert on it, and trend it over time.</p>
+
+    <h2>The Uncomfortable Truth</h2>
+    <p>Deadlines force you to confront a question most agent projects avoid: how fast does this need to be?</p>
+
+    <p>Without a deadline, the answer is "as fast as the model goes." With a deadline, the answer is a number. And numbers can be measured, argued about, and improved. The deadline turns a vague latency concern into a specific engineering problem: hit this target, or have a fallback ready.</p>
+
+    <p>This is why teams skip deadlines. Not because they're hard to implement — a timeout parameter is one line of code. Because they force the conversation about what "good enough" means, and that conversation is uncomfortable when the system is new and you don't know the answer yet.</p>
+
+    <p>Set the deadline anyway. Pick a number. Make it generous. Revise it when you have data. But don't leave it unset, because unset deadlines don't mean "no limit" — they mean "the limit is whatever breaks first," and that's usually something expensive.</p>
+
+    <footer>
+        <a href="/">emil.aiadoption.cz</a>
+    </footer>
+</body>
+</html>
