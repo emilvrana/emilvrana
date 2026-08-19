@@ -1,0 +1,144 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>The Versioning Problem — Emil Vrána</title>
+    <meta name="description" content="Your code is versioned. Your data is versioned. Your agent is a prompt file in a Google Doc that someone edited last Tuesday. Why agent systems need proper versioning — and the minimum viable approach.">
+    <style>
+        :root {
+            --bg: #0f0f0f;
+            --text: #e0e0e0;
+            --accent: #6b9bd2;
+            --muted: #888;
+            --card-bg: #1a1a1a;
+        }
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+        body {
+            font-family: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+            background: var(--bg);
+            color: var(--text);
+            line-height: 1.7;
+            max-width: 680px;
+            margin: 0 auto;
+            padding: 2rem 1.5rem;
+        }
+        a { color: var(--accent); text-decoration: none; }
+        a:hover { text-decoration: underline; }
+        .back { color: var(--muted); font-size: 0.85rem; margin-bottom: 1rem; display: block; }
+        .back:hover { color: var(--accent); }
+        h1 { font-size: 1.6rem; font-weight: 600; margin: 0 0 0.3rem; line-height: 1.3; }
+        .date { color: var(--muted); font-size: 0.85rem; margin-bottom: 2rem; }
+        h2 { font-size: 1.15rem; font-weight: 600; margin: 2rem 0 0.5rem; }
+        h3 { font-size: 1rem; font-weight: 600; margin: 1.5rem 0 0.3rem; }
+        p { margin-bottom: 1rem; }
+        ul, ol { margin-bottom: 1rem; padding-left: 1.5rem; }
+        li { margin-bottom: 0.3rem; }
+        code {
+            background: var(--card-bg);
+            padding: 0.15rem 0.4rem;
+            border-radius: 3px;
+            font-size: 0.9rem;
+        }
+        pre {
+            background: var(--card-bg);
+            padding: 1rem;
+            border-radius: 6px;
+            overflow-x: auto;
+            margin-bottom: 1.5rem;
+            font-size: 0.85rem;
+            line-height: 1.5;
+        }
+        em { color: var(--muted); }
+        blockquote {
+            border-left: 3px solid #333;
+            padding-left: 1rem;
+            margin: 1.5rem 0;
+            color: var(--muted);
+        }
+        footer {
+            margin-top: 3rem;
+            padding-top: 1.5rem;
+            border-top: 1px solid #222;
+            color: var(--muted);
+            font-size: 0.8rem;
+        }
+    </style>
+</head>
+<body>
+    <a href="/" class="back">← Emil Vrána</a>
+    <h1>The Versioning Problem: Your Agent Has No Release Tags</h1>
+    <div class="date">August 19, 2026</div>
+
+    <p>Your code is versioned. Your data is versioned. Your infrastructure is versioned. Your agent? Your agent is a prompt file in a Google Doc that someone edited last Tuesday without telling anyone.</p>
+
+    <p>I've never walked into a team where the agent system had proper versioning. Not once. And I've walked into a lot of teams.</p>
+
+    <h2>What You're Not Versioning</h2>
+
+    <p>An agent system has at least four layers that need versioning, and most teams version zero of them:</p>
+
+    <p><strong>Prompts.</strong> The system prompt, the tool descriptions, the output format instructions. These are code — they determine behavior as much as any function in your codebase. But they live in unversioned files, get edited in place, and nobody knows what changed when.</p>
+
+    <p><strong>Tool definitions.</strong> The schemas your agent uses to call APIs, databases, and external services. When an API adds a required field, does your tool definition track that? When you change a parameter name, is there a migration path? Or does the agent just start failing with a cryptic error from the tool executor?</p>
+
+    <p><strong>Model configuration.</strong> Which model, which version, which parameters. Temperature, top-p, max tokens, retry counts. These are knobs that change behavior. If you can't answer "what model config was running when this bug was reported?" you can't reproduce the bug.</p>
+
+    <p><strong>Evaluation baselines.</strong> Your eval suite — the set of test cases that tells you whether the agent is still working. If the eval suite changes at the same time as the agent, you can't tell whether a regression is from the agent change or the eval change. These need to be versioned independently.</p>
+
+    <h2>Why It Breaks</h2>
+
+    <p>The failure mode is always the same. Something goes wrong in production. You investigate. You discover the prompt was changed. By whom? When? Why? What was the previous version? Nobody knows. The Google Doc has the full edit history, but good luck reconstructing what the prompt looked like when the bug happened.</p>
+
+    <p>Or worse: someone improves the prompt. The agent gets better on the test cases — great. But it silently gets worse on a class of inputs that isn't in the test suite. Nobody notices for two weeks because the monitoring only tracks errors, not quality regression. By the time someone reports degraded outputs, three other changes have been layered on top. Now you're debugging a stack of unversioned changes with no baseline to compare against.</p>
+
+    <p>This is how teams end up afraid to touch their own agent. Not because it's good — because they've lost the ability to safely change it. Every modification is a leap of faith because there's no rollback, no diff, no "what did this look like before."</p>
+
+    <h2>The Minimum Viable Versioning</h2>
+
+    <p>You don't need a sophisticated MLOps platform. You need four things:</p>
+
+    <p><strong>1. Prompts in git, not in docs.</strong> Every prompt is a file in your repository. Edits go through pull requests. The PR description says what changed and why. This alone solves 80% of the "who changed what and when" problem. It's the single highest-impact change you can make, and most teams haven't made it.</p>
+
+    <p><strong>2. A version manifest for every deploy.</strong> A JSON file that records: prompt version (git SHA), model name and version, model parameters, tool definition versions, eval suite version. This gets logged with every agent run. When something breaks, you look up the manifest for that run and know exactly what configuration produced the behavior.</p>
+
+    <pre><code>{
+  "prompt_version": "a3f2c1e",
+  "model": "gpt-4o-2024-08-06",
+  "temperature": 0.3,
+  "tool_definitions_version": "b7d4e8a",
+  "eval_suite_version": "c1a2b3d",
+  "deployed_at": "2026-08-19T10:00:00Z"
+}</code></pre>
+
+    <p><strong>3. Tagged releases, not rolling deploys.</strong> When you change the prompt, you create a tag. The tag is what deploys. If the new version is worse, you roll back to the previous tag. This is standard practice for code and somehow novel for agents.</p>
+
+    <p><strong>4. Eval results in the PR.</strong> Before a prompt change merges, the eval suite runs against both the old and new versions. The PR shows the diff: which test cases improved, which regressed, which stayed the same. If any critical case regresses, the merge is blocked. This turns "I think this is better" into "here's what changed."</p>
+
+    <h2>The Hard Part: Model Versioning</h2>
+
+    <p>Prompt versioning is straightforward — it's text in a file. Model versioning is harder because you don't control the model. Providers update models silently. The model called <code>gpt-4o</code> today is not the same model that was called <code>gpt-4o</code> six months ago. The behavior changes, the latency changes, the cost changes — and you didn't change anything.</p>
+
+    <p>You can't pin a model version forever. But you can:</p>
+
+    <p><strong>Record which model version produced which outputs.</strong> The manifest above handles this. When behavior shifts, you check whether the model version shifted.</p>
+
+    <p><strong>Run a canary on model updates.</strong> When your provider announces a model update, don't switch all traffic. Route 5% to the new model, compare outputs to the old model on the same inputs. If the diff is small, increase. If it's large, investigate.</p>
+
+    <p><strong>Maintain a golden dataset.</strong> A set of 50-100 representative inputs with known-good outputs. Run this dataset against any new model version before adopting it. If more than 10% of outputs change meaningfully, you're not upgrading — you're migrating.</p>
+
+    <h2>The Uncomfortable Question</h2>
+
+    <p>If I asked you right now: "What prompt was your agent running on August 5th at 3 PM?" — could you answer?</p>
+
+    <p>If the answer is "I'd have to check the Google Doc history and cross-reference with the deploy log and maybe ask Sarah" — you don't have versioning. You have archaeology.</p>
+
+    <p>Your agent is a system. Systems need version control. Not because it's best practice, but because without it, you can't answer the most basic question about your own production system: what was running when it broke?</p>
+
+    <p>Put the prompts in git. Tag your releases. Log your manifests. Run your evals. It's not complicated, and it's the difference between an agent you can trust and an agent you're afraid to touch.</p>
+
+    <footer>
+        <a href="/">emil.aiadoption.cz</a>
+    </footer>
+</body>
+</html>
