@@ -1,0 +1,159 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>The Circuit Breaker Pattern — Emil Vrána</title>
+    <meta name="description" content="When your agent starts failing, it fails in bursts. Without a circuit breaker, it keeps hammering the broken path. How to fail fast, alert, and degrade gracefully.">
+    <style>
+        :root {
+            --bg: #0f0f0f;
+            --text: #e0e0e0;
+            --accent: #6b9bd2;
+            --muted: #888;
+            --card-bg: #1a1a1a;
+        }
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+        body {
+            font-family: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+            background: var(--bg);
+            color: var(--text);
+            line-height: 1.7;
+            max-width: 680px;
+            margin: 0 auto;
+            padding: 2rem 1.5rem;
+        }
+        a { color: var(--accent); text-decoration: none; }
+        a:hover { text-decoration: underline; }
+        .back { color: var(--muted); font-size: 0.85rem; margin-bottom: 1rem; display: block; }
+        .back:hover { color: var(--accent); }
+        h1 { font-size: 1.6rem; font-weight: 600; margin: 0 0 0.3rem; line-height: 1.3; }
+        .date { color: var(--muted); font-size: 0.85rem; margin-bottom: 2rem; }
+        h2 { font-size: 1.15rem; font-weight: 600; margin: 2rem 0 0.5rem; }
+        h3 { font-size: 1rem; font-weight: 600; margin: 1.5rem 0 0.3rem; }
+        p { margin-bottom: 1rem; }
+        ul, ol { margin-bottom: 1rem; padding-left: 1.5rem; }
+        li { margin-bottom: 0.3rem; }
+        code {
+            background: var(--card-bg);
+            padding: 0.15rem 0.4rem;
+            border-radius: 3px;
+            font-size: 0.9rem;
+        }
+        pre {
+            background: var(--card-bg);
+            padding: 1rem;
+            border-radius: 6px;
+            overflow-x: auto;
+            margin-bottom: 1.5rem;
+            font-size: 0.85rem;
+            line-height: 1.5;
+        }
+        em { color: var(--muted); }
+        blockquote {
+            border-left: 3px solid #333;
+            padding-left: 1rem;
+            margin: 1.5rem 0;
+            color: var(--muted);
+        }
+        footer {
+            margin-top: 3rem;
+            padding-top: 1.5rem;
+            border-top: 1px solid #222;
+            color: var(--muted);
+            font-size: 0.8rem;
+        }
+    </style>
+</head>
+<body>
+    <a href="/" class="back">← Emil Vrána</a>
+    <h1>The Circuit Breaker Pattern: When Your Agent Should Stop Trying</h1>
+    <div class="date">August 20, 2026</div>
+
+    <p>Your agent calls an LLM API. The API returns a 500. Your code retries. The retry returns a 500. Your code retries again. The retry returns a 500. Meanwhile, the user has been waiting 30 seconds, your queue is backing up, and you're burning API credits on requests that have no chance of succeeding.</p>
+
+    <p>You don't have a retry problem. You have a missing circuit breaker.</p>
+
+    <p>Circuit breakers are standard in distributed systems. They've been standard for over a decade. And yet, in every agent codebase I've reviewed, the pattern is absent. Teams build retry logic with exponential backoff — sometimes sophisticated, with jitter and capped attempts — but never add the circuit that says "stop trying for a while." The retry logic is designed for transient failures. Circuit breakers are designed for sustained failures. Agent systems experience both, and the difference matters.</p>
+
+    <h2>Transient vs. Sustained Failures</h2>
+
+    <p>A transient failure is a network blip. The API was busy for 200ms, your retry succeeds, life continues. Exponential backoff handles this well — wait a bit, try again, the problem is gone.</p>
+
+    <p>A sustained failure is a model outage. The provider is down, the API has changed, the model is returning errors for every request because of a formatting issue in your prompt. Retrying doesn't help. Each retry hits the same wall. And unlike a transient blip, sustained failures tend to come in bursts: if the model is degraded for one request, it's degraded for all of them. Your retry logic turns a degraded model into a cascading system failure because every concurrent request is independently retrying the same broken path.</p>
+
+    <p>The circuit breaker's job is to detect the difference. After N consecutive failures (or failures within a time window), the circuit opens. Requests stop going to the broken service. Instead, they get a fallback response immediately — no retry, no wait, no cascade. After a cooldown period, the circuit allows a single test request (half-open state). If it succeeds, the circuit closes and traffic resumes. If it fails, the circuit stays open and the cooldown restarts.</p>
+
+    <h2>Three States, Not Two</h2>
+
+    <p>The most common implementation mistake is building a binary circuit: open or closed. The circuit breaker has three states, and the half-open state is the one that matters most.</p>
+
+    <p><strong>Closed.</strong> Normal operation. Requests flow through. The breaker counts failures. If failures exceed a threshold within a window (say, 5 failures in 60 seconds), the circuit opens.</p>
+
+    <p><strong>Open.</strong> Requests are rejected immediately. No call to the failing service. The fallback response is returned. A timer starts. When the timer expires (say, 30 seconds), the circuit moves to half-open.</p>
+
+    <p><strong>Half-open.</strong> A single request is allowed through. This is the probe. If it succeeds, the circuit closes — the service is healthy. If it fails, the circuit reopens and the cooldown restarts. The half-open state is critical because it's how the system recovers automatically. Without it, you'd need manual intervention to close the circuit after an outage.</p>
+
+    <h2>Where Circuit Breakers Belong in Agent Systems</h2>
+
+    <p>In a typical agent pipeline, there are several points where a circuit breaker should sit:</p>
+
+    <p><strong>The LLM API call.</strong> This is the most obvious one. If the model provider is down or degraded, the circuit opens, and your agent returns a fallback response — a cached answer, a degraded mode message, or a queue-and-retry-later response. The agent doesn't crash. The user doesn't wait. The queue doesn't back up.</p>
+
+    <p><strong>Tool executions.</strong> Each external tool your agent calls is a dependency that can fail. A web search API, a database, a third-party service — each should have its own circuit breaker. If the web search tool is down, the agent can still answer questions that don't require search. If the database is down, the agent can still process requests that don't need persistence. Circuit breakers per tool let the agent degrade gracefully rather than failing entirely.</p>
+
+    <p><strong>Sub-agent delegations.</strong> If your agent delegates to a sub-agent (another model, another pipeline), a circuit breaker prevents the parent from repeatedly sending tasks to a failing child. The sub-agent's circuit opens, and the parent falls back to its own capabilities — which might be less capable but at least functional.</p>
+
+    <p><strong>The agent itself.</strong> If the agent is producing bad outputs — not errors, but responses that fail quality checks — a circuit breaker on the agent's output can stop a bad deployment from polluting downstream systems. This is harder to implement because "bad output" is fuzzier than "API error," but if you have quality signals (eval scores, user feedback, format validation), they can feed the circuit breaker the same way error rates feed a traditional one.</p>
+
+    <h2>The Threshold Question</h2>
+
+    <p>The hardest design decision isn't the implementation — it's the thresholds. When should the circuit open?</p>
+
+    <p>Too sensitive: the circuit opens on a single transient failure, and your agent is constantly in fallback mode. Too forgiving: the circuit never opens, and you're back to retrying into a wall.</p>
+
+    <p>I use two parameters that work well in practice:</p>
+
+    <p><strong>Failure count threshold.</strong> Open after 5 consecutive failures. Not 5 total failures — 5 in a row, with no success in between. This filters out single blips while catching sustained outages quickly. For a system that handles 100 requests per minute, 5 consecutive failures means the circuit opens within seconds of a real outage.</p>
+
+    <p><strong>Failure rate threshold.</strong> Open if the failure rate exceeds 50% over a 30-second window with at least 10 requests. This catches the case where failures aren't strictly consecutive but are still systemic — the model is returning errors for half the requests, with occasional successes that prevent the consecutive counter from triggering.</p>
+
+    <p>Either condition opens the circuit. Both must be clear for it to close (in half-open, the probe request must succeed).</p>
+
+    <p>These numbers aren't universal. A system with lower traffic needs different thresholds — 5 failures in a row is a lot if you get 2 requests per minute. Tune to your volume. But the structure (consecutive count + rate window) is more robust than either alone.</p>
+
+    <h2>The Fallback Design</h2>
+
+    <p>A circuit breaker without a fallback is just a faster way to fail. When the circuit opens, what does the user get?</p>
+
+    <p>For LLM calls, the fallback hierarchy I recommend:</p>
+
+    <p><strong>1. Cached response.</strong> If you've answered a similar or identical query recently, return the cached answer. This works for Q&A-style agents where the same questions recur. Mark the response as cached so the user knows it's not fresh.</p>
+
+    <p><strong>2. Simpler model.</strong> If the primary model is down, route to a smaller, more reliable model. A less capable answer is better than no answer. This requires maintaining a fallback model integration — but if your primary is a large hosted model and your fallback is a local model or a different provider, you've got resilience against provider-specific outages.</p>
+
+    <p><strong>3. Honest degradation.</strong> "The AI service is currently unavailable. Your request has been queued and will be processed when service resumes." This is better than a spinner, better than a timeout, and better than a silent failure. Users respect systems that tell them what's happening.</p>
+
+    <p>For tool calls, the fallback is simpler: skip the tool and proceed with what you have, or return a partial result that acknowledges the missing data. The agent's prompt should be designed to handle missing tool outputs gracefully — "I couldn't retrieve real-time data, but based on what I know..." is a valid agent response.</p>
+
+    <h2>What Most Teams Get Wrong</h2>
+
+    <p>The most common mistake is building retry logic and thinking it's enough. Retry logic handles transient failures. It makes sustained failures worse. Every retry during an outage is wasted compute, wasted time, and wasted user patience. The circuit breaker is what stops the bleeding.</p>
+
+    <p>The second mistake is setting the cooldown too long. A 5-minute cooldown means your agent is in fallback mode for 5 minutes after a 30-second outage. The half-open state exists specifically to recover quickly — set the cooldown to 30-60 seconds, let the probe request test the waters, and reopen if needed. Fast recovery is as important as fast failure.</p>
+
+    <p>The third mistake is not monitoring the circuit state. If your circuit is open 20% of the time, you have a serious problem — but only if you know about it. Track circuit state transitions (open, close, half-open) as events. Alert when a circuit opens. Dashboard the percentage of time each circuit spends open. A circuit breaker that's silently open half the day is a system running in degraded mode that nobody knows about.</p>
+
+    <h2>The Bigger Picture</h2>
+
+    <p>Circuit breakers are part of a family of resilience patterns that agent systems need and mostly don't have. Retries handle transient failures. Deadlines handle hangs. Circuit breakers handle sustained failures. Bulkheads handle resource exhaustion. Each pattern addresses a different failure mode, and they compose.</p>
+
+    <p>If you're building an agent system and you haven't added a circuit breaker yet, start with the LLM API call. It's the highest-impact, easiest to implement, and most likely to save you during the next provider outage. Five failures in 60 seconds — circuit opens — fallback response — 30-second cooldown — probe — recover. That's the whole pattern. The implementation is 50 lines of code. The impact is the difference between your agent degrading gracefully during an outage and your agent taking down everything upstream of it.</p>
+
+    <p>Your retry logic is not enough. It was never enough. It handles the easy failures and amplifies the hard ones. Add the circuit. Your future self — the one on call at 2 AM when the model provider has a bad deploy — will thank you.</p>
+
+    <footer>
+        <a href="/">emil.aiadoption.cz</a>
+    </footer>
+</body>
+</html>
