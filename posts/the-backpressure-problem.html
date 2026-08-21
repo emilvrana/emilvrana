@@ -1,0 +1,181 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>The Backpressure Problem — Emil Vrána</title>
+    <meta name="description" content="Your agent queue is growing. Each request takes 15 seconds. Users are waiting minutes. The system hasn't crashed — it's just drowning. How backpressure saves agent systems from slow death.">
+    <style>
+        :root {
+            --bg: #0f0f0f;
+            --text: #e0e0e0;
+            --accent: #6b9bd2;
+            --muted: #888;
+            --card-bg: #1a1a1a;
+        }
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+        body {
+            font-family: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+            background: var(--bg);
+            color: var(--text);
+            line-height: 1.7;
+            max-width: 680px;
+            margin: 0 auto;
+            padding: 2rem 1.5rem;
+        }
+        a { color: var(--accent); text-decoration: none; }
+        a:hover { text-decoration: underline; }
+        .back { color: var(--muted); font-size: 0.85rem; margin-bottom: 1rem; display: block; }
+        .back:hover { color: var(--accent); }
+        h1 { font-size: 1.6rem; font-weight: 600; margin: 0 0 0.3rem; line-height: 1.3; }
+        .date { color: var(--muted); font-size: 0.85rem; margin-bottom: 2rem; }
+        h2 { font-size: 1.15rem; font-weight: 600; margin: 2rem 0 0.5rem; }
+        h3 { font-size: 1rem; font-weight: 600; margin: 1.5rem 0 0.3rem; }
+        p { margin-bottom: 1rem; }
+        ul, ol { margin-bottom: 1rem; padding-left: 1.5rem; }
+        li { margin-bottom: 0.3rem; }
+        code {
+            background: var(--card-bg);
+            padding: 0.15rem 0.4rem;
+            border-radius: 3px;
+            font-size: 0.9rem;
+        }
+        pre {
+            background: var(--card-bg);
+            padding: 1rem;
+            border-radius: 6px;
+            overflow-x: auto;
+            margin-bottom: 1.5rem;
+            font-size: 0.85rem;
+            line-height: 1.5;
+        }
+        em { color: var(--muted); }
+        blockquote {
+            border-left: 3px solid #333;
+            padding-left: 1rem;
+            margin: 1.5rem 0;
+            color: var(--muted);
+        }
+        footer {
+            margin-top: 3rem;
+            padding-top: 1.5rem;
+            border-top: 1px solid #222;
+            color: var(--muted);
+            font-size: 0.8rem;
+        }
+    </style>
+</head>
+<body>
+    <a href="/" class="back">← Emil Vrána</a>
+    <h1>The Backpressure Problem: What Happens When Your Agent Can't Keep Up</h1>
+    <div class="date">August 21, 2026</div>
+
+    <p>Your agent takes 15 seconds per request. You get 4 requests per minute. That's fine — 60 seconds of work arriving in 60 seconds of wall clock. The queue stays near empty.</p>
+
+    <p>Then a newsletter goes out. Suddenly you get 20 requests per minute. Each still takes 15 seconds. That's 300 seconds of work arriving every 60 seconds. The queue grows by 240 seconds of work every minute. After 5 minutes, a new request waits 20 minutes before it's even picked up. After 10 minutes, the wait is 40 minutes.</p>
+
+    <p>The system hasn't crashed. No errors. No timeouts. No circuit breaker tripped. The agent is dutifully processing requests one by one, exactly as designed. And your users are watching a spinner that hasn't moved in half an hour.</p>
+
+    <p>This is the backpressure problem, and it's the failure mode that agent teams are least prepared for.</p>
+
+    <h2>Why Agent Systems Are Uniquely Vulnerable</h2>
+
+    <p>Traditional web services handle load spikes by adding replicas. Each request is stateless and fast — a few milliseconds. You can run 1000 concurrent requests on 10 servers without thinking about it.</p>
+
+    <p>Agent systems can't do this. Each request is expensive (an LLM call costs real money), slow (5-30 seconds per request), and often stateful (context accumulates within a conversation). You can't just spin up 100 replicas — the API costs would bankrupt you, and the model provider has rate limits anyway. And unlike a web server where each request is independent, agent pipelines often have sequential dependencies: the LLM call, then the tool call, then another LLM call with the tool result. Parallelism within a single request is limited.</p>
+
+    <p>The result is that agent systems have fundamentally different load characteristics. Throughput is bounded by cost and rate limits, not just CPU. Latency is high even when the system is healthy. And the gap between "normal load" and "overload" can be small — a 3x spike that a web server absorbs with auto-scaling can put an agent system into a death spiral.</p>
+
+    <h2>The Death Spiral</h2>
+
+    <p>Without backpressure, overload doesn't just make the system slow. It makes the system <em>worse</em> in a feedback loop.</p>
+
+    <p>As the queue grows, requests take longer to start. Users get impatient and retry — submitting the same query again, which goes to the back of the queue. Now you're processing the same request twice, wasting capacity on duplicate work. The queue grows faster.</p>
+
+    <p>Some requests time out on the client side before the agent even starts processing them. But the agent doesn't know that — it processes the request anyway, spending 15 seconds and an API call on a response nobody will read. More wasted capacity.</p>
+
+    <p>Long-running requests hold connections open. Connection pools exhaust. The web server runs out of worker threads. New requests can't even be accepted, let alone processed. The system appears down to health checks — not because the agent is broken, but because the infrastructure around it is suffocating under queued work.</p>
+
+    <p>This is the death spiral: overload leads to retries, retries lead to wasted work, wasted work leads to more overload. Each turn makes the next one worse, and the system has no mechanism to break the cycle.</p>
+
+    <h2>What Backpressure Actually Means</h2>
+
+    <p>Backpressure is the system's ability to push back on incoming work when it can't keep up. Instead of accepting everything and drowning, it signals to upstream that capacity is full and either rejects, delays, or degrades requests deliberately.</p>
+
+    <p>The key insight: <strong>rejecting work early is better than accepting work you can't process.</strong> A user who gets an immediate "system busy, try again in 5 minutes" can make a decision. A user who waits 40 minutes with no feedback is stuck and angry. Fast failure is better than slow success — but slow failure is the worst of all, and that's what a queue without backpressure delivers.</p>
+
+    <h2>Three Layers of Backpressure</h2>
+
+    <h3>1. Admission Control</h3>
+
+    <p>The first layer is at the front door. Before a request enters the queue, check if the system has capacity. If not, reject immediately with a clear message.</p>
+
+    <p>The simplest version: track queue depth. If the queue has more than N pending requests (or more than M seconds of estimated work), return a 503 Service Unavailable with a Retry-After header. The user gets an instant response. The system doesn't accept work it can't handle.</p>
+
+    <p>More sophisticated: track estimated wait time. If the queue contains 10 items and each takes 15 seconds, the estimated wait is 150 seconds. If that exceeds a threshold (say, 60 seconds), reject. This adapts to the agent's actual processing speed rather than a fixed queue length.</p>
+
+    <p>The threshold should be a user-experience decision, not a system-capacity one. How long is a user willing to wait? For a chat agent, maybe 30 seconds. For a batch processing agent, maybe 5 minutes. Set the threshold at the edge of user patience and reject anything beyond it.</p>
+
+    <h3>2. Load Shedding</h3>
+
+    <p>Admission control prevents new requests from entering. Load shedding handles requests already in the system when overload hits.</p>
+
+    <p>Not all requests are equal. A user's first question in a conversation is more valuable than their fifth retry of the same question. A paid tier request is more valuable than a free tier request. A real-time chat interaction is more valuable than a background batch job.</p>
+
+    <p>Load shedding means dropping low-priority work to protect high-priority work. In practice:</p>
+
+    <ul>
+        <li><strong>Drop duplicate requests.</strong> If the same user has submitted the same query twice (or the same query is already in the queue), drop the duplicate. Keep the first one.</li>
+        <li><strong>Expire stale requests.</strong> If a request has been in the queue longer than the user's patience threshold, remove it. The user has likely already left or retried. Processing it wastes capacity.</li>
+        <li><strong>Pause background jobs.</strong> If your agent system runs background tasks (indexing, evaluation runs, batch processing), pause them during overload. All capacity goes to interactive requests.</li>
+        <li><strong>Priority queues.</strong> Separate queues by priority. When capacity is available, drain the high-priority queue first. Low-priority requests wait — or get shed entirely if overload persists.</li>
+    </ul>
+
+    <h3>3. Rate Limiting</h3>
+
+    <p>The third layer prevents overload from happening in the first place. Rate limiting caps the number of requests per user per time window, smoothing out spikes.</p>
+
+    <p>For agent systems, rate limiting serves two purposes. First, it protects the system from any single user dominating capacity. Second, it protects the user from themselves — a script that submits 100 requests in 10 seconds will exhaust a user's budget and clog the queue. A per-user rate limit of 10 requests per minute turns a runaway script into a manageable trickle.</p>
+
+    <p>The limits should be set based on the system's capacity, not on arbitrary guesses. If the system can process 4 requests per minute, and you have 10 users, a per-user limit of 1 request per minute ensures everyone gets a turn. The math is unsophisticated but effective.</p>
+
+    <h2>The Feedback Loop That Closes It</h2>
+
+    <p>Admission control, load shedding, and rate limiting are the mechanisms. But they need to be driven by real-time state. The system needs to know its own queue depth, processing speed, and estimated wait time — and adjust its behavior accordingly.</p>
+
+    <p>This is where most agent systems fail. They have a queue (often just an in-memory list or a database table), but no visibility into its depth, no tracking of processing speed, and no mechanism to feed that information back to the admission layer. The queue is a black box — requests go in, responses come out, and nobody knows what's happening in between.</p>
+
+    <p>The minimum viable observability for backpressure:</p>
+
+    <ul>
+        <li><strong>Queue depth.</strong> How many requests are waiting. Track as a gauge, alert when it exceeds a threshold.</li>
+        <li><strong>Processing time per request.</strong> How long each request takes from queue to response. Track as a histogram, not just an average — the tail matters more than the mean.</li>
+        <li><strong>Estimated wait time.</strong> Queue depth × average processing time. This is the number that drives admission decisions.</li>
+        <li><strong>Rejection rate.</strong> What percentage of incoming requests are being rejected. If this is high, you need more capacity or lower demand — the backpressure is working, but the system is undersized.</li>
+    </ul>
+
+    <p>These four metrics tell you whether the system is healthy, overloaded, or in a death spiral. They're the difference between managing backpressure and hoping it doesn't happen.</p>
+
+    <h2>What Doesn't Work</h2>
+
+    <p><strong>"Just add more workers."</strong> Agent systems are bounded by API rate limits and cost, not just compute. Adding workers increases concurrency but doesn't increase the total throughput if you're already at the rate limit. And it multiplies cost — each concurrent request is a separate API call. More workers processing a backlog means more API calls per minute, which may hit rate limits faster, which triggers errors, which triggers retries. You've built a different kind of death spiral.</p>
+
+    <p><strong>"Make the agent faster."</strong> Reducing per-request latency helps — a 5-second agent handles 3x the throughput of a 15-second agent. But latency optimization has diminishing returns, and you can't make an LLM call faster than the model provider allows. Backpressure is about surviving the gap between your throughput and your demand, not about closing it entirely.</p>
+
+    <p><strong>"Just queue everything."</strong> An unbounded queue is a promise you can't keep. It tells every user "your request will be processed" without telling them when. A bounded queue with backpressure tells some users "not now" — but the ones it accepts, it actually serves. Bounded is better than honest; bounded is honest.</p>
+
+    <h2>The Honest System</h2>
+
+    <p>Backpressure is fundamentally about honesty. An agent system without backpressure lies to every user who submits a request during a spike: it says "your request is being processed" when it's actually sitting in a queue that's growing faster than it's draining. A system with backpressure tells the truth: "I can handle this now" or "I can't, try again later."</p>
+
+    <p>Users prefer the second answer. Always. The spinner that never ends is the worst UX in agent systems — worse than an error, worse than a slow response, worse than a rejection. At least an error gives you information. The spinner gives you nothing but hope, and hope decays.</p>
+
+    <p>If you're building an agent system that handles user-facing requests, backpressure is not optional. It's the difference between a system that degrades under load and a system that collapses under load. Add the queue depth metric. Set the admission threshold. Shed the duplicates. Rate limit the users. Break the spiral before it starts.</p>
+
+    <p>Your queue is a resource. Treat it like one.</p>
+
+    <footer>
+        <a href="/">emil.aiadoption.cz</a>
+    </footer>
+</body>
+</html>
