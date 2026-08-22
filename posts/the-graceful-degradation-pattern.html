@@ -1,0 +1,179 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>The Graceful Degradation Pattern — Emil Vrána</title>
+    <meta name="description" content="Your agent can't always deliver the full response. Instead of failing, it should deliver a smaller version of the answer. How graceful degradation turns total failures into partial successes.">
+    <style>
+        :root {
+            --bg: #0f0f0f;
+            --text: #e0e0e0;
+            --accent: #6b9bd2;
+            --muted: #888;
+            --card-bg: #1a1a1a;
+        }
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+        body {
+            font-family: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+            background: var(--bg);
+            color: var(--text);
+            line-height: 1.7;
+            max-width: 680px;
+            margin: 0 auto;
+            padding: 2rem 1.5rem;
+        }
+        a { color: var(--accent); text-decoration: none; }
+        a:hover { text-decoration: underline; }
+        .back { color: var(--muted); font-size: 0.85rem; margin-bottom: 1rem; display: block; }
+        .back:hover { color: var(--accent); }
+        h1 { font-size: 1.6rem; font-weight: 600; margin: 0 0 0.3rem; line-height: 1.3; }
+        .date { color: var(--muted); font-size: 0.85rem; margin-bottom: 2rem; }
+        h2 { font-size: 1.15rem; font-weight: 600; margin: 2rem 0 0.5rem; }
+        h3 { font-size: 1rem; font-weight: 600; margin: 1.5rem 0 0.3rem; }
+        p { margin-bottom: 1rem; }
+        ul, ol { margin-bottom: 1rem; padding-left: 1.5rem; }
+        li { margin-bottom: 0.3rem; }
+        code {
+            background: var(--card-bg);
+            padding: 0.15rem 0.4rem;
+            border-radius: 3px;
+            font-size: 0.9rem;
+        }
+        pre {
+            background: var(--card-bg);
+            padding: 1rem;
+            border-radius: 6px;
+            overflow-x: auto;
+            margin-bottom: 1.5rem;
+            font-size: 0.85rem;
+            line-height: 1.5;
+        }
+        em { color: var(--muted); }
+        blockquote {
+            border-left: 3px solid #333;
+            padding-left: 1rem;
+            margin: 1.5rem 0;
+            color: var(--muted);
+        }
+        footer {
+            margin-top: 3rem;
+            padding-top: 1.5rem;
+            border-top: 1px solid #222;
+            color: var(--muted);
+            font-size: 0.8rem;
+        }
+    </style>
+</head>
+<body>
+    <a href="/" class="back">← Emil Vrána</a>
+    <h1>The Graceful Degradation Pattern: When Your Agent Can't Deliver Everything, Deliver Something</h1>
+    <div class="date">August 22, 2026</div>
+
+    <p>Your agent answers user questions by searching a vector database, ranking results, calling an LLM to synthesize an answer, and formatting it with citations. That's the happy path. It takes 8 seconds and produces a high-quality response.</p>
+
+    <p>Now the vector database is down. The LLM is rate-limited. The citation formatter times out. What does the user get?</p>
+
+    <p>If your answer is "a 500 error" or "a spinner that never ends" — you have a binary agent. It either delivers 100% of the response or 0%. No middle ground. No partial credit. The user gets a perfect answer or nothing at all.</p>
+
+    <p>Binary agents are the default. They're also the worst possible user experience under degraded conditions.</p>
+
+    <h2>Why Binary Failure Is the Default</h2>
+
+    <p>Most agent pipelines are designed as a chain of required steps. Each step depends on the previous one. If any step fails, the pipeline fails. This is the simplest architecture — and the most fragile.</p>
+
+    <p>The assumption behind it: every step is necessary for a useful response. This is almost never true. A response without citations is less useful than one with citations, but it's more useful than no response. A response based on cached data is less accurate than one based on fresh data, but it's more useful than silence. A response that says "I found 3 relevant documents but couldn't synthesize them — here are the links" is less helpful than a synthesized answer, but it's more helpful than a 500 error.</p>
+
+    <p>The gap between "the best possible answer" and "no answer at all" is enormous. Graceful degradation is the practice of filling that gap deliberately.</p>
+
+    <h2>The Principle: Partial Is Better Than Nothing</h2>
+
+    <p>Users come to your agent with a question. The agent's job is to answer it. The full pipeline produces the best answer — but a reduced pipeline can still produce a useful one. The degradation should be planned in advance, not improvised at the moment of failure.</p>
+
+    <p>Think of it as a staircase, not a cliff. Each step down loses something — speed, accuracy, completeness, formatting — but the user still gets a response they can act on.</p>
+
+    <h2>The Degradation Staircase</h2>
+
+    <h3>Level 0: Full Service</h3>
+
+    <p>Everything works. Vector search returns results. LLM synthesizes them. Citations are formatted. The user gets a complete, well-structured answer in 8 seconds.</p>
+
+    <h3>Level 1: No Citations</h3>
+
+    <p>The citation formatter is down or slow. Instead of waiting for it, return the synthesized answer without citations. Add a note: "Citations temporarily unavailable." The user gets the answer — they just can't verify the sources right now. This is a small degradation that most users won't even notice.</p>
+
+    <h3>Level 2: No Synthesis</h3>
+
+    <p>The LLM is rate-limited or timing out. Instead of failing, return the raw search results — ranked, with titles and snippets. The user has to read them themselves, but they have the information. Add a note: "I found these documents but couldn't synthesize an answer right now. Here are the most relevant results."</p>
+
+    <p>This is where most teams balk. "Returning raw search results isn't an answer!" No, it isn't. It's a useful response to a user's question. The user asked "what is X?" and you gave them three documents that explain X. That's not nothing. That's a 60% answer delivered in 2 seconds instead of a 0% answer delivered never.</p>
+
+    <h3>Level 3: Cached Results</h3>
+
+    <p>The vector database is down. But you cached the last 1000 query results. If the user's query (or something close to it) is in the cache, return the cached answer with a timestamp. "This answer was generated 2 hours ago. Fresh results temporarily unavailable."</p>
+
+    <p>Stale data gets a bad reputation it doesn't entirely deserve. For most questions, an answer from 2 hours ago is fine. For some questions — "what's the current stock price?" — it's not. The agent should know which questions tolerate staleness and which don't. But even for time-sensitive questions, a cached answer with a clear timestamp is better than silence.</p>
+
+    <h3>Level 4: Honest Failure</h3>
+
+    <p>Everything is down. No search, no LLM, no cache. The user gets: "I can't answer this right now. The system is experiencing issues. Try again in a few minutes, or here's a link to the documentation."</p>
+
+    <p>This is the floor. It's not a useful answer — but it's an honest one. It tells the user what happened, what to do next, and when to expect recovery. Compare this to a 500 error or an endless spinner. The information content is low, but it's nonzero. And nonzero is the goal.</p>
+
+    <h2>Designing for Degradation</h2>
+
+    <p>Graceful degradation doesn't happen by accident. You have to design for it, and the design starts with a question most teams never ask: <strong>what is the minimum useful response?</strong></p>
+
+    <p>Not the ideal response. Not the response you'd put in a demo. The minimum response that gives the user something they can act on. For a search agent, it's a list of relevant documents. For a coding agent, it's the code without the explanation. For a data analysis agent, it's the raw numbers without the chart. For a summarization agent, it's the first paragraph of the summary without the rest.</p>
+
+    <p>Once you know the minimum useful response, the degradation staircase falls out naturally. Each level above the floor adds one capability back: synthesis, citations, formatting, freshness. Each level below the top removes one. The order of removal is a product decision, not a technical one — which capability matters least to the user?</p>
+
+    <h2>Implementation: Fallbacks, Not Try-Catch</h2>
+
+    <p>The wrong way to implement degradation is a giant try-catch that falls through to a generic error. That's not degradation — that's just error handling with extra steps.</p>
+
+    <p>The right way is explicit fallback chains at each step of the pipeline. Each step has a primary path and a fallback path. The fallback produces a lower-quality but still useful output. The step's caller doesn't know whether the primary or fallback was used — it just gets a result and a quality flag.</p>
+
+    <p>In practice, this means each step returns a tuple: <code>(result, quality)</code> where quality is <code>full</code>, <code>degraded</code>, or <code>failed</code>. The pipeline orchestrator decides whether to continue with a degraded result or fall through to the next lower level. The final response includes a quality indicator so the user knows what they're getting.</p>
+
+    <p>The quality indicator matters. Don't hide degradation. If the answer is based on cached data, say so. If citations are missing, say so. Users are more forgiving of a clearly labeled partial answer than of a full answer that's secretly wrong or stale.</p>
+
+    <h2>The Cost of Not Degrading</h2>
+
+    <p>Binary agents don't just fail worse — they fail more often. A pipeline where every step is required has an availability equal to the product of each step's availability. Five steps at 99% each gives you 95.1% overall availability. That's one failure every 20 requests.</p>
+
+    <p>A pipeline with graceful degradation has availability equal to the availability of reaching the floor — which is usually just "can I return any response at all?" That's close to 100%, because even an honest "I can't answer this right now" is a response.</p>
+
+    <p>The math is straightforward. The implementation isn't hard. The barrier is cultural: teams treat degradation as a hack, a compromise, a sign that the system isn't working properly. It isn't. It's a sign that the system is designed for the real world, where things fail and users still need answers.</p>
+
+    <h2>What Degradation Is Not</h2>
+
+    <p><strong>Degradation is not retry.</strong> Retrying is for transient failures — the network blip, the temporary 429. Degradation is for sustained failures — the service that's down for 20 minutes, the rate limit that won't lift until tomorrow. Retrying a sustained failure wastes time and capacity. Degrading around it delivers value now.</p>
+
+    <p><strong>Degradation is not a fallback to a worse model.</strong> Switching from GPT-4 to GPT-3.5 when rate-limited is a reasonable strategy, but it's model fallback, not degradation. Degradation is about removing pipeline steps, not downgrading individual steps. You can do both — but they're separate mechanisms with separate design considerations.</p>
+
+    <p><strong>Degradation is not "good enough."</strong> The goal isn't to ship a worse product and call it fine. The goal is to ship the best possible product under the current conditions. When conditions improve, you go back to full service automatically. Degradation is dynamic, not a permanent downgrade.</p>
+
+    <h2>The Staircase in Practice</h2>
+
+    <p>If you're building an agent pipeline today, here's the minimum viable degradation strategy:</p>
+
+    <ol>
+        <li><strong>List every step in your pipeline.</strong> Search, retrieval, synthesis, formatting, citation, enrichment — whatever your steps are.</li>
+        <li><strong>For each step, define what happens if it fails.</strong> Not "the pipeline fails" — what does the user get? If the answer is "nothing," you've found a degradation opportunity.</li>
+        <li><strong>For each step, define the fallback output.</strong> Raw results instead of synthesized. Cached instead of fresh. No citations instead of citations. The fallback should be something the user can still use.</li>
+        <li><strong>Add quality flags to step outputs.</strong> Full, degraded, failed. The orchestrator uses these to decide whether to continue or fall through.</li>
+        <li><strong>Surface the quality to the user.</strong> "Answer based on cached data from 2 hours ago." "Citations temporarily unavailable." Honesty builds trust; silence builds frustration.</li>
+    </ol>
+
+    <p>The entire strategy fits in an afternoon of design and a few days of implementation. It's not complex. What it requires is the decision to treat partial responses as first-class outputs rather than errors to be hidden.</p>
+
+    <p>Your agent will fail. Components will go down. Rate limits will hit. The question isn't whether degradation happens — it's whether you designed for it. A staircase gives users something at every level. A cliff gives them nothing at the first stumble.</p>
+
+    <p>Build the staircase.</p>
+
+    <footer>
+        <a href="/">emil.aiadoption.cz</a>
+    </footer>
+</body>
+</html>
