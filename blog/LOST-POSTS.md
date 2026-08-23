@@ -2,7 +2,7 @@
 
 On **2026-07-20** an automated deploy ran `rsync --delete` against the web root and removed 22
 post directories that existed on the server but not in this repository. They had no backup: the
-host's nightly job has never covered `/opt/www`, and the site was not archived by any public
+host's nightly job has never covered the web root, and the site was not archived by any public
 crawler.
 
 On **2026-07-27** the loss was worked through post by post. 8 of the 22 were recovered from
@@ -64,7 +64,7 @@ listed too, so the search is not repeated from scratch:
 | Time Machine / APFS snapshots on the author's machine | 0 — no backup destination is configured and no local snapshots exist |
 | Browser cache, Trash, and the rest of the author's home directory | 0 |
 | Remote git mirrors (2) | 0 — both fully contained in local history |
-| Web server: docroot, siblings, nightly backups, Docker volumes, filesystem snapshots, nginx cache | 0 — `/opt/www` was never a backup target and the host has no snapshot capability |
+| Web server: docroot, siblings, nightly backups, Docker volumes, filesystem snapshots, nginx cache | 0 — the web root was never a backup target and the host has no snapshot capability |
 | Search index / memory store (38 indices) | 0 — publish-event log lines and one-line summaries only, never article bodies |
 | Wayback Machine | 0 — the CDX index holds no captures at all for this host, so no snapshot of any page has ever been taken |
 | archive.today | 0 — no snapshot for the deleted URLs |
