@@ -1,0 +1,157 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>The Untested Fallback — Emil Vrána</title>
+    <meta name="description" content="A fallback that never runs is a claim, not a mechanism. Config keys get renamed, credentials expire, schemas drift — and you find out at the worst possible moment. How to test the backup path on purpose.">
+    <style>
+        :root {
+            --bg: #0f0f0f;
+            --text: #e0e0e0;
+            --accent: #6b9bd2;
+            --muted: #888;
+            --card-bg: #1a1a1a;
+        }
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+        body {
+            font-family: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+            background: var(--bg);
+            color: var(--text);
+            line-height: 1.7;
+            max-width: 680px;
+            margin: 0 auto;
+            padding: 2rem 1.5rem;
+        }
+        a { color: var(--accent); text-decoration: none; }
+        a:hover { text-decoration: underline; }
+        .back { color: var(--muted); font-size: 0.85rem; margin-bottom: 1rem; display: block; }
+        .back:hover { color: var(--accent); }
+        h1 { font-size: 1.6rem; font-weight: 600; margin: 0 0 0.3rem; line-height: 1.3; }
+        .date { color: var(--muted); font-size: 0.85rem; margin-bottom: 2rem; }
+        h2 { font-size: 1.15rem; font-weight: 600; margin: 2rem 0 0.5rem; }
+        h3 { font-size: 1rem; font-weight: 600; margin: 1.5rem 0 0.3rem; }
+        p { margin-bottom: 1rem; }
+        ul, ol { margin-bottom: 1rem; padding-left: 1.5rem; }
+        li { margin-bottom: 0.3rem; }
+        code {
+            background: var(--card-bg);
+            padding: 0.15rem 0.4rem;
+            border-radius: 3px;
+            font-size: 0.9rem;
+        }
+        pre {
+            background: var(--card-bg);
+            padding: 1rem;
+            border-radius: 6px;
+            overflow-x: auto;
+            margin-bottom: 1.5rem;
+            font-size: 0.85rem;
+            line-height: 1.5;
+        }
+        em { color: var(--muted); }
+        blockquote {
+            border-left: 3px solid #333;
+            padding-left: 1rem;
+            margin: 1.5rem 0;
+            color: var(--muted);
+        }
+        footer {
+            margin-top: 3rem;
+            padding-top: 1.5rem;
+            border-top: 1px solid #222;
+            color: var(--muted);
+            font-size: 0.8rem;
+        }
+    </style>
+</head>
+<body>
+    <a href="/" class="back">← Emil Vrána</a>
+    <h1>The Untested Fallback: Your Backup Path Is Broken and You Won't Find Out Until It Matters</h1>
+    <div class="date">August 23, 2026</div>
+
+    <p>Last month I found a fallback in a client's pipeline that had never executed in production. Not "rarely." Never. It had been in the codebase for fourteen months. It was written well. It was reviewed. It referenced an environment variable that had been renamed nine months earlier.</p>
+
+    <p>The primary path — a hosted model API — was reliable enough that the fallback never got a turn. Then it wasn't, and the fallback raised a <code>KeyError</code> two lines in. The system that was supposed to degrade gracefully instead failed twice: once on the primary, once on the safety net.</p>
+
+    <p>This is not a rare bug. It's the default state of every fallback path nobody exercises.</p>
+
+    <h2>Why Fallbacks Rot Faster Than Primary Code</h2>
+
+    <p>Your primary path is tested continuously by the fact that it runs. Every request is a test. Break it, and you know within minutes — the errors show up, the dashboard turns red, someone pages you.</p>
+
+    <p>The fallback has none of that. It runs when the primary fails, which by design is rare. Between those moments, the codebase keeps moving: a config key gets renamed, a client library gets a new constructor signature, a schema field goes from optional to required, a credential expires. Each of those changes gets validated against the primary path — because that's what CI exercises and what staging traffic hits — and silently invalidated against the fallback.</p>
+
+    <p>So the failure rate of a fallback isn't constant. It grows with time since last execution. The longer your primary path stays healthy, the more likely your backup is broken. That's the uncomfortable shape of it: <strong>reliability of the primary erodes reliability of the secondary.</strong></p>
+
+    <p>And the moment of discovery is the worst possible one. You find out your fallback is broken exactly when the primary is already down — when you have the least time, the least attention, and the most users waiting.</p>
+
+    <h2>Unit Tests Don't Catch This</h2>
+
+    <p>The obvious objection: "we have tests for the fallback." Usually you do. They usually don't help.</p>
+
+    <p>A unit test for a fallback runs against mocks. The mocked config has the old key name because the mock was written when the key had that name. The mocked client accepts whatever arguments the test passes. The mocked response has the shape the test author remembered. The test passes forever, on a fallback that cannot run, because everything it touches is a fixture rather than the world.</p>
+
+    <p>That's not a criticism of unit tests generally — it's a statement about what they can observe. A fallback's failure mode is drift between the code and its <em>environment</em>: config, credentials, network reachability, library versions, downstream schemas. Mocks are precisely the layer that hides environment. You cannot test for environmental drift with a test that replaces the environment.</p>
+
+    <p>Integration tests get closer, but only if they're run against the real fallback dependency with real credentials — which most aren't, because the fallback dependency is usually the awkward one. It's the self-hosted model on the box in the corner, the secondary provider with the annoying auth flow, the local cache that only exists in production.</p>
+
+    <h2>The Fix: Make the Fallback Run on Purpose</h2>
+
+    <p>The only reliable test for a fallback is executing it, in production, against real dependencies, on a schedule. Not when the primary fails — on a schedule, while the primary is healthy and you're awake.</p>
+
+    <p>Three ways to do this, in increasing order of confidence:</p>
+
+    <h3>1. The Scheduled Probe</h3>
+
+    <p>A cron job that invokes the fallback path directly, once an hour, with a known input and a known expected output. Not the whole pipeline — just the fallback. If the fallback is "call the self-hosted model," the probe sends it a prompt whose answer you know and checks the answer comes back. If it doesn't, you get alerted while the primary is still serving traffic and nothing is on fire.</p>
+
+    <p>This is the cheapest option and it catches the majority of real cases: expired credentials, renamed config, unreachable host, changed response shape. Cost is one request an hour. I've never seen a team regret adding this and I've seen several regret not having it.</p>
+
+    <p>One requirement that's easy to get wrong: the probe must go through the <em>same code path</em> the real fallback uses. A probe that opens its own connection with its own config proves that the dependency is up. It proves nothing about whether your fallback can reach it. Call the actual function.</p>
+
+    <h3>2. Forced Sampling</h3>
+
+    <p>Route a small percentage of real production traffic — 1%, 0.5%, whatever your quality budget tolerates — through the fallback path deliberately. Not because the primary failed. Because you decided to.</p>
+
+    <p>This is stronger than a probe because it exercises the fallback with real inputs, not a fixed test input. Real inputs are longer, weirder, and more varied than anything you'd write into a probe. A fallback that handles your canned prompt fine may choke on a 40KB document or a query in Czech with diacritics.</p>
+
+    <p>The tradeoff is real: that 1% of users gets the degraded response. Whether that's acceptable is a product decision, and for some pipelines it isn't. But note what you're buying — you're converting an unknown failure at the worst moment into a known, small, continuous cost. That's usually a good trade.</p>
+
+    <h3>3. Scheduled Failover Drills</h3>
+
+    <p>Once a month, turn the primary off. On purpose, during business hours, with the team watching. Let the whole pipeline run on the fallback for fifteen minutes.</p>
+
+    <p>This is the only method that tests the <em>transition</em> rather than the fallback in isolation. The transition is where the interesting bugs live: the circuit breaker that trips but never resets, the connection pool that stays pinned to the dead endpoint, the retry storm that hits the fallback with ten times the traffic it was sized for, the cache that fills with degraded responses and then serves them for six hours after recovery.</p>
+
+    <p>A probe won't find any of those. Forced sampling won't either, because sampling sends a trickle to the fallback while the primary handles the load. Only a real failover puts full traffic through the backup path and shows you what breaks under it.</p>
+
+    <h2>What Actually Broke, In Practice</h2>
+
+    <p>From pipelines I've worked on or been asked to look at, the fallbacks that turned out to be dead, and what killed them:</p>
+
+    <ul>
+        <li><strong>Renamed config key.</strong> The one above. The primary path's key was renamed in a config refactor; the fallback's reference wasn't, because nothing failed when it wasn't.</li>
+        <li><strong>Expired credential.</strong> The secondary provider's API key had a twelve-month expiry. Nobody rotated it because nobody was using it. It expired quietly.</li>
+        <li><strong>Undersized capacity.</strong> The self-hosted fallback model was sized for the trickle it received during testing. Under real failover it took 90 seconds per request, which exceeded the caller's timeout, so every request failed anyway. The fallback worked perfectly and delivered nothing.</li>
+        <li><strong>Schema drift.</strong> The fallback returned the old response format. Downstream code had moved on. The fallback succeeded and the parsing failed one layer up — which showed up in logs as a parse error, not a fallback failure, and took the longest to diagnose.</li>
+        <li><strong>Circuit breaker that never closed.</strong> The breaker opened correctly during the outage. When the primary recovered, the half-open probe used a request type the primary still rejected, so the breaker stayed open for hours after recovery. Everyone was on the fallback long after they needed to be.</li>
+    </ul>
+
+    <p>Every one of these was invisible to code review and to the test suite. Every one would have been caught within an hour by a scheduled probe or within a month by a drill.</p>
+
+    <h2>The Rule Underneath</h2>
+
+    <p>A fallback isn't a piece of code. It's a claim: <em>if the primary fails, this will work.</em> Claims decay. Code that isn't run isn't verified, no matter how carefully it was written, and "we reviewed it" is not evidence about the state of an environment nine months later.</p>
+
+    <p>Which gives a rule you can apply without much judgment: <strong>if a path hasn't executed in production within your measurement window, treat it as broken until it runs.</strong> Not "probably fine." Broken. If that feels too harsh, notice that the alternative is assuming it works based on no observation at all — and the assumption is what fails at 3am.</p>
+
+    <p>The same logic covers more than model fallbacks. Your backup restore is a claim. Your disaster recovery runbook is a claim. Your rate-limit handling, your queue drain, your dead-letter reprocessing — all claims, all rotting at the same rate, all discovered at the moment they're needed.</p>
+
+    <p>The previous post argued for building a degradation staircase instead of a cliff. This is the other half of it: a staircase nobody has walked down is a drawing of a staircase. Walk down it on purpose, on a schedule, while it's still cheap to find out that a step is missing.</p>
+
+    <footer>
+        <a href="/">emil.aiadoption.cz</a>
+    </footer>
+</body>
+</html>
