@@ -1,0 +1,178 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>The Correlated Check — Emil Vrána</title>
+    <meta name="description" content="A check that draws its verdict from the same source as the thing it checks cannot see that source fail. Three green instruments, three broken systems, and the one question that separates them.">
+    <style>
+        :root {
+            --bg: #0f0f0f;
+            --text: #e0e0e0;
+            --accent: #6b9bd2;
+            --muted: #888;
+            --card-bg: #1a1a1a;
+        }
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+        body {
+            font-family: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+            background: var(--bg);
+            color: var(--text);
+            line-height: 1.7;
+            max-width: 680px;
+            margin: 0 auto;
+            padding: 2rem 1.5rem;
+        }
+        a { color: var(--accent); text-decoration: none; }
+        a:hover { text-decoration: underline; }
+        .back { color: var(--muted); font-size: 0.85rem; margin-bottom: 1rem; display: block; }
+        .back:hover { color: var(--accent); }
+        h1 { font-size: 1.6rem; font-weight: 600; margin: 0 0 0.3rem; line-height: 1.3; }
+        .date { color: var(--muted); font-size: 0.85rem; margin-bottom: 2rem; }
+        h2 { font-size: 1.15rem; font-weight: 600; margin: 2rem 0 0.5rem; }
+        h3 { font-size: 1rem; font-weight: 600; margin: 1.5rem 0 0.3rem; }
+        p { margin-bottom: 1rem; }
+        ul, ol { margin-bottom: 1rem; padding-left: 1.5rem; }
+        li { margin-bottom: 0.3rem; }
+        code {
+            background: var(--card-bg);
+            padding: 0.15rem 0.4rem;
+            border-radius: 3px;
+            font-size: 0.9rem;
+        }
+        pre {
+            background: var(--card-bg);
+            padding: 1rem;
+            border-radius: 6px;
+            overflow-x: auto;
+            margin-bottom: 1.5rem;
+            font-size: 0.85rem;
+            line-height: 1.5;
+        }
+        em { color: var(--muted); }
+        blockquote {
+            border-left: 3px solid #333;
+            padding-left: 1rem;
+            margin: 1.5rem 0;
+            color: var(--muted);
+        }
+        footer {
+            margin-top: 3rem;
+            padding-top: 1.5rem;
+            border-top: 1px solid #222;
+            color: var(--muted);
+            font-size: 0.8rem;
+        }
+    </style>
+</head>
+<body>
+    <a href="/" class="back">← Emil Vrána</a>
+    <h1>The Correlated Check: When Your Monitor and Your System Fail Together</h1>
+    <div class="date">August 24, 2026</div>
+
+    <p>I spent last week looking at three instruments that were all reporting green while the systems underneath them were broken. Different projects, different failures, different people. Once I had them side by side, they turned out to be the same bug written three ways.</p>
+
+    <p>The bug is this: <strong>a check that draws its verdict from the same source as the thing it checks cannot see that source fail.</strong> It goes green, and it is not lying. It is answering a narrower question than the one you think you asked.</p>
+
+    <h2>Instrument One: The Ratio That Could Not See Its Own Population</h2>
+
+    <p>A document pipeline I built for a client validates each incoming file against a schema before it goes downstream. The health check reports a pass ratio: <code>documents_passed / documents_checked</code>. It sat at 98 out of 98 for months, which is exactly what a working pipeline looks like.</p>
+
+    <p>Then an upstream change moved the input directory. The scan that feeds the check found a subset of what it used to find. The ratio went to 41 out of 41.</p>
+
+    <p>Still 100%. Still green. Fifty-seven documents were now passing through with no validation at all, and the instrument whose entire job was to notice that had nothing to say, because <em>the numerator and the denominator came from the same scan</em>. When the scan shrank, both numbers shrank together and the ratio held perfectly still.</p>
+
+    <p>A ratio measures the relationship between two things it counted. It cannot measure whether it counted the right things. If your denominator is produced by the same walk that produces your numerator, the check is blind to the one failure mode that matters most: the walk finding less than it should.</p>
+
+    <p>The fix is not a better ratio. The fix is a denominator from a source that <strong>cannot shrink along with the scan</strong> — a count recorded when the corpus was last known-good, the previous run's value, an independent enumeration from the system that produces the documents in the first place. Then <code>41 of 98</code> is loud, and <code>41 of 41</code> never gets printed.</p>
+
+    <h2>Instrument Two: The Guard That Complained and Let It Through</h2>
+
+    <p>The second one was mine, in my own tooling, which is the only reason I am comfortable describing it in this much detail.</p>
+
+    <p>I have a guard that refuses certain operations under certain conditions. It detected the condition. It printed the refusal — the exact message it was written to print, with the right prefix and the right detail. And the run continued anyway, because the shell chain that invoked it never depended on its exit code. Six operations happened after the guard objected to them.</p>
+
+    <p>There was a test. The test passed. The test asserted that the refusal message appeared.</p>
+
+    <p>Read that again, because it is the whole lesson: <strong>the complaint is emitted by the same code path that was supposed to stop the work.</strong> Asserting the complaint asks the guard whether it disapproved. It does not ask the world whether anything happened. Those are two different questions, and for as long as the guard both disapproves and blocks, they have the same answer — which is why the test looked fine for as long as the guard worked.</p>
+
+    <p>A guard's test has to assert an <em>absence</em>, and it has to measure that absence with something outside the guard. The shape that works:</p>
+
+    <ol>
+        <li>Break the guard on purpose — edit the code so the condition it looks for cannot fire, or so it fires and returns success.</li>
+        <li>Run the thing it protects.</li>
+        <li>Count the protected action with an <strong>external</strong> instrument: a stand-in binary that records every invocation, a request log, a system audit trail, a row count in a table.</li>
+        <li>The count must be zero. If it is not zero, your guard is decorative, whatever it printed.</li>
+    </ol>
+
+    <p>Step 3 is the one people skip, and skipping it is what makes the test correlated. Counting the action by reading the guard's own log means you have built a second instrument on the first one's wire.</p>
+
+    <h2>Instrument Three: The Budget That Modelled the Wrong Limit</h2>
+
+    <p>The third came from a client running several services against one shared model account. They had a cost guard: a local counter tracking spend, checked before each call, refusing to proceed past a threshold. Sensible. Cheap. It is what I would have built.</p>
+
+    <p>The provider started refusing calls. It refused one hundred and ninety of them in a row. Throughout, the counter reported a comfortable reserve, and every consumer that trusted the counter kept dispatching work into a wall.</p>
+
+    <p>The counter was not broken. It was accurately reporting <em>our model of the constraint</em>. The provider was enforcing <em>the constraint</em>. Those had been the same number right up until they weren't — a second service on the same account, a limit that counts something we weren't counting, a mid-month policy change, take your pick. It doesn't matter which. The counter had no way to find out, because nothing in its inputs came from the provider.</p>
+
+    <blockquote>A budget is a model of the constraint. The refusal is the constraint. When they disagree, the refusal is right by definition.</blockquote>
+
+    <p>This has a direct architectural consequence, and it is the reason I now argue for it on every engagement: <strong>fall back on the refusal, not on the estimate.</strong> If you have a cheaper path and an expensive one, do not switch based on your own accounting of how much of the cheap path is left. Switch when the cheap path says no. The counter is a nice dashboard and a bad trigger. Under a good design, the 190 refusals would have been 190 completed calls on the fallback path plus one very obvious line in the logs.</p>
+
+    <h2>The Question That Finds All Three</h2>
+
+    <p>The three instruments look nothing alike. A pass ratio, a unit test, a spend counter. They fail identically, and one question separates the honest ones from the correlated ones:</p>
+
+    <p><strong>If the thing I am checking breaks, does anything my check reads change?</strong></p>
+
+    <p>Trace the inputs. Not the intent — the inputs. Where does each number the check consumes actually come from?</p>
+
+    <ul>
+        <li>The ratio read its numerator and denominator from one scan. The scan broke. Both moved. Nothing changed.</li>
+        <li>The test read the guard's own output. The guard's blocking broke, its printing didn't. Nothing changed.</li>
+        <li>The counter read our arithmetic. The provider's limit moved. Our arithmetic didn't. Nothing changed.</li>
+    </ul>
+
+    <p>In all three the answer to the question was <em>no</em>, and every one of them was written by someone competent who believed the answer was <em>yes</em>. The belief is the hazard. A check feels independent because it is in a separate file, or a separate service, or a separate dashboard. Separation of code is not separation of source. What makes a check independent is where its evidence comes from, and nothing else.</p>
+
+    <h2>Building the Independent Source</h2>
+
+    <p>Independence is usually cheaper than people expect, because you rarely need a whole second system. You need one number that comes from somewhere else.</p>
+
+    <h3>Ask the other side</h3>
+
+    <p>The strongest source is the thing you don't control. The provider's own response about your limit. The receiving system's row count. The HTTP status the reader actually got, not the one your sender logged. Anything from the far side of the boundary fails independently of your side by construction, which is exactly the property you're paying for.</p>
+
+    <h3>Record the expectation before you need it</h3>
+
+    <p>Write down the population size when you know it is right, and check against the written number rather than against a fresh count. It is a single value in a file. It is also the difference between <code>41 of 41</code> and <code>41 of 98</code>, and one of those pages someone.</p>
+
+    <h3>Compare against the past</h3>
+
+    <p>Last run's value is a free independent source and almost nobody uses it. A check that emits its own history gets a second question for nothing: not only "is this ratio healthy" but "did this population just drop by 58% between runs". The second question would have caught the pipeline on the day it broke.</p>
+
+    <h3>Prove the check can say no</h3>
+
+    <p>Every one of these three instruments had, over its lifetime, produced only green. None of their owners — me included — had ever seen one go red. A check that has never fired is in exactly the same evidentiary position as <a href="/posts/the-untested-fallback.html">a fallback that has never run</a>: it is a claim about behaviour, unsupported by any observation.</p>
+
+    <p>So break it on purpose. Feed the ratio a truncated corpus and watch it complain. Set the counter's threshold to zero and watch the fallback engage. Disable the guard's condition and count the protected action externally. Injecting the fault takes minutes, and it converts your check from a claim into a mechanism.</p>
+
+    <h2>What This Is Not</h2>
+
+    <p><strong>It is not an argument for more monitoring.</strong> Two checks drawn from the same source are two green lights on one wire. Adding a third instrument that reads the same scan does not add coverage — it adds confidence, which is worse than nothing when it is unearned. One check with an independent source beats five without.</p>
+
+    <p><strong>It is not about flaky or noisy checks.</strong> A noisy check is annoying and visible; people fix it or delete it. A correlated check is quiet and beloved. It has been green for a year. It is the one on the wall behind the desk. Nobody suspects it, and its record of never having failed is the exact thing that makes it trusted.</p>
+
+    <p><strong>It is not solved by testing the check.</strong> You can unit-test a correlated check to a hundred percent coverage and it will remain correlated, because the defect isn't in its logic. Its logic is fine. The defect is in where its inputs come from, and coverage does not look there.</p>
+
+    <h2>The Practical Version</h2>
+
+    <p>Take your three most trusted health signals — the ones you would quote in a status meeting without checking first. For each, write down every input and where it comes from. Then ask the question: if the system it watches broke right now, which of those inputs would move?</p>
+
+    <p>If the answer is "none of them", you don't have a monitor. You have a decoration that has been agreeing with you for a very long time.</p>
+
+    <footer>
+        <a href="/">emil.aiadoption.cz</a>
+    </footer>
+</body>
+</html>
