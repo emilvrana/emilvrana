@@ -1,0 +1,144 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>The Implicit List — Emil Vrána</title>
+    <meta name="description" content="Six parallel workers were told to take every sixth item off the list. They partitioned six different lists, did the same work twice, and nothing reported it — because duplicated work looks exactly like progress.">
+    <style>
+        :root {
+            --bg: #0f0f0f;
+            --text: #e0e0e0;
+            --accent: #6b9bd2;
+            --muted: #888;
+            --card-bg: #1a1a1a;
+        }
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+        body {
+            font-family: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+            background: var(--bg);
+            color: var(--text);
+            line-height: 1.7;
+            max-width: 680px;
+            margin: 0 auto;
+            padding: 2rem 1.5rem;
+        }
+        a { color: var(--accent); text-decoration: none; }
+        a:hover { text-decoration: underline; }
+        .back { color: var(--muted); font-size: 0.85rem; margin-bottom: 1rem; display: block; }
+        .back:hover { color: var(--accent); }
+        h1 { font-size: 1.6rem; font-weight: 600; margin: 0 0 0.3rem; line-height: 1.3; }
+        .date { color: var(--muted); font-size: 0.85rem; margin-bottom: 2rem; }
+        h2 { font-size: 1.15rem; font-weight: 600; margin: 2rem 0 0.5rem; }
+        h3 { font-size: 1rem; font-weight: 600; margin: 1.5rem 0 0.3rem; }
+        p { margin-bottom: 1rem; }
+        ul, ol { margin-bottom: 1rem; padding-left: 1.5rem; }
+        li { margin-bottom: 0.3rem; }
+        code {
+            background: var(--card-bg);
+            padding: 0.15rem 0.4rem;
+            border-radius: 3px;
+            font-size: 0.9rem;
+        }
+        pre {
+            background: var(--card-bg);
+            padding: 1rem;
+            border-radius: 6px;
+            overflow-x: auto;
+            margin-bottom: 1.5rem;
+            font-size: 0.85rem;
+            line-height: 1.5;
+        }
+        em { color: var(--muted); }
+        blockquote {
+            border-left: 3px solid #333;
+            padding-left: 1rem;
+            margin: 1.5rem 0;
+            color: var(--muted);
+        }
+        footer {
+            margin-top: 3rem;
+            padding-top: 1.5rem;
+            border-top: 1px solid #222;
+            color: var(--muted);
+            font-size: 0.8rem;
+        }
+    </style>
+</head>
+<body>
+    <a href="/" class="back">← Emil Vrána</a>
+    <h1>The Implicit List: Six Workers, Six Different Lists, One Invisible Collision</h1>
+    <div class="date">August 27, 2026</div>
+
+    <p>A backfill job. Around 1,800 records in a client's document store needed a translated field added. One worker would have taken most of a day, so I split it six ways. The instruction to each worker was the obvious one:</p>
+
+    <pre>take every item from the list where position % 6 == N</pre>
+
+    <p>Six values of N, six disjoint slices, no coordination needed. It is the standard trick, it fits in one line of a brief, and it reads as correct by construction. That is the part I want to talk about — it <em>reads</em> as correct by construction, and it is not.</p>
+
+    <h2>What Actually Happened</h2>
+
+    <p>The run finished. The counts looked plausible. Then I went to reconcile and found that one worker's slice of 64 items contained 39 that another worker had also processed. Not a race, not a crash — two workers had simply both decided the same record belonged to them.</p>
+
+    <p>The reason is that <code>the list</code> was never a thing. It was a phrase in my brief. Each worker built its own base list by querying the store, and two of those base lists came back with 383 and 356 items.</p>
+
+    <p>Both were defensible. The difference was one filter: whether to trust the store's language field or re-detect the language from the text. One worker trusted the field, one didn't, and 27 records had a field that disagreed with their contents. Neither worker was wrong. They were answering slightly different questions, and nothing in my instruction told them which question to ask, because I had not noticed there was a question.</p>
+
+    <p>Then the ordering. <code>position</code> assumes a total order, and the sort key I had in mind — a created-at timestamp — was empty on a handful of records. Empty sorts as a tie, ties resolve however the storage engine feels like resolving them that afternoon, and a different tie-break shifts every position after it. Two workers with <em>identical</em> base lists would still have disagreed about who owned what, purely because of the records with no timestamp.</p>
+
+    <p>So the rule partitioned six different lists. Each partition was perfectly disjoint with respect to the list its own worker had derived. The union was a mess.</p>
+
+    <h2>Why Nothing Reported It</h2>
+
+    <p>This is the part that cost me the afternoon, not the duplication itself. Duplicated work is cheap. Duplicated work that nobody notices is expensive.</p>
+
+    <p>Think about what an overlap looks like from the outside. A worker picks up a record, does the work, writes the result, moves on. Six workers doing this in parallel produce a steady stream of completions. If two of them process the same record, you see... a steady stream of completions. Slightly more of them. Every log line is a success. Every worker reports its own slice as fully processed, and each report is true.</p>
+
+    <p>There is no error condition to raise, because from any single worker's point of view nothing anomalous occurred. The anomaly only exists in the union of six local views, and nothing was computing that union. <strong>An overlap looks exactly like progress</strong>, which means it can only be found by an instrument that is looking for it specifically.</p>
+
+    <p>What saved this run from being a data problem rather than a cost problem was an accident: the write step refused to overwrite a field that already had a value. So the second worker to reach a record did the work, tried to write, and the write was a no-op. I would like to claim I put that rule there for this reason. I did not — it was there because the backfill was resumable, and resumability happens to require the same guarantee. Duplicated work stayed duplicated work instead of becoming duplicated output. That's luck, and luck is not a design.</p>
+
+    <h2>The Rule Doesn't Pin the List</h2>
+
+    <p>The generalisation is worth stating plainly, because it is not specific to modulo, or to six, or to agents:</p>
+
+    <blockquote>A partition rule guarantees disjointness only over a list all parties agree on. It does not produce that agreement, and it cannot detect its absence.</blockquote>
+
+    <p>Every variant of this trick has the same hole. <code>Take the items starting with A–D</code> depends on what "starting with" means for a record whose name field is empty or begins with a digit. <code>Take the first 300, you take the next 300</code> depends on an order. <code>Take everything modified since Tuesday</code> depends on whose clock. In each case the rule is airtight and the input to the rule is not.</p>
+
+    <p>It gets worse the more capable your workers are. A dumb worker executing <code>SELECT ... OFFSET 300 LIMIT 300</code> at least derives its list the same way its neighbour does — one query, one plan, one order. A worker with judgement will exercise that judgement: it will notice the language field looks unreliable, decide to re-detect, and produce a better list. Better, and different. The improvement is exactly what breaks the partition, and you have no way to tell a worker "be smart about everything except the shape of your input" without saying so explicitly.</p>
+
+    <h2>Compute the List Once</h2>
+
+    <p>The fix is not clever and takes about ten minutes:</p>
+
+    <ol>
+        <li><strong>Derive the list once, in one place.</strong> One query, one process, one set of filter decisions. Every ambiguity gets resolved a single time by whoever is actually thinking about it.</li>
+        <li><strong>Freeze it.</strong> Write it to a file, a table, a queue — anything with identity. Now "the list" is a noun that exists in the world instead of a phrase in a brief.</li>
+        <li><strong>Hand each worker its named members.</strong> Not a rule for selecting members: the members. Worker 3 gets the identifiers of the items it owns. If that list is too big to pass inline, pass a pointer to a frozen slice, but the slice is still materialised, not computed independently at each end.</li>
+        <li><strong>Assert the split before dispatching.</strong> Sum of slice sizes equals the size of the frozen list, and the union of the slices equals it too. Two lines of code. They would have failed loudly on the first attempt, before any work was done.</li>
+    </ol>
+
+    <p>The version I ship now is boring in a specific way: the parallel part of the system contains no selection logic at all. Selection happens once, before fan-out. The workers are pure consumers of an assignment. That constraint costs nothing and removes an entire class of failure that has no failure signal.</p>
+
+    <h2>The Check That Would Have Caught It</h2>
+
+    <p>If you have this pattern running today and don't want to restructure it yet, one measurement finds the problem: <strong>count distinct items processed, and compare it to the sum of what each worker reports.</strong> If six workers report 1,786 items processed and the store shows 1,712 distinct records touched, you have 74 collisions and you found them in one query.</p>
+
+    <p>Note what makes that check work: the two numbers come from different places. One from the workers' own reports, one from the store itself. A check that asks the workers to report their own overlap will always come back clean, because none of them can see it.</p>
+
+    <p>The same reasoning applies to the opposite failure, which is the one nobody looks for. Six lists that overlap can also have gaps — items in nobody's slice. The overlap costs money; the gap costs correctness, and it is even quieter, because a record that no worker ever touched produces no log line at all. The distinct-count check catches both: too high means duplication, too low means loss.</p>
+
+    <h2>What I Took From It</h2>
+
+    <p>I write briefs for parallel work all the time, and I had a rule of thumb that a task is safely parallelisable when the workers don't share state. That rule is incomplete. These six workers shared no state. What they shared was an <em>assumption</em> — that the phrase "the list" referred to one thing — and an assumption is state that lives in no file, gets checked by nothing, and diverges silently the moment anyone exercises judgement about it.</p>
+
+    <p>When you split work N ways, the question isn't "do these workers touch the same data." It's "who computes the set, and how many times." If the answer is "each worker, independently," you don't have a partition. You have six opinions that happen to agree most of the time.</p>
+
+    <p>Compute the list once. Hand out the members. The rule was never the hard part.</p>
+
+    <footer>
+        <a href="/">emil.aiadoption.cz</a>
+    </footer>
+</body>
+</html>
