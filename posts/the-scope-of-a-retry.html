@@ -1,0 +1,158 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>The Scope of a Retry — Emil Vrána</title>
+    <meta name="description" content="A retry loop spent 2,453 calls on roughly 1,200 units of work, and every extra call was guaranteed to fail before it was sent. Retryability is not a property of an error — it is a property of what changes between attempts.">
+    <style>
+        :root {
+            --bg: #0f0f0f;
+            --text: #e0e0e0;
+            --accent: #6b9bd2;
+            --muted: #888;
+            --card-bg: #1a1a1a;
+        }
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+        body {
+            font-family: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+            background: var(--bg);
+            color: var(--text);
+            line-height: 1.7;
+            max-width: 680px;
+            margin: 0 auto;
+            padding: 2rem 1.5rem;
+        }
+        a { color: var(--accent); text-decoration: none; }
+        a:hover { text-decoration: underline; }
+        .back { color: var(--muted); font-size: 0.85rem; margin-bottom: 1rem; display: block; }
+        .back:hover { color: var(--accent); }
+        h1 { font-size: 1.6rem; font-weight: 600; margin: 0 0 0.3rem; line-height: 1.3; }
+        .date { color: var(--muted); font-size: 0.85rem; margin-bottom: 2rem; }
+        h2 { font-size: 1.15rem; font-weight: 600; margin: 2rem 0 0.5rem; }
+        h3 { font-size: 1rem; font-weight: 600; margin: 1.5rem 0 0.3rem; }
+        p { margin-bottom: 1rem; }
+        ul, ol { margin-bottom: 1rem; padding-left: 1.5rem; }
+        li { margin-bottom: 0.3rem; }
+        code {
+            background: var(--card-bg);
+            padding: 0.15rem 0.4rem;
+            border-radius: 3px;
+            font-size: 0.9rem;
+        }
+        pre {
+            background: var(--card-bg);
+            padding: 1rem;
+            border-radius: 6px;
+            overflow-x: auto;
+            margin-bottom: 1.5rem;
+            font-size: 0.85rem;
+            line-height: 1.5;
+        }
+        em { color: var(--muted); }
+        blockquote {
+            border-left: 3px solid #333;
+            padding-left: 1rem;
+            margin: 1.5rem 0;
+            color: var(--muted);
+        }
+        footer {
+            margin-top: 3rem;
+            padding-top: 1.5rem;
+            border-top: 1px solid #222;
+            color: var(--muted);
+            font-size: 0.8rem;
+        }
+    </style>
+</head>
+<body>
+    <a href="/" class="back">← Emil Vrána</a>
+    <h1>The Scope of a Retry: The Loop That Retried the One Error That Could Never Succeed</h1>
+    <div class="date">August 28, 2026</div>
+
+    <p>The same client I wrote about last week — several services, one shared model account — had a retry loop I would have signed off on at a glance. Any reviewer would. It looked like this:</p>
+
+    <pre><code>call model A
+  on 429 → sleep(backoff), retry once
+  still 429 → fall over to model B
+    on 429 → sleep(backoff), retry once
+    still 429 → model C
+      ... D, E
+after E → give up, log, move on</code></pre>
+
+    <p>Bounded retries. Exponential backoff with jitter. A supplier fallback so no single model is a hard dependency. Every box ticked.</p>
+
+    <p>Over one working day the loop logged 2,453 calls to do roughly 1,200 units of work. Not 2,453 attempts of which some failed — 2,453 calls, of which about 1,200 were the first attempt and the rest were retries and fallbacks that could not have succeeded. Not "were unlikely to." Could not. The outcome of every one of them was determined before it left the machine.</p>
+
+    <p>Models A through E were five model names on <em>one account</em>. The quota that returned the 429 was an account quota.</p>
+
+    <h2>What the loop was actually varying</h2>
+
+    <p>A retry is a bet that something relevant will be different on the next attempt. Backoff bets on time: the constraint is a rate window, waiting moves you into a new one. A supplier fallback bets on independence: this supplier is refusing, that one is not.</p>
+
+    <p>The loop above made both bets, and both were placed on the wrong table. The backoff bet on time against a limit that resets at midnight. The fallback bet on independence between five names that shared one billing identity — the only dimension that mattered was the one the loop held constant.</p>
+
+    <p>So the useful question about a retry is not "is this error retryable?" It is: <strong>what is different about the next attempt, and does that difference cross the boundary the constraint lives at?</strong> If the answer is no, you do not have a retry. You have a delay loop with an invoice attached.</p>
+
+    <p>And when the constraint is usage-based rather than time-based, it is worse than neutral. Refused calls still counted against the account. The loop was not waiting out the limit — it was feeding it. The sibling-model walk turned one refusal into five, which is how 1,200 units of work became 2,453 calls.</p>
+
+    <h2>Why a status code cannot tell you this</h2>
+
+    <p>Everyone's retry policy is a switch on the status code, because that is what the transport gives you. But an HTTP status describes what happened to <em>the request</em>. Retryability depends on where the constraint <em>lives</em>, and the status code has no field for that.</p>
+
+    <p>One 429 means four unrelated things:</p>
+
+    <ul>
+        <li><strong>Per-request</strong> — this input is too large, or too many tokens in one shot. Retrying identically is pointless; a smaller request succeeds immediately.</li>
+        <li><strong>Per-key, rate</strong> — you are going too fast on this key. Backoff is exactly right. This is the case every retry library is written for, and it is the only one where the textbook answer holds unmodified.</li>
+        <li><strong>Per-account, quota</strong> — the balance or the daily cap. Backoff does nothing until a reset you cannot see, sibling models are the same account, and each attempt may shrink what is left.</li>
+        <li><strong>Per-organisation or per-region</strong> — capacity, not billing. Another region might work; the same region with a different key will not.</li>
+    </ul>
+
+    <p>Four constraints, four different remedies, one status code. The provider usually says which one in the response body, in prose, and almost nobody parses it — including us, until this. The classification is available. It just isn't in the field people switch on.</p>
+
+    <h2>The failure was invisible because the retry hid it</h2>
+
+    <p>This ran for weeks. Here is why nobody looked.</p>
+
+    <p>The service's own logs showed a healthy stream of activity: calls going out, backoffs sleeping, fallbacks engaging. Everything a working system does under load. The word in the log lines was "retrying", which reads as recovery in progress. Failure per unit of work was near total, but no log line said so, because no line was written at that level — the loop logged attempts, and the unit of work was the thing that had failed.</p>
+
+    <p>This is the same shape as the <a href="/posts/the-correlated-check.html">spend counter</a> at that client that stayed green through 190 consecutive refusals: an instrument reporting its own activity rather than the outcome it exists to guarantee. A retry loop is an instrument too. Left alone, it reports effort.</p>
+
+    <p>The metric that would have caught it in an afternoon is not the error rate. The error rate was visible and high, and had been rationalised as "the provider is flaky lately." It is <strong>calls per completed unit of work</strong>. At 1.0 you are healthy. At 2.04 — where this sat — you are paying double for something, and the number is trivially derivable from data everyone already logs.</p>
+
+    <h2>The circuit breaker was there, and it made things worse</h2>
+
+    <p>Worth saying plainly, because it is the part I got wrong in my own head first. There <em>was</em> a breaker. Per model, five of them, correct implementation, correctly tuned.</p>
+
+    <p>When model A's breaker tripped, the loop stopped calling A and went to B. Which is the documented behaviour, and in this situation it was precisely backwards: the breaker's job was to stop hammering a failing dependency, and the dependency was the account, not the model. Tripping A's breaker just routed the same doomed traffic to the next name on the same account, faster and with less backoff than before. Five breakers, and the thing they were guarding had no breaker at all.</p>
+
+    <p>A circuit breaker is keyed. If the key is narrower than the scope of the failure, the breaker does not protect anything — it accelerates the walk across the siblings that share the failure. This is not an argument against breakers. It is the observation that <em>the key must match the scope</em>, and the key is usually chosen by whatever object the client library happened to give you a handle on.</p>
+
+    <h2>What we changed</h2>
+
+    <p>Small diff, in the end. Three parts.</p>
+
+    <p><strong>Parse the refusal, don't just count it.</strong> The error handler now extracts a scope — <code>request</code>, <code>key</code>, <code>account</code>, <code>region</code>, or <code>unknown</code> — from the response body, and the retry policy switches on the scope, not the status. <code>unknown</code> is treated as <code>account</code>, because the cheap mistake is stopping too early and the expensive one is what we had been doing.</p>
+
+    <p><strong>Abort the sibling walk on account scope.</strong> One line. An account-scoped refusal ends the walk immediately instead of continuing it, because every remaining sibling shares the thing that refused. This alone removed about half the day's calls.</p>
+
+    <p><strong>Make the fallback actually independent.</strong> Falling over to a second supplier is a good pattern, and it was never wrong here — it was just never implemented. The fallback is now a genuinely separate account with separate billing, and the failure of one has no path to the other. And it triggers on the provider's refusal, not on our own estimate of how much budget is left. A budget is a model of the constraint; the refusal is the constraint.</p>
+
+    <p>Nothing about the backoff maths changed. That part was always fine.</p>
+
+    <h2>The test, in one line</h2>
+
+    <p>I wrote about the <a href="/blog/retry-trap/">retry trap</a> months ago, and classified failures into transient, prompt, and state — with rate limits filed cleanly under transient, retry with backoff, next question. That taxonomy is not wrong, but it is cut along the wrong axis for this. "Transient" is not a property an error has by itself. It is a claim about a specific boundary: the failure is on the other side of it, and waiting or switching will get you across.</p>
+
+    <p>So before adding a retry anywhere, ask the loop one question, and make it answer in writing:</p>
+
+    <blockquote>What is different about the next attempt, and does that difference cross the boundary the constraint lives at?</blockquote>
+
+    <p>If you can't name the boundary, you are not retrying. You are repeating, and repeating is what an error looks like when nobody is counting.</p>
+
+    <footer>
+        <a href="/">emil.aiadoption.cz</a>
+    </footer>
+</body>
+</html>
