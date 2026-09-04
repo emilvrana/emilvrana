@@ -6,19 +6,20 @@
     <title>Emil Vrána — AI &amp; Systems Engineer</title>
     <meta name="description" content="Independent tech consultant specializing in AI systems, automation, and data architecture. Based in Prague, Czech Republic.">
     <style>
-        /* Light, gridded, Swiss-modern. Committed to one palette on purpose: the point of the
-           redesign was that the old near-black page read as gloomy, and honouring a dark system
-           preference would hand that same page straight back to the reader who asked for light. */
+        /* Dark grey base with black insets. The base is deliberately lighter than a
+           near-black page and the cards are darker than the base, so the surfaces read as
+           layered rather than flat. Committed to unconditionally rather than following the
+           system preference: the palette is a decision here, not a reader setting. */
         :root {
-            --bg: #f8fafc;
-            --surface: #ffffff;
-            --text: #1e293b;
-            --muted: #5b6b7f;
-            --line: #e2e8f0;
-            --accent: #2563eb;
-            --accent-soft: #eff6ff;
+            --bg: #2b2e33;
+            --surface: #171819;
+            --text: #e9ebee;
+            --muted: #a7aeb8;
+            --line: #3a3e45;
+            --accent: #7ba9ff;
+            --accent-soft: #23262c;
             --radius: 12px;
-            --shadow: 0 1px 2px rgba(15, 23, 42, .04), 0 8px 24px rgba(15, 23, 42, .06);
+            --shadow: 0 1px 2px rgba(0, 0, 0, .35), 0 10px 28px rgba(0, 0, 0, .35);
         }
         * { margin: 0; padding: 0; box-sizing: border-box; }
         html { -webkit-text-size-adjust: 100%; }
@@ -51,7 +52,7 @@
             text-transform: uppercase;
             margin: .9rem 0 1.2rem;
         }
-        .intro { font-size: 1.15rem; color: #33415a; max-width: 34em; margin-bottom: 1.6rem; }
+        .intro { font-size: 1.15rem; color: #cbd1d9; max-width: 34em; margin-bottom: 1.6rem; }
         .hero-photo {
             width: 100%;
             aspect-ratio: 4 / 5;
