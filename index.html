@@ -1,8 +1,9 @@
 <!DOCTYPE html>
-<html lang="en">
+<html lang="en" style="color-scheme: dark">
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta name="theme-color" content="#2b2e33">
     <title>Emil Vrána — AI &amp; Systems Engineer</title>
     <meta name="description" content="Independent tech consultant specializing in AI systems, automation, and data architecture. Based in Prague, Czech Republic.">
     <style>
@@ -25,14 +26,23 @@
         html { -webkit-text-size-adjust: 100%; }
         body {
             font-family: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+            touch-action: manipulation;
+            -webkit-tap-highlight-color: rgba(123, 169, 255, .18);
+            overflow-wrap: break-word;
             background: var(--bg);
             color: var(--text);
             font-size: 16px;
             line-height: 1.65;
-            padding: 0 1.5rem 4rem;
+            padding: 0 max(1.5rem, env(safe-area-inset-left)) 4rem max(1.5rem, env(safe-area-inset-right));
         }
         .wrap { max-width: 880px; margin: 0 auto; }
         a { color: var(--accent); }
+        .skip {
+            position: absolute; left: -9999px; top: 0;
+            background: var(--accent); color: #10131a;
+            padding: .7rem 1.1rem; border-radius: 0 0 8px 0; font-weight: 600; z-index: 10;
+        }
+        .skip:focus { left: 0; }
         :focus-visible { outline: 3px solid var(--accent); outline-offset: 3px; border-radius: 4px; }
 
         /* ---- hero ---- */
@@ -43,7 +53,7 @@
             align-items: center;
             padding: 4rem 0 3rem;
         }
-        .hero h1 { font-size: 2.6rem; line-height: 1.1; letter-spacing: -.02em; font-weight: 650; }
+        .hero h1 { font-size: 2.6rem; line-height: 1.1; letter-spacing: -.02em; font-weight: 650; text-wrap: balance; }
         .tagline {
             color: var(--accent);
             font-weight: 600;
@@ -103,7 +113,7 @@
             transform: translateY(-1px);
         }
         .latest-post .date { color: var(--muted); font-size: .78rem; letter-spacing: .03em; }
-        .latest-post .title { font-weight: 650; font-size: 1.02rem; margin: .25rem 0 .4rem; color: var(--text); }
+        .latest-post .title { font-weight: 650; font-size: 1.02rem; margin: .25rem 0 .4rem; color: var(--text); text-wrap: pretty; }
         .latest-post:hover .title { color: var(--accent); }
         .latest-post .summary { color: var(--muted); font-size: .92rem; }
 
@@ -144,6 +154,7 @@
     </style>
 </head>
 <body>
+<a class="skip" href="#main">Skip to content</a>
 <div class="wrap">
     <header class="hero">
         <div>
@@ -162,11 +173,11 @@
             <img src="/img/emil-conference.jpg"
                  srcset="/img/emil-conference.jpg 448w, /img/emil-conference@2x.jpg 896w"
                  sizes="(max-width: 720px) 220px, 280px"
-                 width="448" height="560" alt="Emil Vrána" loading="eager" decoding="async">
+                 width="448" height="560" alt="Emil Vrána" fetchpriority="high" decoding="async">
         </div>
     </header>
 
-    <h2>What I do</h2>
+    <h2 id="main">What I do</h2>
     <div class="expertise">
             <article class="card">
                 <h3>AI Systems</h3>
