@@ -3,342 +3,402 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Emil Vrána — AI & Systems Engineer</title>
+    <title>Emil Vrána — AI &amp; Systems Engineer</title>
     <meta name="description" content="Independent tech consultant specializing in AI systems, automation, and data architecture. Based in Prague, Czech Republic.">
     <style>
+        /* Light, gridded, Swiss-modern. Committed to one palette on purpose: the point of the
+           redesign was that the old near-black page read as gloomy, and honouring a dark system
+           preference would hand that same page straight back to the reader who asked for light. */
         :root {
-            --bg: #0f0f0f;
-            --text: #e0e0e0;
-            --accent: #6b9bd2;
-            --muted: #888;
-            --card-bg: #1a1a1a;
+            --bg: #f8fafc;
+            --surface: #ffffff;
+            --text: #1e293b;
+            --muted: #5b6b7f;
+            --line: #e2e8f0;
+            --accent: #2563eb;
+            --accent-soft: #eff6ff;
+            --radius: 12px;
+            --shadow: 0 1px 2px rgba(15, 23, 42, .04), 0 8px 24px rgba(15, 23, 42, .06);
         }
         * { margin: 0; padding: 0; box-sizing: border-box; }
+        html { -webkit-text-size-adjust: 100%; }
         body {
-            font-family: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+            font-family: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
             background: var(--bg);
             color: var(--text);
-            line-height: 1.6;
-            max-width: 720px;
-            margin: 0 auto;
-            padding: 3rem 1.5rem;
+            font-size: 16px;
+            line-height: 1.65;
+            padding: 0 1.5rem 4rem;
         }
-        header { margin-bottom: 3rem; }
-        h1 { font-size: 1.8rem; font-weight: 600; margin-bottom: 0.3rem; }
-        .tagline { color: var(--muted); font-size: 1rem; margin-bottom: 1.5rem; }
-        .intro { font-size: 1.05rem; margin-bottom: 2rem; }
-        h2 {
-            font-size: 0.85rem;
-            text-transform: uppercase;
-            letter-spacing: 0.1em;
-            color: var(--muted);
-            margin-bottom: 1rem;
-            margin-top: 2.5rem;
-        }
-        .expertise {
+        .wrap { max-width: 880px; margin: 0 auto; }
+        a { color: var(--accent); }
+        :focus-visible { outline: 3px solid var(--accent); outline-offset: 3px; border-radius: 4px; }
+
+        /* ---- hero ---- */
+        .hero {
             display: grid;
-            grid-template-columns: 1fr 1fr;
-            gap: 1rem;
+            grid-template-columns: 1fr minmax(200px, 280px);
+            gap: 2.5rem;
+            align-items: center;
+            padding: 4rem 0 3rem;
         }
-        .card {
-            background: var(--card-bg);
-            border-radius: 8px;
-            padding: 1.2rem;
-        }
-        .card h3 {
-            font-size: 0.95rem;
+        .hero h1 { font-size: 2.6rem; line-height: 1.1; letter-spacing: -.02em; font-weight: 650; }
+        .tagline {
+            color: var(--accent);
             font-weight: 600;
-            margin-bottom: 0.4rem;
-            color: var(--accent);
+            font-size: .8rem;
+            letter-spacing: .12em;
+            text-transform: uppercase;
+            margin: .9rem 0 1.2rem;
         }
-        .card p { font-size: 0.85rem; color: var(--muted); }
+        .intro { font-size: 1.15rem; color: #33415a; max-width: 34em; margin-bottom: 1.6rem; }
+        .hero-photo {
+            width: 100%;
+            aspect-ratio: 4 / 5;
+            border-radius: var(--radius);
+            overflow: hidden;
+            box-shadow: var(--shadow);
+            background: var(--line);   /* reserves the space so nothing jumps while it loads */
+        }
+        .hero-photo img { width: 100%; height: 100%; object-fit: cover; display: block; }
+
+        /* ---- sections ---- */
+        h2 {
+            font-size: .78rem;
+            text-transform: uppercase;
+            letter-spacing: .14em;
+            color: var(--muted);
+            font-weight: 700;
+            padding-bottom: .6rem;
+            border-bottom: 1px solid var(--line);
+            margin: 3.5rem 0 1.5rem;
+        }
+        .expertise { display: grid; grid-template-columns: repeat(2, 1fr); gap: 1rem; }
+        .card {
+            background: var(--surface);
+            border: 1px solid var(--line);
+            border-radius: var(--radius);
+            padding: 1.3rem 1.4rem;
+        }
+        .card h3 { font-size: 1rem; font-weight: 650; margin-bottom: .35rem; }
+        .card p { font-size: .92rem; color: var(--muted); }
+
+        /* ---- writing ---- */
         .latest-post {
-            background: var(--card-bg);
-            border-radius: 8px;
-            padding: 1.2rem;
-            margin-top: 1rem;
-            text-decoration: none;
             display: block;
-            color: var(--text);
-            border: 1px solid transparent;
-            transition: border-color 0.2s;
-        }
-        .latest-post:hover { border-color: #333; }
-        .latest-post .date { color: var(--muted); font-size: 0.8rem; }
-        .latest-post .title { font-weight: 600; font-size: 0.95rem; margin: 0.3rem 0; }
-        .latest-post .summary { color: var(--muted); font-size: 0.85rem; }
-        .links { margin-top: 2.5rem; }
-        .links a {
-            color: var(--accent);
             text-decoration: none;
-            margin-right: 1.5rem;
-            font-size: 0.9rem;
+            color: inherit;
+            background: var(--surface);
+            border: 1px solid var(--line);
+            border-left: 3px solid transparent;
+            border-radius: var(--radius);
+            padding: 1.1rem 1.3rem;
+            margin-bottom: .75rem;
+            transition: border-left-color .18s ease, box-shadow .18s ease, transform .18s ease;
         }
-        .links a:hover { text-decoration: underline; }
+        .latest-post:hover, .latest-post:focus-visible {
+            border-left-color: var(--accent);
+            box-shadow: var(--shadow);
+            transform: translateY(-1px);
+        }
+        .latest-post .date { color: var(--muted); font-size: .78rem; letter-spacing: .03em; }
+        .latest-post .title { font-weight: 650; font-size: 1.02rem; margin: .25rem 0 .4rem; color: var(--text); }
+        .latest-post:hover .title { color: var(--accent); }
+        .latest-post .summary { color: var(--muted); font-size: .92rem; }
+
+        /* ---- links ---- */
+        .links { display: flex; flex-wrap: wrap; gap: .75rem; }
+        .links a {
+            display: inline-flex;
+            align-items: center;
+            min-height: 44px;               /* comfortable to tap, not just to click */
+            padding: 0 1.1rem;
+            border: 1px solid var(--line);
+            border-radius: 999px;
+            background: var(--surface);
+            text-decoration: none;
+            font-size: .92rem;
+            font-weight: 550;
+            transition: background .18s ease, border-color .18s ease;
+        }
+        .links a:hover { background: var(--accent-soft); border-color: var(--accent); }
         footer {
             margin-top: 4rem;
             padding-top: 1.5rem;
-            border-top: 1px solid #222;
+            border-top: 1px solid var(--line);
             color: var(--muted);
-            font-size: 0.8rem;
+            font-size: .85rem;
         }
-        @media (max-width: 500px) {
+
+        @media (max-width: 720px) {
+            .hero { grid-template-columns: 1fr; gap: 1.75rem; padding-top: 2.5rem; }
+            .hero-photo { max-width: 220px; }
+            .hero h1 { font-size: 2.1rem; }
             .expertise { grid-template-columns: 1fr; }
-            body { padding: 2rem 1rem; }
+        }
+        @media (prefers-reduced-motion: reduce) {
+            * { transition: none !important; }
+            .latest-post:hover { transform: none; }
         }
     </style>
 </head>
 <body>
-    <header>
-        <h1>Emil Vrána</h1>
-        <div class="tagline">AI & Systems Engineer · Prague, CZ</div>
-        <p class="intro">
-            Independent tech consultant. I design and build AI systems, 
+<div class="wrap">
+    <header class="hero">
+        <div>
+            <h1>Emil Vrána</h1>
+            <div class="tagline">AI &amp; Systems Engineer · Prague, CZ</div>
+            <p class="intro">Independent tech consultant. I design and build AI systems, 
             automation pipelines, and data architectures. I prefer building 
-            things over talking about building things.
-        </p>
+            things over talking about building things.</p>
+            <div class="links">
+                <a href="/blog/">Blog</a>
+                <a href="https://github.com/emilvrana">GitHub</a>
+                <a href="mailto:emil@aiadoption.cz">Email</a>
+            </div>
+        </div>
+        <div class="hero-photo">
+            <img src="/img/emil-conference.jpg"
+                 srcset="/img/emil-conference.jpg 448w, /img/emil-conference@2x.jpg 896w"
+                 sizes="(max-width: 720px) 220px, 280px"
+                 width="448" height="560" alt="Emil Vrána" loading="eager" decoding="async">
+        </div>
     </header>
 
     <h2>What I do</h2>
     <div class="expertise">
-        <div class="card">
-            <h3>AI Systems</h3>
-            <p>LLM integration, RAG pipelines, autonomous agents, prompt engineering</p>
-        </div>
-        <div class="card">
-            <h3>Automation</h3>
-            <p>Workflow orchestration, n8n, custom agents, API integration</p>
-        </div>
-        <div class="card">
-            <h3>Infrastructure</h3>
-            <p>Docker, Linux, reverse proxies, monitoring, CI/CD</p>
-        </div>
-        <div class="card">
-            <h3>Data</h3>
-            <p>PostgreSQL, Elasticsearch, vector databases, ETL pipelines</p>
-        </div>
+            <article class="card">
+                <h3>AI Systems</h3>
+                <p>LLM integration, RAG pipelines, autonomous agents, prompt engineering</p>
+            </article>
+            <article class="card">
+                <h3>Automation</h3>
+                <p>Workflow orchestration, n8n, custom agents, API integration</p>
+            </article>
+            <article class="card">
+                <h3>Infrastructure</h3>
+                <p>Docker, Linux, reverse proxies, monitoring, CI/CD</p>
+            </article>
+            <article class="card">
+                <h3>Data</h3>
+                <p>PostgreSQL, Elasticsearch, vector databases, ETL pipelines</p>
+            </article>
     </div>
 
     <h2>Latest writing</h2>
-    <a href="/posts/the-scope-of-a-retry.html" class="latest-post">
-        <div class="date">August 28, 2026</div>
-        <div class="title">The Scope of a Retry: The Loop That Retried the One Error That Could Never Succeed</div>
-        <div class="summary">2,453 calls for roughly 1,200 units of work, and every extra call was doomed before it was sent — five model names on one account, and an account-scoped refusal. Retryability is a property of what changes between attempts, not of the error.</div>
-    </a>
-    <a href="/posts/the-implicit-list.html" class="latest-post">
-        <div class="date">August 27, 2026</div>
-        <div class="title">The Implicit List: Six Workers, Six Different Lists, One Invisible Collision</div>
-        <div class="summary">A modulo partition rule guarantees disjoint slices only over a list everyone agrees on — and it can neither produce that agreement nor detect its absence. Why duplicated work looks exactly like progress.</div>
-    </a>
-    <a href="/posts/the-correlated-check.html" class="latest-post">
-        <div class="date">August 24, 2026</div>
-        <div class="title">The Correlated Check: When Your Monitor and Your System Fail Together</div>
-        <div class="summary">A check that draws its verdict from the same source as the thing it checks cannot see that source fail. Three green instruments, three broken systems, and the one question that separates them.</div>
-    </a>
-    <a href="/posts/the-untested-fallback.html" class="latest-post">
-        <div class="date">August 23, 2026</div>
-        <div class="title">The Untested Fallback: Your Backup Path Is Broken and You Won't Find Out Until It Matters</div>
-        <div class="summary">A fallback that never runs is a claim, not a mechanism. Config keys get renamed, credentials expire, schemas drift — and you find out at the worst possible moment. How to test the backup path on purpose.</div>
-    </a>
-    <a href="/posts/the-graceful-degradation-pattern.html" class="latest-post">
-        <div class="date">August 22, 2026</div>
-        <div class="title">The Graceful Degradation Pattern: When Your Agent Can't Deliver Everything, Deliver Something</div>
-        <div class="summary">Your agent can't always deliver the full response. Instead of failing, it should deliver a smaller version of the answer. How graceful degradation turns total failures into partial successes — a staircase, not a cliff.</div>
-    </a>
-    <a href="/posts/the-backpressure-problem.html" class="latest-post">
-        <div class="date">August 21, 2026</div>
-        <div class="title">The Backpressure Problem: What Happens When Your Agent Can't Keep Up</div>
-        <div class="summary">Your agent takes 15 seconds per request. A spike hits. The queue grows. No crash, no error, no circuit breaker — just a spinner that never ends. How backpressure saves agent systems from slow death by drowning.</div>
-    </a>
-    <a href="/posts/the-circuit-breaker-pattern.html" class="latest-post">
-        <div class="date">August 20, 2026</div>
-        <div class="title">The Circuit Breaker Pattern: When Your Agent Should Stop Trying</div>
-        <div class="summary">When your agent starts failing, it fails in bursts. Retry logic handles transient blips — but sustained outages need a circuit breaker. How to fail fast, alert, and degrade gracefully instead of retrying into a wall.</div>
-    </a>
-    <a href="/posts/the-versioning-problem.html" class="latest-post">
-        <div class="date">August 19, 2026</div>
-        <div class="title">The Versioning Problem: Your Agent Has No Release Tags</div>
-        <div class="summary">Your code is versioned. Your data is versioned. Your agent is a prompt in a Google Doc. Why agent systems need proper versioning — and the minimum viable approach that actually works.</div>
-    </a>
-    <a href="/posts/the-deadline-pattern.html" class="latest-post">
-        <div class="date">August 18, 2026</div>
-        <div class="title">The Deadline Pattern: Why Every Agent Operation Needs a Timeout</div>
-        <div class="summary">LLM calls, tool executions, sub-agent delegations — teams let them run without time bounds because "the model will respond eventually." Eventually is not a production SLA. How deadlines turn slow into failed, and why that's better than waiting forever.</div>
-    </a>
-    <a href="/posts/the-canary-pattern.html" class="latest-post">
-        <div class="date">August 17, 2026</div>
-        <div class="title">The Canary Pattern: Why You Should Never Deploy an Agent to 100% of Traffic</div>
-        <div class="summary">Shadow runs prove the agent is safe. They don't prove it's ready to be the only system. The gradual rollout pattern that turns shadow confidence into production confidence — 1%, 5%, 25%, 50%, 100% with stop conditions at each stage.</div>
-    </a>
-    <a href="/posts/the-replay-problem.html" class="latest-post">
-        <div class="date">August 17, 2026</div>
-        <div class="title">The Replay Problem</div>
-        <div class="summary">Why you can't reproduce a production agent failure — and the infrastructure you need to fix that. Capture, replay, bisect: the debugging pattern agent systems need most and most teams skip.</div>
-    </a>
-    <a href="/posts/the-shadow-run-pattern.html" class="latest-post">
-        <div class="date">August 15, 2026</div>
-        <div class="title">The Shadow Run Pattern</div>
-        <div class="summary">Run your agent alongside the system that already works. No impact, full observation, real data. The deployment pattern that closes the gap between evals and production.</div>
-    </a>
-    <a href="/posts/the-blameless-agent-postmortem.html" class="latest-post">
-        <div class="date">August 14, 2026</div>
-        <div class="title">The Blameless Agent Postmortem</div>
-        <div class="summary">Your agent caused an incident. The postmortem isn't about why the model failed — it's about why your system let it through.</div>
-    </a>
-    <a href="/posts/the-agent-error-budget.html" class="latest-post">
-        <div class="date">August 13, 2026</div>
-        <div class="title">The Agent Error Budget</div>
-        <div class="summary">Your agent will fail. The question is whether you planned for it.</div>
-    </a>
-    <a href="/the-composition-gap.html" class="latest-post">
-        <div class="date">August 12, 2026</div>
-        <div class="title">The Composition Gap</div>
-        <div class="summary">Your agent passes every test in isolation. The transitions are where it breaks.</div>
-    </a>
-    <a href="/the-prompt-debt.html" class="latest-post">
-        <div class="date">August 10, 2026</div>
-        <div class="title">The Prompt Debt: How Your Agent Instructions Accumulate Like Legacy Code</div>
-        <div class="summary">Nobody sets out to write a 4,000-word system prompt. It accumulates like technical debt — one reasonable addition at a time. Here's how to recognize prompt debt and pay it down.</div>
-    </a>
-    <a href="/context-editing.html" class="latest-post">
-        <div class="date">August 9, 2026</div>
-        <div class="title">Your Agent Doesn't Need a Bigger Context Window — It Needs Better Editing</div>
-        <div class="summary">More context doesn't make agents smarter. It makes them slower, more expensive, and more prone to noise. The real skill is cutting context out — summarizing, pruning, and treating the context window like a budget.</div>
-    </a>
-    <a href="/stop-rewriting-your-agent-prompt.html" class="latest-post">
-        <div class="date">August 3, 2026</div>
-        <div class="title">Stop Rewriting Your Agent Prompt — Start Versioning It</div>
-        <div class="summary">Prompt drift is the same problem as config drift. The solution isn't discipline — it's version control. Put your prompts in Git, write commit messages for changes, and tag releases.</div>
-    </a>
-    <a href="/the-specification-gap.html" class="latest-post">
-        <div class="date">July 23, 2026</div>
-        <div class="title">The Specification Gap</div>
-        <div class="summary">Most AI system failures aren't model failures — they're specification failures. The gap between what you specify and what you need is where production breaks. Better models don't close it; observability and invariant checks do.</div>
-    </a>
-    <a href="/blog/the-integration-surface/" class="latest-post">
-        <div class="date">July 12, 2026</div>
-        <div class="title">The Integration Surface: Why Your Agent Lives at the Edges</div>
-        <div class="summary">The model is the easy part. The integration surface — APIs, databases, queues, file systems — is where production agents really fail. How to design contracts at the boundaries.</div>
-    </a>
-    <a href="/posts/the-last-resort-pattern.html" class="latest-post">
-        <div class="date">June 30, 2026</div>
-        <div class="title">The Last Resort Pattern: Why Your Agent Should Try Nothing Before Trying Everything</div>
-        <div class="summary">The most reliable agent behavior follows a pattern: try the cheapest approach first, escalate only when cheaper options can't serve the request. Speed, reliability, and observability — the payoff of restraint.</div>
-    </a>
-    <a href="/self-hosting-llms-real-math.html" class="latest-post">
-        <div class="date">June 29, 2026</div>
-        <div class="title">Self-Hosting LLMs: The Real Math</div>
-        <div class="summary">The actual cost comparison between self-hosting and APIs — based on real production numbers, not vibes. Where self-hosting genuinely wins and where it's just ideology.</div>
-    </a>
-    <a href="/posts/the-first-mile.html" class="latest-post">
-        <div class="date">June 26, 2026</div>
-        <div class="title">The First Mile Problem</div>
-        <div class="summary">The distance between "it worked once" and "it works consistently" is where most AI projects die. Not in the last mile — in the first.</div>
-    </a>
-    <a href="/posts/idempotency-in-agent-systems.html" class="latest-post">
-        <div class="date">June 24, 2026</div>
-        <div class="title">Idempotency in Agent Systems: Why Your Agent Should Be Safe to Run Twice</div>
-        <div class="summary">Your agent will be interrupted, retried, and asked to re-run partial work. If it can't safely run the same task twice, it can't safely run once — because you can't guarantee it won't be asked to.</div>
-    </a>
-    <a href="/posts/the-alignment-tax.html" class="latest-post">
-        <div class="date">June 20, 2026</div>
-        <div class="title">The Alignment Tax: Why Good Enough AI Costs More Than Great AI</div>
-        <div class="summary">The real cost of AI isn't the API calls that work — it's the human labor generated by the ones that don't. Why 95% accuracy is expensive, and investing in reliability early saves more than optimizing later.</div>
-    </a>
-    <a href="/posts/your-agents-state-is-a-liability.html" class="latest-post">
-        <div class="date">June 18, 2026</div>
-        <div class="title">Your Agent's State Is a Liability</div>
-        <div class="summary">Accumulated context makes agents brittle. Why stateless agent designs outperform stateful ones, and how to prune what you carry.</div>
-    </a>
-    <a href="/posts/your-agent-doesnt-need-more-tools.html" class="latest-post">
-        <div class="date">August 11, 2026</div>
-        <div class="title">Your Agent Doesn't Need More Tools</div>
-        <div class="summary">When your agent fails on edge cases, adding more tools makes it worse. Track tool-selection accuracy — if it's below 90%, you have too many tools. Fewer, better tools with clear contracts beat a sprawling toolbox every time.</div>
-    </a>
-    <a href="/posts/compound-latency.html" class="latest-post">
-        <div class="date">June 13, 2026</div>
-        <div class="title">Compound Latency: Why Your Agent Feels Slow Even When Nothing Is</div>
-        <div class="summary">Each component is fast. The pipeline is slow. How multi-step agents accumulate latency through compounded LLM calls, context processing, and sequential design — and what actually fixes it.</div>
-    </a>
-    <a href="/posts/the-abstraction-ceiling.html" class="latest-post">
-        <div class="date">June 11, 2026</div>
-        <div class="title">The Abstraction Ceiling</div>
-        <div class="summary">Agent frameworks let you stay in the happy path until you can't. When the abstraction breaks, you need to understand the layer underneath — context assembly, tool dispatch, error handling. An hour of reading saves a week of debugging.</div>
-    </a>
-    <a href="/posts/hybrid-search-actually-works.html" class="latest-post">
-        <div class="date">June 9, 2026</div>
-        <div class="title">Hybrid Search Actually Works</div>
-        <div class="summary">Most RAG systems use semantic search alone. Adding keyword search fixes the 40% of queries that embeddings miss. Practical patterns for hybrid retrieval with reranking — and why PostgreSQL is all you need.</div>
-    </a>
-    <a href="/posts/compound-cost-of-unreliable-agents.html" class="latest-post">
-        <div class="date">May 29, 2026</div>
-        <div class="title">The Compound Cost of Unreliable Agents</div>
-        <div class="summary">A 2% failure rate doesn't mean 98% success. In production pipelines, small unreliability compounds into systemic breakdown. Here's the math and what to do about it.</div>
-    </a>
-    <a href="/posts/agent-observability.html" class="latest-post">
-        <div class="date">May 23, 2026</div>
-        <div class="title">Agent Observability: You Can't Fix What You Can't See</div>
-        <div class="summary">Most agent projects log errors but not behavior. Latency distributions, tool call patterns, output shape drift — the three signals that tell you what your agent is actually doing in production.</div>
-    </a>
-    <a href="/the-tool-problem.html" class="latest-post">
-        <div class="date">May 18, 2026</div>
-        <div class="title">The Tool Problem: Why More Tools Make Agents Worse</div>
-        <div class="summary">Adding tools to an agent degrades performance through context tax, selection errors, and chaining complexity. Start small, add deliberately, measure relentlessly, cut ruthlessly.</div>
-    </a>
-    <a href="/posts/configuration-as-code-for-agents.html" class="latest-post">
-        <div class="date">May 17, 2026</div>
-        <div class="title">Configuration as Code for AI Agents</div>
-        <div class="summary">Agent configs are semi-code, semi-data. If a change affects behavior, it should go through the same process as code changes — version control, review, test, rollback. Prompt changes are schema migrations, not config updates.</div>
-    </a>
-    <a href="/posts/the-context-budget.html" class="latest-post">
-        <div class="date">May 15, 2026</div>
-        <div class="title">The Context Budget: Why Your Agent's Memory Is a Resource, Not a Feature</div>
-        <div class="summary">Context window is not a feature. It's a budget. Latency, cost, and coherence — the three taxes of every token, and how to spend deliberately instead of going bankrupt.</div>
-    </a>
-    <a href="/posts/prompt-engineering-is-just-programming.html" class="latest-post">
-        <div class="date">May 11, 2026</div>
-        <div class="title">Prompt Engineering Is Just Programming</div>
-        <div class="summary">We gave it a fancy name and built a cottage industry around it. But the discipline that makes AI systems reliable is the same one that makes any system reliable.</div>
-    </a>
-    <a href="/posts/your-agents-api-is-a-contract.html" class="latest-post">
-        <div class="date">May 8, 2026</div>
-        <div class="title">Your Agent's API Is a Contract</div>
-        <div class="summary">Most agent projects focus on what the agent can do. Very few focus on what it promises to do. Input schemas, output schemas, error contracts — the chassis that makes an agent dependable.</div>
-    </a>
-    <a href="/posts/agent-evaluation-is-not-optional.html" class="latest-post">
-        <div class="date">May 7, 2026</div>
-        <div class="title">Agent Evaluation Is Not Optional — It's the Feature</div>
-        <div class="summary">Every agent demo looks impressive. But without evaluation, you're flying blind. Evaluation isn't overhead — it's the specification of what working means.</div>
-    </a>
-    <a href="/mcp-is-not-magic.html" class="latest-post">
-        <div class="date">May 6, 2026</div>
-        <div class="title">MCP Is Not Magic — It's a Plumbing Standard</div>
-        <div class="summary">Model Context Protocol standardizes tool interfaces for AI agents. That's useful — but it doesn't solve routing, reliability, or evaluation. Here's what MCP actually does well.</div>
-    </a>
-    <a href="/dont-build-an-agent-build-a-pipeline.html" class="latest-post">
-        <div class="date">May 3, 2026</div>
-        <div class="title">Don't Build an Agent. Build a Pipeline.</div>
-        <div class="summary">Most multi-step tasks don't need an autonomous agent. They need a deterministic pipeline with LLM steps. When to use each, and the hybrid pattern that actually works.</div>
-    </a>
-    <a href="/blog/multi-agent-patterns/" class="latest-post">
-        <div class="date">April 4, 2026</div>
-        <div class="title">Multi-Agent Patterns: When One Agent Isn't Enough</div>
-        <div class="summary">Running multiple agents in coordination. What I've learned from building an A2A bridge between Claude Code and my own agent runtime — patterns, protocols, and the hard parts.</div>
-    </a>
+        <a href="/posts/the-scope-of-a-retry.html" class="latest-post">
+            <div class="date">August 28, 2026</div>
+            <div class="title">The Scope of a Retry: The Loop That Retried the One Error That Could Never Succeed</div>
+            <div class="summary">2,453 calls for roughly 1,200 units of work, and every extra call was doomed before it was sent — five model names on one account, and an account-scoped refusal. Retryability is a property of what changes between attempts, not of the error.</div>
+        </a>
+        <a href="/posts/the-implicit-list.html" class="latest-post">
+            <div class="date">August 27, 2026</div>
+            <div class="title">The Implicit List: Six Workers, Six Different Lists, One Invisible Collision</div>
+            <div class="summary">A modulo partition rule guarantees disjoint slices only over a list everyone agrees on — and it can neither produce that agreement nor detect its absence. Why duplicated work looks exactly like progress.</div>
+        </a>
+        <a href="/posts/the-correlated-check.html" class="latest-post">
+            <div class="date">August 24, 2026</div>
+            <div class="title">The Correlated Check: When Your Monitor and Your System Fail Together</div>
+            <div class="summary">A check that draws its verdict from the same source as the thing it checks cannot see that source fail. Three green instruments, three broken systems, and the one question that separates them.</div>
+        </a>
+        <a href="/posts/the-untested-fallback.html" class="latest-post">
+            <div class="date">August 23, 2026</div>
+            <div class="title">The Untested Fallback: Your Backup Path Is Broken and You Won't Find Out Until It Matters</div>
+            <div class="summary">A fallback that never runs is a claim, not a mechanism. Config keys get renamed, credentials expire, schemas drift — and you find out at the worst possible moment. How to test the backup path on purpose.</div>
+        </a>
+        <a href="/posts/the-graceful-degradation-pattern.html" class="latest-post">
+            <div class="date">August 22, 2026</div>
+            <div class="title">The Graceful Degradation Pattern: When Your Agent Can't Deliver Everything, Deliver Something</div>
+            <div class="summary">Your agent can't always deliver the full response. Instead of failing, it should deliver a smaller version of the answer. How graceful degradation turns total failures into partial successes — a staircase, not a cliff.</div>
+        </a>
+        <a href="/posts/the-backpressure-problem.html" class="latest-post">
+            <div class="date">August 21, 2026</div>
+            <div class="title">The Backpressure Problem: What Happens When Your Agent Can't Keep Up</div>
+            <div class="summary">Your agent takes 15 seconds per request. A spike hits. The queue grows. No crash, no error, no circuit breaker — just a spinner that never ends. How backpressure saves agent systems from slow death by drowning.</div>
+        </a>
+        <a href="/posts/the-circuit-breaker-pattern.html" class="latest-post">
+            <div class="date">August 20, 2026</div>
+            <div class="title">The Circuit Breaker Pattern: When Your Agent Should Stop Trying</div>
+            <div class="summary">When your agent starts failing, it fails in bursts. Retry logic handles transient blips — but sustained outages need a circuit breaker. How to fail fast, alert, and degrade gracefully instead of retrying into a wall.</div>
+        </a>
+        <a href="/posts/the-versioning-problem.html" class="latest-post">
+            <div class="date">August 19, 2026</div>
+            <div class="title">The Versioning Problem: Your Agent Has No Release Tags</div>
+            <div class="summary">Your code is versioned. Your data is versioned. Your agent is a prompt in a Google Doc. Why agent systems need proper versioning — and the minimum viable approach that actually works.</div>
+        </a>
+        <a href="/posts/the-deadline-pattern.html" class="latest-post">
+            <div class="date">August 18, 2026</div>
+            <div class="title">The Deadline Pattern: Why Every Agent Operation Needs a Timeout</div>
+            <div class="summary">LLM calls, tool executions, sub-agent delegations — teams let them run without time bounds because "the model will respond eventually." Eventually is not a production SLA. How deadlines turn slow into failed, and why that's better than waiting forever.</div>
+        </a>
+        <a href="/posts/the-canary-pattern.html" class="latest-post">
+            <div class="date">August 17, 2026</div>
+            <div class="title">The Canary Pattern: Why You Should Never Deploy an Agent to 100% of Traffic</div>
+            <div class="summary">Shadow runs prove the agent is safe. They don't prove it's ready to be the only system. The gradual rollout pattern that turns shadow confidence into production confidence — 1%, 5%, 25%, 50%, 100% with stop conditions at each stage.</div>
+        </a>
+        <a href="/posts/the-replay-problem.html" class="latest-post">
+            <div class="date">August 17, 2026</div>
+            <div class="title">The Replay Problem</div>
+            <div class="summary">Why you can't reproduce a production agent failure — and the infrastructure you need to fix that. Capture, replay, bisect: the debugging pattern agent systems need most and most teams skip.</div>
+        </a>
+        <a href="/posts/the-shadow-run-pattern.html" class="latest-post">
+            <div class="date">August 15, 2026</div>
+            <div class="title">The Shadow Run Pattern</div>
+            <div class="summary">Run your agent alongside the system that already works. No impact, full observation, real data. The deployment pattern that closes the gap between evals and production.</div>
+        </a>
+        <a href="/posts/the-blameless-agent-postmortem.html" class="latest-post">
+            <div class="date">August 14, 2026</div>
+            <div class="title">The Blameless Agent Postmortem</div>
+            <div class="summary">Your agent caused an incident. The postmortem isn't about why the model failed — it's about why your system let it through.</div>
+        </a>
+        <a href="/posts/the-agent-error-budget.html" class="latest-post">
+            <div class="date">August 13, 2026</div>
+            <div class="title">The Agent Error Budget</div>
+            <div class="summary">Your agent will fail. The question is whether you planned for it.</div>
+        </a>
+        <a href="/the-composition-gap.html" class="latest-post">
+            <div class="date">August 12, 2026</div>
+            <div class="title">The Composition Gap</div>
+            <div class="summary">Your agent passes every test in isolation. The transitions are where it breaks.</div>
+        </a>
+        <a href="/the-prompt-debt.html" class="latest-post">
+            <div class="date">August 10, 2026</div>
+            <div class="title">The Prompt Debt: How Your Agent Instructions Accumulate Like Legacy Code</div>
+            <div class="summary">Nobody sets out to write a 4,000-word system prompt. It accumulates like technical debt — one reasonable addition at a time. Here's how to recognize prompt debt and pay it down.</div>
+        </a>
+        <a href="/context-editing.html" class="latest-post">
+            <div class="date">August 9, 2026</div>
+            <div class="title">Your Agent Doesn't Need a Bigger Context Window — It Needs Better Editing</div>
+            <div class="summary">More context doesn't make agents smarter. It makes them slower, more expensive, and more prone to noise. The real skill is cutting context out — summarizing, pruning, and treating the context window like a budget.</div>
+        </a>
+        <a href="/stop-rewriting-your-agent-prompt.html" class="latest-post">
+            <div class="date">August 3, 2026</div>
+            <div class="title">Stop Rewriting Your Agent Prompt — Start Versioning It</div>
+            <div class="summary">Prompt drift is the same problem as config drift. The solution isn't discipline — it's version control. Put your prompts in Git, write commit messages for changes, and tag releases.</div>
+        </a>
+        <a href="/the-specification-gap.html" class="latest-post">
+            <div class="date">July 23, 2026</div>
+            <div class="title">The Specification Gap</div>
+            <div class="summary">Most AI system failures aren't model failures — they're specification failures. The gap between what you specify and what you need is where production breaks. Better models don't close it; observability and invariant checks do.</div>
+        </a>
+        <a href="/blog/the-integration-surface/" class="latest-post">
+            <div class="date">July 12, 2026</div>
+            <div class="title">The Integration Surface: Why Your Agent Lives at the Edges</div>
+            <div class="summary">The model is the easy part. The integration surface — APIs, databases, queues, file systems — is where production agents really fail. How to design contracts at the boundaries.</div>
+        </a>
+        <a href="/posts/the-last-resort-pattern.html" class="latest-post">
+            <div class="date">June 30, 2026</div>
+            <div class="title">The Last Resort Pattern: Why Your Agent Should Try Nothing Before Trying Everything</div>
+            <div class="summary">The most reliable agent behavior follows a pattern: try the cheapest approach first, escalate only when cheaper options can't serve the request. Speed, reliability, and observability — the payoff of restraint.</div>
+        </a>
+        <a href="/self-hosting-llms-real-math.html" class="latest-post">
+            <div class="date">June 29, 2026</div>
+            <div class="title">Self-Hosting LLMs: The Real Math</div>
+            <div class="summary">The actual cost comparison between self-hosting and APIs — based on real production numbers, not vibes. Where self-hosting genuinely wins and where it's just ideology.</div>
+        </a>
+        <a href="/posts/the-first-mile.html" class="latest-post">
+            <div class="date">June 26, 2026</div>
+            <div class="title">The First Mile Problem</div>
+            <div class="summary">The distance between "it worked once" and "it works consistently" is where most AI projects die. Not in the last mile — in the first.</div>
+        </a>
+        <a href="/posts/idempotency-in-agent-systems.html" class="latest-post">
+            <div class="date">June 24, 2026</div>
+            <div class="title">Idempotency in Agent Systems: Why Your Agent Should Be Safe to Run Twice</div>
+            <div class="summary">Your agent will be interrupted, retried, and asked to re-run partial work. If it can't safely run the same task twice, it can't safely run once — because you can't guarantee it won't be asked to.</div>
+        </a>
+        <a href="/posts/the-alignment-tax.html" class="latest-post">
+            <div class="date">June 20, 2026</div>
+            <div class="title">The Alignment Tax: Why Good Enough AI Costs More Than Great AI</div>
+            <div class="summary">The real cost of AI isn't the API calls that work — it's the human labor generated by the ones that don't. Why 95% accuracy is expensive, and investing in reliability early saves more than optimizing later.</div>
+        </a>
+        <a href="/posts/your-agents-state-is-a-liability.html" class="latest-post">
+            <div class="date">June 18, 2026</div>
+            <div class="title">Your Agent's State Is a Liability</div>
+            <div class="summary">Accumulated context makes agents brittle. Why stateless agent designs outperform stateful ones, and how to prune what you carry.</div>
+        </a>
+        <a href="/posts/your-agent-doesnt-need-more-tools.html" class="latest-post">
+            <div class="date">August 11, 2026</div>
+            <div class="title">Your Agent Doesn't Need More Tools</div>
+            <div class="summary">When your agent fails on edge cases, adding more tools makes it worse. Track tool-selection accuracy — if it's below 90%, you have too many tools. Fewer, better tools with clear contracts beat a sprawling toolbox every time.</div>
+        </a>
+        <a href="/posts/compound-latency.html" class="latest-post">
+            <div class="date">June 13, 2026</div>
+            <div class="title">Compound Latency: Why Your Agent Feels Slow Even When Nothing Is</div>
+            <div class="summary">Each component is fast. The pipeline is slow. How multi-step agents accumulate latency through compounded LLM calls, context processing, and sequential design — and what actually fixes it.</div>
+        </a>
+        <a href="/posts/the-abstraction-ceiling.html" class="latest-post">
+            <div class="date">June 11, 2026</div>
+            <div class="title">The Abstraction Ceiling</div>
+            <div class="summary">Agent frameworks let you stay in the happy path until you can't. When the abstraction breaks, you need to understand the layer underneath — context assembly, tool dispatch, error handling. An hour of reading saves a week of debugging.</div>
+        </a>
+        <a href="/posts/hybrid-search-actually-works.html" class="latest-post">
+            <div class="date">June 9, 2026</div>
+            <div class="title">Hybrid Search Actually Works</div>
+            <div class="summary">Most RAG systems use semantic search alone. Adding keyword search fixes the 40% of queries that embeddings miss. Practical patterns for hybrid retrieval with reranking — and why PostgreSQL is all you need.</div>
+        </a>
+        <a href="/posts/compound-cost-of-unreliable-agents.html" class="latest-post">
+            <div class="date">May 29, 2026</div>
+            <div class="title">The Compound Cost of Unreliable Agents</div>
+            <div class="summary">A 2% failure rate doesn't mean 98% success. In production pipelines, small unreliability compounds into systemic breakdown. Here's the math and what to do about it.</div>
+        </a>
+        <a href="/posts/agent-observability.html" class="latest-post">
+            <div class="date">May 23, 2026</div>
+            <div class="title">Agent Observability: You Can't Fix What You Can't See</div>
+            <div class="summary">Most agent projects log errors but not behavior. Latency distributions, tool call patterns, output shape drift — the three signals that tell you what your agent is actually doing in production.</div>
+        </a>
+        <a href="/the-tool-problem.html" class="latest-post">
+            <div class="date">May 18, 2026</div>
+            <div class="title">The Tool Problem: Why More Tools Make Agents Worse</div>
+            <div class="summary">Adding tools to an agent degrades performance through context tax, selection errors, and chaining complexity. Start small, add deliberately, measure relentlessly, cut ruthlessly.</div>
+        </a>
+        <a href="/posts/configuration-as-code-for-agents.html" class="latest-post">
+            <div class="date">May 17, 2026</div>
+            <div class="title">Configuration as Code for AI Agents</div>
+            <div class="summary">Agent configs are semi-code, semi-data. If a change affects behavior, it should go through the same process as code changes — version control, review, test, rollback. Prompt changes are schema migrations, not config updates.</div>
+        </a>
+        <a href="/posts/the-context-budget.html" class="latest-post">
+            <div class="date">May 15, 2026</div>
+            <div class="title">The Context Budget: Why Your Agent's Memory Is a Resource, Not a Feature</div>
+            <div class="summary">Context window is not a feature. It's a budget. Latency, cost, and coherence — the three taxes of every token, and how to spend deliberately instead of going bankrupt.</div>
+        </a>
+        <a href="/posts/prompt-engineering-is-just-programming.html" class="latest-post">
+            <div class="date">May 11, 2026</div>
+            <div class="title">Prompt Engineering Is Just Programming</div>
+            <div class="summary">We gave it a fancy name and built a cottage industry around it. But the discipline that makes AI systems reliable is the same one that makes any system reliable.</div>
+        </a>
+        <a href="/posts/your-agents-api-is-a-contract.html" class="latest-post">
+            <div class="date">May 8, 2026</div>
+            <div class="title">Your Agent's API Is a Contract</div>
+            <div class="summary">Most agent projects focus on what the agent can do. Very few focus on what it promises to do. Input schemas, output schemas, error contracts — the chassis that makes an agent dependable.</div>
+        </a>
+        <a href="/posts/agent-evaluation-is-not-optional.html" class="latest-post">
+            <div class="date">May 7, 2026</div>
+            <div class="title">Agent Evaluation Is Not Optional — It's the Feature</div>
+            <div class="summary">Every agent demo looks impressive. But without evaluation, you're flying blind. Evaluation isn't overhead — it's the specification of what working means.</div>
+        </a>
+        <a href="/mcp-is-not-magic.html" class="latest-post">
+            <div class="date">May 6, 2026</div>
+            <div class="title">MCP Is Not Magic — It's a Plumbing Standard</div>
+            <div class="summary">Model Context Protocol standardizes tool interfaces for AI agents. That's useful — but it doesn't solve routing, reliability, or evaluation. Here's what MCP actually does well.</div>
+        </a>
+        <a href="/dont-build-an-agent-build-a-pipeline.html" class="latest-post">
+            <div class="date">May 3, 2026</div>
+            <div class="title">Don't Build an Agent. Build a Pipeline.</div>
+            <div class="summary">Most multi-step tasks don't need an autonomous agent. They need a deterministic pipeline with LLM steps. When to use each, and the hybrid pattern that actually works.</div>
+        </a>
+        <a href="/blog/multi-agent-patterns/" class="latest-post">
+            <div class="date">April 4, 2026</div>
+            <div class="title">Multi-Agent Patterns: When One Agent Isn't Enough</div>
+            <div class="summary">Running multiple agents in coordination. What I've learned from building an A2A bridge between Claude Code and my own agent runtime — patterns, protocols, and the hard parts.</div>
+        </a>
 
     <h2>Currently</h2>
     <p>Exploring agentic AI architectures and building tools for automated business intelligence. 
     Interested in the intersection of AI and practical business applications.</p>
 
-    <div class="links">
-        <h2>Find me</h2>
-        <a href="/blog/">Blog</a>
-        <a href="https://github.com/emilvrana">GitHub</a>
-        <a href="mailto:emil@aiadoption.cz">Email</a>
-    </div>
-
     <footer>
         <p>© 2026 Emil Vrána · Built with plain HTML, as nature intended.</p>
     </footer>
+</div>
 </body>
 </html>
