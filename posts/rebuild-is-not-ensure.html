@@ -1,0 +1,168 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Rebuild Is Not Ensure — Emil Vrána</title>
+    <meta name="description" content="A nightly rebuild delegated to a create-if-absent helper, so it never rebuilt anything and returned success every time. 54 GiB of file around 50 MiB of data, and two size numbers that were both correct.">
+    <style>
+        :root {
+            --bg: #0f0f0f;
+            --text: #e0e0e0;
+            --accent: #6b9bd2;
+            --muted: #888;
+            --card-bg: #1a1a1a;
+        }
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+        body {
+            font-family: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+            background: var(--bg);
+            color: var(--text);
+            line-height: 1.7;
+            max-width: 680px;
+            margin: 0 auto;
+            padding: 2rem 1.5rem;
+        }
+        a { color: var(--accent); text-decoration: none; }
+        a:hover { text-decoration: underline; }
+        .back { color: var(--muted); font-size: 0.85rem; margin-bottom: 1rem; display: block; }
+        .back:hover { color: var(--accent); }
+        h1 { font-size: 1.6rem; font-weight: 600; margin: 0 0 0.3rem; line-height: 1.3; }
+        .date { color: var(--muted); font-size: 0.85rem; margin-bottom: 2rem; }
+        h2 { font-size: 1.15rem; font-weight: 600; margin: 2rem 0 0.5rem; }
+        h3 { font-size: 1rem; font-weight: 600; margin: 1.5rem 0 0.3rem; }
+        p { margin-bottom: 1rem; }
+        ul, ol { margin-bottom: 1rem; padding-left: 1.5rem; }
+        li { margin-bottom: 0.3rem; }
+        code {
+            background: var(--card-bg);
+            padding: 0.15rem 0.4rem;
+            border-radius: 3px;
+            font-size: 0.9rem;
+        }
+        pre {
+            background: var(--card-bg);
+            padding: 1rem;
+            border-radius: 6px;
+            overflow-x: auto;
+            margin-bottom: 1.5rem;
+            font-size: 0.85rem;
+            line-height: 1.5;
+        }
+        em { color: var(--muted); }
+        blockquote {
+            border-left: 3px solid #333;
+            padding-left: 1rem;
+            margin: 1.5rem 0;
+            color: var(--muted);
+        }
+        footer {
+            margin-top: 3rem;
+            padding-top: 1.5rem;
+            border-top: 1px solid #222;
+            color: var(--muted);
+            font-size: 0.8rem;
+        }
+    </style>
+</head>
+<body>
+    <a href="/" class="back">← Emil Vrána</a>
+    <h1>Rebuild Is Not Ensure: The Maintenance Job That Ran Every Night and Did Nothing</h1>
+    <div class="date">September 5, 2026</div>
+
+    <p>A document pipeline I look after keeps an embedded store on disk — the local index the retrieval step reads from, rows and a vector index in one file. It is rewritten constantly: documents arrive, get chunked, get replaced when a newer version of the same file shows up. That churn leaves dead weight behind, so a nightly job rebuilds the indexes to reclaim it.</p>
+
+    <p>The job had been green for months. Then the volume filled up, and the store turned out to be 54 GiB. The data inside it was 50 MiB.</p>
+
+    <p>The rebuild had never run. Not "failed and retried" — never rebuilt anything, not once, while returning success on every invocation.</p>
+
+    <h2>The Line</h2>
+
+    <p>The rebuild function was three lines, and the last one was the whole incident:</p>
+
+    <pre>def reindex(store):
+    store.hnsw_ready = False
+    log.info("rebuilding indexes")
+    return ensure_indexes(store)   # creates only when ABSENT</pre>
+
+    <p><code>ensure_indexes</code> is the helper everything else in the codebase uses at startup, after a migration, after a restore. Its contract is get-or-create: if the index is there, leave it; if not, build it. It is the correct helper for every other caller. It was the wrong helper for exactly one.</p>
+
+    <p>Whoever wrote <code>reindex</code> — and it may well have been me, the blame is not the interesting part — reached for the function whose name says "this is how indexes get made here". That is a reasonable reflex. Reusing the existing helper is normally the right answer, and delegating to it is what a well-factored module looks like. In review, <code>return ensure_indexes(store)</code> reads as good practice. The caller reads as doing the work; the callee reads as careful.</p>
+
+    <p>But the two have opposite relationships to existing state. <em>Ensure</em> asserts a state, and is idempotent by design: its job is to tolerate an index that already exists. <em>Rebuild</em> asserts an action, and must not be idempotent: its entire purpose is to destroy the index that already exists. Route the second through the first and you do not get a weaker rebuild. You get no rebuild at all, plus a flag set to false and a log line saying otherwise — and nothing can ever notice, because the state the helper checks is always correct.</p>
+
+    <h2>Why It Could Run for Months Without a Complaint</h2>
+
+    <p>Ask what a successful rebuild leaves behind. A store with a working index on it. Now ask what a rebuild that silently did nothing leaves behind. A store with a working index on it.</p>
+
+    <p>The two outcomes are not merely hard to tell apart — they are byte-identical at the interface. The rebuild has no output to inspect. Its value is entirely in a side effect, and the side effect is not represented in the return value or in any error.</p>
+
+    <p>This is the shape I have come to distrust most, because it defeats the checks people actually write, and because no test and no review would have caught it. There is no wrong output. Search returned correct results the entire time. The cron wrapper checked the exit code: zero. The job logged "rebuild complete": it did. A health check confirmed the store was queryable afterwards: it was, magnificently so, having never been touched. Every instrument pointed at the operation's <em>success</em>, and success was never the thing in doubt. What was in doubt was whether anything happened, and the only observable for that was a file growing on a disk nobody looks at.</p>
+
+    <p>There is a general version of this. <strong>Idempotence is a property you want on the retry, not on the work.</strong> Get-or-create helpers are idempotent by construction, which is why they are pleasant to call and safe to spam. Rebuild, compact, vacuum, reindex, rotate, prune — these are the operations whose whole point is that the second call does something different from the first, because the first changed the world. Route one of them through an idempotent helper and you get an operation that is perfectly safe, perfectly repeatable, and perfectly useless — and every property that makes it safe also makes it quiet.</p>
+
+    <h2>The Two Numbers, Both Correct</h2>
+
+    <p>The other half of this is why 54 GiB did not set anything off for as long as it did, and it is the part I found genuinely interesting rather than merely embarrassing.</p>
+
+    <p>The store reports its own size. It said 50 MiB. The filesystem said 54 GiB. Neither was lying.</p>
+
+    <p>The store's number counted bytes in live records. The filesystem's number counted blocks the store's allocator had been handed and never given back. I want to dwell on that second one, because I spent an afternoon being fooled by it: the store also exposes a used-blocks counter, and it reported almost no free space — 222,329 blocks used of 222,996. That reads as "the file is full of data", and on the strength of it I withdrew the explanation I had already got right. It took stopping the service and reading a per-table breakdown to see that all four tables together accounted for 209 blocks. The other 222,120 belonged to no table at all.</p>
+
+    <p>The counter was precise, authoritative, and answering a different question than the one I put to it. <em>Used</em> meant handed out by the allocator, not holding data. <strong>A number that contradicts your conclusion deserves exactly the same scrutiny as one that supports it</strong> — ask what a counter counts before you let it overturn a finding. I am careful about numbers that agree with me and had no habit at all about numbers that disagree, and the retraction cost more than the original mistake would have.</p>
+
+    <h2>Where the Blocks Went</h2>
+
+    <p>The store keeps a persistent vector index alongside the rows. That index only appends. The store's upsert is implemented as delete-then-insert, so every time a record is written again, its old index entry stays behind permanently — the delete removes the row, not the vector. There is exactly one operation that reclaims those entries, and it is dropping the index and building it fresh. Which is to say: the nightly rebuild. The one that had never run.</p>
+
+    <p>So the mechanism is a loop closed on itself. The leak is unbounded precisely because the only thing that could bound it is the operation that was silently doing nothing.</p>
+
+    <p>Establishing that took a measurement rather than an argument, and I recommend the measurement to anyone with a suspiciously large store, because <strong>it needs no knowledge of the engine at all: export every table, verify the export by reading it back and comparing row counts, build a fresh store from it, and compare file sizes.</strong> Same rows, a few hundred megabytes instead of 54 GiB. That answers "is this size the data?" in one shot, and it is the same operation as the rebuild, which is a hint about what to do next.</p>
+
+    <p>I also nearly shipped the wrong fix off the back of it. My first hypothesis was that rebuilding the index was itself the leak — plausible, mechanically sensible, and false. Re-upserting the same 500 records with nothing new added grew the file by about 45 MiB per pass, and a control run with the same churn and no vector index stayed flat. Drop-and-create reclaimed fully and repeatably. The experiment separated a story that sounded right from one that was.</p>
+
+    <h2>The Root Cause Under the Root Cause</h2>
+
+    <p>Fixing the rebuild stops the file growing without limit. It does not stop it growing.</p>
+
+    <p>The store was re-writing records whose content had not changed at all. The ingest step had no comparison in it: every document that came round again produced an upsert, the upsert produced a delete-and-insert, and the append-only index gained another dead entry for a record identical to the one it already held. Comparing text and summary before writing, and skipping when they match, took the same 12-pass loop from +45 MiB per pass to net zero — flat, not merely slower. Records that genuinely changed dropped to +4.2 MiB per pass.</p>
+
+    <p>This is the bit I would have skipped if the disk had not been at 94%. A working rebuild makes an unbounded leak into a bounded one, and a bounded leak with a nightly cleanup looks like a healthy system. It is a good place to stop and a bad place to stop, and the difference is whether you asked what was producing the garbage in the first place.</p>
+
+    <h2>The Fix That Broke the Other Index</h2>
+
+    <p>My repair introduced a fresh defect within the hour, and the client's own test suite caught it, which is the only reason this paragraph is a war story rather than an incident report.</p>
+
+    <p>Rebuilding is expensive, so I put it behind a budget: rebuild at most so often, defer otherwise. Sensible. I applied the budget to <em>the indexes</em> — both of them, in one line, because in my head they were one thing with a plural on the end.</p>
+
+    <p>They are not one thing. The vector index is maintained by the engine on insert, so its rebuild is purely space reclamation and can be deferred all week without anyone noticing. The text index is not maintained on insert; rebuilding it is how new records become findable. Deferring that one meant a freshly stored document was invisible to keyword search until the budget came round. I had traded wasted disk for silently wrong results, which is a strictly worse currency.</p>
+
+    <p><strong>Two things that share a name in the codebase needed opposite treatment, and the plural in my own head is what merged them.</strong> Worth checking whenever you write a policy that applies to <em>the</em> caches, <em>the</em> queues, <em>the</em> workers: is that plural a set of like things, or is it a word doing the work of two?</p>
+
+    <h2>What the Check Has to Be</h2>
+
+    <p>The code fix was small. What was worth the rest of the day was the check, and the rule I now apply to every job of this kind:</p>
+
+    <p><strong>A maintenance job must be verified by a quantity that changes, not by its return code.</strong> The job exists because something is wrong with the world and the job makes it right, so name the thing that should be different afterwards and read it from somewhere the job does not control.</p>
+
+    <p>What went into the health check was file bytes per stored record: healthy around 30 KiB, warn at 200, critical at 500. The incident sat at 5,900. That is a ratio rather than a size, which matters — a size threshold on a growing corpus is a false alarm waiting to happen, while bytes-per-record is stable as long as the store is behaving.</p>
+
+    <p>Three details about it earned their keep more than the threshold did.</p>
+
+    <p><strong>The two numbers come from different places.</strong> The byte count comes from the filesystem; the record count comes from the running service. Had I read both from the store, both would have said 50 MiB of healthy data and the check would have been blind to the entire defect. The store's allocator is the subject of the check; it cannot also be the witness.</p>
+
+    <p><strong>A failed reading is not a passing reading.</strong> The engine is single-writer, so querying the file directly while the service holds it fails outright. An unreachable service now produces a named instrument failure, not a clean pass. This is the failure mode I would bet on in anyone else's monitoring: the probe that cannot run and reports nothing wrong.</p>
+
+    <p><strong>Every branch was fault-injected, including the passing one.</strong> A check that has never been seen to fail is a decoration that happens to be green, and — less obviously — a check that has never been seen to <em>run</em> is worse. The suite's check count went from 82 to 83 when it was added, which is the cheap proof that the passing branch executes rather than being skipped.</p>
+
+    <h2>The Thing I Keep Relearning</h2>
+
+    <p>Every incident of this shape I have written up ends in the same place, and this one is no different. The system did not break. It reported. It reported an exit code, a log line, a healthy readable store, and a plausible data size, and every one of those reports was true. What none of them described was whether the operation had any effect, because effect was not in the vocabulary of anything doing the reporting.</p>
+
+    <p>When you write a job whose value is a side effect, you have to add the vocabulary yourself. Nothing in the runtime will do it for you: exit codes describe control flow, not consequences, and a function that quietly does nothing is the most reliable code you will ever ship.</p>
+
+    <footer>
+        <a href="/">emil.aiadoption.cz</a>
+    </footer>
+</body>
+</html>
