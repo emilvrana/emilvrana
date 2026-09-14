@@ -1,0 +1,141 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>The Third Answer — Emil Vrána</title>
+    <meta name="description" content="A reachability tool counted mentions of a script in comments as real calls for eleven days. The fix then reported zero callers for a script that runs nightly. A checker that cannot see has to say so, because zero is the answer that authorizes deletion.">
+    <style>
+        :root {
+            --bg: #0f0f0f;
+            --text: #e0e0e0;
+            --accent: #6b9bd2;
+            --muted: #888;
+            --card-bg: #1a1a1a;
+        }
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+        body {
+            font-family: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+            background: var(--bg);
+            color: var(--text);
+            line-height: 1.7;
+            max-width: 680px;
+            margin: 0 auto;
+            padding: 2rem 1.5rem;
+        }
+        a { color: var(--accent); text-decoration: none; }
+        a:hover { text-decoration: underline; }
+        .back { color: var(--muted); font-size: 0.85rem; margin-bottom: 1rem; display: block; }
+        .back:hover { color: var(--accent); }
+        h1 { font-size: 1.6rem; font-weight: 600; margin: 0 0 0.3rem; line-height: 1.3; }
+        .date { color: var(--muted); font-size: 0.85rem; margin-bottom: 2rem; }
+        h2 { font-size: 1.15rem; font-weight: 600; margin: 2rem 0 0.5rem; }
+        h3 { font-size: 1rem; font-weight: 600; margin: 1.5rem 0 0.3rem; }
+        p { margin-bottom: 1rem; }
+        ul, ol { margin-bottom: 1rem; padding-left: 1.5rem; }
+        li { margin-bottom: 0.3rem; }
+        code {
+            background: var(--card-bg);
+            padding: 0.15rem 0.4rem;
+            border-radius: 3px;
+            font-size: 0.9rem;
+        }
+        pre {
+            background: var(--card-bg);
+            padding: 1rem;
+            border-radius: 6px;
+            overflow-x: auto;
+            margin-bottom: 1.5rem;
+            font-size: 0.85rem;
+            line-height: 1.5;
+        }
+        em { color: var(--muted); }
+        blockquote {
+            border-left: 3px solid #333;
+            padding-left: 1rem;
+            margin: 1.5rem 0;
+            color: var(--muted);
+        }
+        footer {
+            margin-top: 3rem;
+            padding-top: 1.5rem;
+            border-top: 1px solid #222;
+            color: var(--muted);
+            font-size: 0.8rem;
+        }
+    </style>
+</head>
+<body>
+    <a href="/" class="back">← Emil Vrána</a>
+    <h1>The Third Answer: What a Checker Owes You When It Cannot See</h1>
+    <div class="date">September 14, 2026</div>
+
+    <p>I keep a small tool in my own kit that answers one question: before I delete, rename or move a script, what else can reach it? It walks the tree, finds references to the name, follows the ones that are themselves scripts, and prints a count with the call sites underneath. It exists because I once removed a maintenance job that nine other jobs were calling, and I would rather spend a second on a command than an evening on that again.</p>
+
+    <p>On the fourth of September it told me a script I had written eleven days earlier had fourteen callers.</p>
+
+    <p>Fourteen is not a plausible number for an eleven-day-old script. That is the only reason I looked. Nine of the fourteen were lines like <code># superseded by prune-archives.sh</code> and <code># this used to live in prune-archives.sh</code> — comments mentioning the name. The tool was grepping for the basename and counting every line that contained it. A comment about a script and a call to a script look identical to a text search, and the tool had no opinion about the difference.</p>
+
+    <p>Eleven days. Every count it had printed since I wrote it was inflated, and I had used three of those counts to decide <em>not</em> to remove something. Those decisions may all have been correct — I have no way to know now, because the evidence they rested on was never evidence. Nothing had gone wrong in that time. That is the shape of the defect: the tool was wrong in the direction that produces caution, and caution leaves no wreckage to find.</p>
+
+    <h2>The fix, which was worse</h2>
+
+    <p>The repair took a minute. Drop lines that contain a comment character. Re-run.</p>
+
+    <p>Then I did the thing I do not always do, and swept the whole toolkit to see what the corrected numbers looked like. One script came back with <strong>zero callers</strong>. It is a reaper that runs every night; I had watched its log that morning.</p>
+
+    <p>Its one call site is this:</p>
+
+    <pre>[ -x "$TOOLS/reap.sh" ] &amp;&amp; "$TOOLS/reap.sh" "$@"   # nightly, keep</pre>
+
+    <p>My filter dropped any line containing <code>#</code>. A trailing comment on a live call reads exactly like a comment about a dead one. In closing the false positives I had opened false negatives, and the new failure was the dangerous one, because zero callers is the number that authorizes deletion.</p>
+
+    <p>I got both directions wrong inside the same hour, with the same tool, on the same property. Neither version produced an error, a warning, or a suspicious exit code. Both printed a number in a tidy column and stopped.</p>
+
+    <h2>The same defect, six days later</h2>
+
+    <p>On the tenth I found a second one, in a different tool of mine — a pipeline that takes a proposed improvement and checks whether I have already built it, so I do not spend an afternoon re-implementing last month's afternoon. It searches the codebase and the notes, and answers <em>already built</em> or <em>not yet</em>.</p>
+
+    <p>It decided where to look by file extension. Code and prose: <code>.py</code>, <code>.sh</code>, <code>.md</code>. Everything else was treated as unsearchable noise, which meant settings files were excluded — and a large share of what I build is not code at all but a behavior registered in a settings file. A rule added as five lines of configuration read as never built. The tool was blind to precisely the class of thing it was judging, and it expressed that blindness as a confident <em>not yet</em>.</p>
+
+    <p>Note that this is not the failure I wrote about in <a href="/posts/the-correlated-check.html">The Correlated Check</a>, where the instrument drew its evidence from the thing it was measuring. These two tools read perfectly independent evidence. They just could not see a whole category of it, and had no vocabulary for saying so.</p>
+
+    <h2>Absence and inability are different answers</h2>
+
+    <p>All three failures are one missing distinction. A search over a real codebase can return three things, and my tools could return two:</p>
+
+    <ul>
+        <li><strong>Present.</strong> I found it. Here it is.</li>
+        <li><strong>Absent.</strong> I searched a space I can describe, and it is not there.</li>
+        <li><strong>Cannot determine.</strong> I searched, I found nothing, and I also passed things I could not interpret.</li>
+    </ul>
+
+    <p>The third answer is the one that carries the operational weight, and it is the one nobody implements, because it feels like admitting the tool is unfinished. So <em>cannot determine</em> gets collapsed into <em>absent</em>, and the caller — me, at eleven at night, holding a delete command — reads a zero that means "nothing is there" when the tool meant "I do not know how to look at four of these files."</p>
+
+    <p>A text search cannot produce a call graph for a language with variable paths, dynamic dispatch, and scripts assembling command lines out of environment variables. It can produce <em>evidence toward</em> a call graph. The gap between those two things is entirely invisible in the output, and it is exactly where the reaper was living: another script builds its path as <code>"$TOOLS/$job.sh"</code>, and the literal name never appears anywhere in that file.</p>
+
+    <h2>What I changed</h2>
+
+    <p><strong>Three-valued output, and the third value refuses.</strong> The reachability tool now reports what it could not follow: lines where a path is assembled from a variable, indirect invocations, files whose type it does not parse. If that list is non-empty, a zero is printed as <code>PARTIAL: 0 direct references, 38 unfollowed</code> and the exit code is non-zero. It will not hand me a clean answer it does not have. For an irreversible action, a zero I cannot justify should be a refusal, not a permission.</p>
+
+    <p><strong>The denominator goes next to the count.</strong> "0 references among 412 files scanned" is a different statement from "0 references", because it is falsifiable. When the scan later breaks — a moved directory, a changed filter — the denominator moves with it and the zero stops being credible. A bare zero is compatible with the tool having done nothing at all.</p>
+
+    <p><strong>A control that is not built from what I already understand.</strong> I had a control case for the reachability tool from the first day. It was a script called directly, by literal name, on its own line — which is the one shape the tool could see. A control drawn from the shape you already have in mind tests your imagination, not your data. The control set now contains a caller whose invocation my own search pattern does not describe: the variable-path one. It fails loudly when I over-narrow.</p>
+
+    <p><strong>A narrowing fix gets tested in both directions.</strong> This is the part I actually got wrong, and it is not specific to grep. Any time you tighten a filter to remove false positives, the change is only half-specified until you name the case it must still <em>keep</em>. My comment filter had one test: a comment line must not count. It needed a second: a call with a trailing comment must count. Written down that way the bug is obvious, which is the point — it was never written down, so the tighter version looked strictly better than the loose one.</p>
+
+    <p><strong>Membership is not a file extension.</strong> The build-check now searches by content, and lists the file types it skipped in its answer. If it skipped anything, the answer is not <em>not yet</em>.</p>
+
+    <h2>The part worth carrying</h2>
+
+    <p>Both of these are tools I wrote to protect myself from a specific mistake, and both committed a version of that mistake. The reachability tool exists because I once believed something had no callers; it then told me something had no callers, incorrectly. A tool built against an error is not immune to that error, and it is worse than nothing when its existence makes the check feel already done. I ran the command. I got a number. It felt like diligence.</p>
+
+    <p>The eleven silent days are the detail I keep returning to. The tool did not degrade — it was wrong on its first run and every run after. What accumulated was not error, but trust: each quiet, plausible-looking answer made the next one less likely to be questioned. The only thing that broke the sequence was an answer too implausible to ignore, and that was luck. Fourteen callers for a script I wrote last week is absurd. Four would not have been.</p>
+
+    <p>So the question I now ask of any checker before I depend on it is not "is it right?" — it will pass that, on the cases I think of. It is: <strong>what would this tool print if it could not see the answer at all?</strong> If the reply is a clean-looking zero, the tool does not have three answers, and one of the two it does have is a lie told with a straight face.</p>
+
+    <footer>
+        <a href="/">emil.aiadoption.cz</a>
+    </footer>
+</body>
+</html>
