@@ -1,0 +1,128 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>The Deferred Ticket: When an Alert Suppressor Mistakes a Queue for a Response — Emil Vrána</title>
+    <meta name="description" content="An alert suppressor muted every repeat of a failure because a ticket for it already existed. The ticket had been deferred. For three weeks the queue looked handled because something was in it.">
+    <style>
+        :root {
+            --bg: #0f0f0f;
+            --text: #e0e0e0;
+            --accent: #6b9bd2;
+            --muted: #888;
+            --card-bg: #1a1a1a;
+        }
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+        body {
+            font-family: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+            background: var(--bg);
+            color: var(--text);
+            line-height: 1.7;
+            max-width: 680px;
+            margin: 0 auto;
+            padding: 2rem 1.5rem;
+        }
+        a { color: var(--accent); text-decoration: none; }
+        a:hover { text-decoration: underline; }
+        .back { color: var(--muted); font-size: 0.85rem; margin-bottom: 1rem; display: block; }
+        .back:hover { color: var(--accent); }
+        h1 { font-size: 1.6rem; font-weight: 600; margin: 0 0 0.3rem; line-height: 1.3; }
+        .date { color: var(--muted); font-size: 0.85rem; margin-bottom: 2rem; }
+        h2 { font-size: 1.15rem; font-weight: 600; margin: 2rem 0 0.5rem; }
+        h3 { font-size: 1rem; font-weight: 600; margin: 1.5rem 0 0.3rem; }
+        p { margin-bottom: 1rem; }
+        ul, ol { margin-bottom: 1rem; padding-left: 1.5rem; }
+        li { margin-bottom: 0.3rem; }
+        code {
+            background: var(--card-bg);
+            padding: 0.15rem 0.4rem;
+            border-radius: 3px;
+            font-size: 0.9rem;
+        }
+        pre {
+            background: var(--card-bg);
+            padding: 1rem;
+            border-radius: 6px;
+            overflow-x: auto;
+            margin-bottom: 1.5rem;
+            font-size: 0.85rem;
+            line-height: 1.5;
+        }
+        em { color: var(--muted); }
+        blockquote {
+            border-left: 3px solid #333;
+            padding-left: 1rem;
+            margin: 1.5rem 0;
+            color: var(--muted);
+        }
+        table {
+            width: 100%;
+            border-collapse: collapse;
+            margin: 1rem 0;
+            font-size: 0.9rem;
+        }
+        th, td {
+            text-align: left;
+            padding: 0.5rem 0.75rem;
+            border-bottom: 1px solid #333;
+        }
+        th { color: var(--muted); font-weight: 500; font-size: 0.85rem; }
+        td { color: var(--text); }
+        footer {
+            margin-top: 3rem;
+            padding-top: 1.5rem;
+            border-top: 1px solid #222;
+            color: var(--muted);
+            font-size: 0.8rem;
+        }
+    </style>
+</head>
+<body>
+    <a href="/" class="back">← Emil Vrána</a>
+    <h1>The Deferred Ticket: When an Alert Suppressor Mistakes a Queue for a Response</h1>
+    <div class="date">September 19, 2026</div>
+
+    <p>A client runs a nightly export that feeds a partner's reporting system. The export failed on a Tuesday. The alerting did what it was built to do: it paged once, opened a ticket, and from then on suppressed repeats of the same failure, because a ticket already existed and nobody wants forty pages about one problem.</p>
+
+    <p>Someone looked at the ticket the next morning, decided the partner could live with stale figures until a schema change planned for the following month, and deferred it. That was a reasonable decision about one failure. It became a different decision without anyone making it.</p>
+
+    <p>The export failed for the next 22 nights. The suppressor saw a matching ticket every night and stayed quiet every night. It surfaced when the partner asked why their dashboard still showed the same date. Nothing in the client's own tooling had said a word after day one.</p>
+
+    <h2>What the suppressor was actually asking</h2>
+
+    <p>The rule, reduced to its logic, was: <em>is there a ticket with this fingerprint that is not closed?</em> If yes, suppress. The author meant something else by it: <em>is someone already dealing with this?</em> For most tickets the two questions have the same answer, which is why the rule looked correct in review and behaved correctly for months.</p>
+
+    <p>A deferred ticket is where the two questions come apart. It is not closed, so the rule counts it. It is also, by definition, not being worked on. The state that means "we have decided not to look at this for now" was being read as "someone is looking at this". The queue looked handled because something was in it.</p>
+
+    <table>
+        <tr><th>Ticket state</th><th>Closed?</th><th>Someone acting on it?</th><th>Suppressor's answer</th></tr>
+        <tr><td>open, assigned</td><td>no</td><td>yes</td><td>suppress — correct</td></tr>
+        <tr><td>open, unassigned</td><td>no</td><td>not yet</td><td>suppress — arguable</td></tr>
+        <tr><td>deferred</td><td>no</td><td>no, deliberately</td><td>suppress — wrong</td></tr>
+        <tr><td>closed</td><td>yes</td><td>—</td><td>page</td></tr>
+    </table>
+
+    <p>The deferral itself was not the mistake. The person who deferred it decided about the failure they saw: one missed night, a known cause, a fix already scheduled. They never saw night two, or night twenty. The suppressor took their decision about one event and applied it, silently, to every event that followed, including ones that would have changed the decision. Three weeks of stale partner data is not the same trade-off as one night of it.</p>
+
+    <h2>The fix, in three parts</h2>
+
+    <p><strong>Suppress on ownership, not on existence.</strong> The rule now suppresses only when the matching ticket is open and assigned. Deferred, parked, waiting-on-customer — any state that means nobody is currently acting — does not suppress. Those states were enumerated from the ticket system's actual list, not from the three I remembered; there were seven.</p>
+
+    <p><strong>Suppressed events are counted, not dropped.</strong> Every repeat that is suppressed increments a counter on the ticket and updates a last-seen timestamp. A ticket reading "deferred, 1 occurrence" and one reading "deferred, 23 occurrences, last seen this morning" are different tickets, and the person reading it now knows which one they have. Before this change the ticket said the same thing on day twenty-three as on day one.</p>
+
+    <p><strong>A deferral carries its own terms.</strong> Deferring now requires an expiry date and a recurrence ceiling. Either one reached reopens the ticket and pages. The person deferring decides how much repetition their decision covers, instead of the suppressor deciding for them that it covers all of it.</p>
+
+    <h2>How I tested it</h2>
+
+    <p>The test that mattered was not "a deferred ticket no longer suppresses". It was the reverse direction too: an assigned ticket must still suppress, or the fix just trades silence for forty pages and the team mutes the channel within a week. So the test seeds one ticket in each of the seven states, replays the same failure five times against each, and counts pages in a sandbox sink. Expected: zero for the assigned state, one per failure beyond the ceiling for the others. I also ran it against the old rule first, to see it produce the wrong numbers — a test that passes on the broken version is testing something else.</p>
+
+    <h2>The general shape</h2>
+
+    <p>Any deduplication keyed on "something is already in the queue" inherits the meaning of every state an item in that queue can have. The queue has more states than the person writing the dedup rule is thinking about, and the ones that get added later — deferred, snoozed, blocked — tend to be exactly the ones where nobody is watching. The question worth asking of a suppressor is not "does it stop duplicates" but "who, at this moment, knows the thing is still happening". If the answer is nobody, it is not suppressing noise. It is suppressing the only signal left.</p>
+
+    <footer>
+        <a href="/">emil.aiadoption.cz</a>
+    </footer>
+</body>
+</html>
