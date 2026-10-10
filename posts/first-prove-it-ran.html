@@ -1,0 +1,145 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>First, Prove It Ran: Three Checks That Passed Without Reaching the Code — Emil Vrána</title>
+    <meta name="description" content="A fail-closed guard passed seven fault tests by crashing on line three. A 'was it run' check accepted a syntax check. A stub counted a startup probe. In each case the evidence was produced before the code under test was reached.">
+    <style>
+        :root {
+            --bg: #0f0f0f;
+            --text: #e0e0e0;
+            --accent: #6b9bd2;
+            --muted: #888;
+            --card-bg: #1a1a1a;
+        }
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+        body {
+            font-family: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+            background: var(--bg);
+            color: var(--text);
+            line-height: 1.7;
+            max-width: 680px;
+            margin: 0 auto;
+            padding: 2rem 1.5rem;
+        }
+        a { color: var(--accent); text-decoration: none; }
+        a:hover { text-decoration: underline; }
+        .back { color: var(--muted); font-size: 0.85rem; margin-bottom: 1rem; display: block; }
+        .back:hover { color: var(--accent); }
+        h1 { font-size: 1.6rem; font-weight: 600; margin: 0 0 0.3rem; line-height: 1.3; }
+        .date { color: var(--muted); font-size: 0.85rem; margin-bottom: 2rem; }
+        h2 { font-size: 1.15rem; font-weight: 600; margin: 2rem 0 0.5rem; }
+        h3 { font-size: 1rem; font-weight: 600; margin: 1.5rem 0 0.3rem; }
+        p { margin-bottom: 1rem; }
+        ul, ol { margin-bottom: 1rem; padding-left: 1.5rem; }
+        li { margin-bottom: 0.3rem; }
+        code {
+            background: var(--card-bg);
+            padding: 0.15rem 0.4rem;
+            border-radius: 3px;
+            font-size: 0.9rem;
+        }
+        pre {
+            background: var(--card-bg);
+            padding: 1rem;
+            border-radius: 6px;
+            overflow-x: auto;
+            margin-bottom: 1.5rem;
+            font-size: 0.85rem;
+            line-height: 1.5;
+        }
+        em { color: var(--muted); }
+        blockquote {
+            border-left: 3px solid #333;
+            padding-left: 1rem;
+            margin: 1.5rem 0;
+            color: var(--muted);
+        }
+        table {
+            width: 100%;
+            border-collapse: collapse;
+            margin: 1rem 0;
+            font-size: 0.9rem;
+        }
+        th, td {
+            text-align: left;
+            padding: 0.5rem 0.75rem;
+            border-bottom: 1px solid #333;
+        }
+        th { color: var(--muted); font-weight: 500; font-size: 0.85rem; }
+        td { color: var(--text); }
+        footer {
+            margin-top: 3rem;
+            padding-top: 1.5rem;
+            border-top: 1px solid #222;
+            color: var(--muted);
+            font-size: 0.8rem;
+        }
+    </style>
+</head>
+<body>
+    <a href="/" class="back">← Emil Vrána</a>
+    <h1>First, Prove It Ran: Three Checks That Passed Without Reaching the Code</h1>
+    <div class="date">October 10, 2026</div>
+
+    <p>After <a href="/posts/the-correlated-check.html">the guard of mine that printed its refusal and let the run continue anyway</a>, I stopped trusting any guard I had not seen fail. So I wrote a test for the property that matters most in that guard: it fails closed. If it cannot read the list of values it compares against, cannot find the tool it compares with, or runs out of time, it must refuse. It must never let an operation through because it was unable to check.</p>
+
+    <p>The test injects those faults one at a time and asserts that the guard refuses. Seven faults, seven refusals, green on the first run. In hindsight, green on the first run was the first warning.</p>
+
+    <p>I found the problem a day later, when I added the case I should have started with: nothing broken, a clean input, every dependency in place. The guard must let that one through. It refused it too.</p>
+
+    <h2>A copy that never got past line three</h2>
+
+    <p>To avoid touching the live script, the test copied it into a scratch directory and injected the faults into the copy's environment. The guard begins like this:</p>
+
+<pre>#!/usr/bin/env bash
+set -euo pipefail
+source "$(dirname "$0")/lib/common.sh"</pre>
+
+    <p>The helper library is found relative to the script's own location. In the scratch directory there was no <code>lib/</code>. Bash reported that the file did not exist, <code>set -e</code> ended the run, and the exit code was 1. The guard's refusal is also exit code 1. My assertion was "exit code is non-zero".</p>
+
+    <p>So the guard was never asked about any of the seven faults. Every run ended on line 3 — before the code that reads the list, before the code that calls the comparison tool, before the timeout was even set. Seven correct-looking refusals were seven identical crashes.</p>
+
+    <p>The uncomfortable part is that the property I was testing is what made the test unable to fail. A fail-closed component is designed to refuse whenever anything goes wrong, and "anything" includes the test harness. For a fail-open component, a crash usually looks like a failure. For a fail-closed one, a crash looks exactly like the correct answer.</p>
+
+    <h2>Looking for the same thing elsewhere</h2>
+
+    <p>That week I took the other checks I rely on and asked each one the same question: if I break the code this is supposed to cover, does it notice? Two more did not.</p>
+
+    <p>The first is a check in my own kit that refuses a commit touching one of my scripts unless the script was run after its last edit. It decided whether a script had run by looking through the commands executed in the session for the script's path handed to an interpreter. <code>bash -n deploy.sh</code> matched. The <code>-n</code> flag tells bash to read the commands and not execute them: it is a syntax check, it exits 0 on any file that parses, and it runs nothing. Two characters separate "I ran this" from "this parses", and the check was reading the characters around them.</p>
+
+    <p>The second was at the client from <a href="/posts/the-scope-of-a-retry.html">the retry-loop post</a>, the one with several services on a shared model account. When the fallback there became a genuinely separate account, I wrote a test for it: point the provider client at stub servers, make the primary refuse, assert that the fallback's stub received more than zero requests. It passed. Last month I disabled the fallback path entirely, expecting red. Still green. The test runner lists the available models on every configured provider when it starts, before any test runs — one request to each stub. The count was at least one whether or not the fallback existed. What the assertion proved was that the runner could reach the stub.</p>
+
+    <h2>What each piece of evidence actually proved</h2>
+
+    <table>
+        <tr><th>What the check observed</th><th>What it proved</th><th>What I read it as</th></tr>
+        <tr><td>exit code 1</td><td>the process ended with code 1</td><td>the guard refused</td></tr>
+        <tr><td><code>bash</code> invoked with the script's path</td><td>the file was handed to an interpreter</td><td>the script ran</td></tr>
+        <tr><td>more than zero requests at the stub</td><td>something in the process could reach the stub</td><td>the fallback called the provider</td></tr>
+    </table>
+
+    <p>Each observation is real, and each is a precondition of the thing I wanted to know. The process has to end with a code for the guard to refuse; the file has to reach an interpreter for the script to run; the stub has to be reachable for the fallback to call it. All three are produced on the way to the code under test, so they appear whether or not that code is ever reached. A check built on them reports on the road, not on the destination.</p>
+
+    <p>Mutation-testing tools have a name for this. Stryker and PIT both report a mutant on a line that no test executes as "no coverage" — a status separate from killed and survived, because a test that never reached a line cannot say anything about it. My shell harness had two outcomes, pass and fail, and the third was folded into whichever of the two the crash happened to produce. I have written about <a href="/posts/the-third-answer.html">that third answer</a> before, for search tools. Tests need it as well.</p>
+
+    <h2>The fixes</h2>
+
+    <p><strong>The guard refuses with a reason it can only know by trying.</strong> Refusal now has its own exit code, 3, emitted from one function that also prints which check failed. The test asserts the exact code and that the reason names the fault it injected: "roster unreadable" can only be printed by code that tried to read the roster. A crash at load exits 1 and now fails the test. The test copies the whole directory rather than the one file, and every run starts with the clean case, which must exit 0 before any fault is injected. If the guard cannot say yes, its no means nothing.</p>
+
+    <p><strong>"It ran" is written by the run.</strong> On reaching its end, the script records its own path and a hash of its contents. The commit check compares that record with the file being committed. A syntax check writes no record, an edit after the run changes the hash, and the check no longer reads command lines at all.</p>
+
+    <p><strong>The stub counts what only the code path can send.</strong> It records requests per endpoint and per model name, and the test asserts the exact number of completion requests carrying the fallback model's name that the scenario implies — three, for three refused calls on the primary. The startup listing goes to a different endpoint and no longer counts. And the suite now includes the run that started all this, with the fallback disabled, which must turn the test red. It runs every time, not once when I happen to be curious.</p>
+
+    <h2>The general shape</h2>
+
+    <p>A test asks two questions and usually states only one. The stated one is whether the code did the right thing. The unstated one is whether the code ran at all, and it has to be answered first, with evidence only the code under test can produce: a value it computed, a reason it printed, a record it wrote. Exit codes, invocations and connection counts are produced before the code is reached, so they are present in exactly the cases where the test has nothing to say.</p>
+
+    <p>The cheapest way to find out which kind of evidence a check uses is to give it a case where the right answer is the opposite. A fail-closed guard needs an input it must accept. A fallback test needs a run with the fallback removed. A check that has only ever been seen agreeing with me has not been seen working. It has only been seen agreeing.</p>
+
+    <footer>
+        <a href="/">emil.aiadoption.cz</a>
+    </footer>
+</body>
+</html>
