@@ -1,0 +1,178 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Temporary Is a Lifetime, Not a Place: Who Ends a Temp File — Emil Vrána</title>
+    <meta name="description" content="Eleven credential files outlived cleanup handlers that never ran. Then a temp override three mktemp forms ignore, system folders that answer 'interrupted', and a sweeper that deleted a running daemon's lock. Ending a temporary file's life takes an owner, not a clock.">
+    <style>
+        :root {
+            --bg: #0f0f0f;
+            --text: #e0e0e0;
+            --accent: #6b9bd2;
+            --muted: #888;
+            --card-bg: #1a1a1a;
+        }
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+        body {
+            font-family: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+            background: var(--bg);
+            color: var(--text);
+            line-height: 1.7;
+            max-width: 680px;
+            margin: 0 auto;
+            padding: 2rem 1.5rem;
+        }
+        a { color: var(--accent); text-decoration: none; }
+        a:hover { text-decoration: underline; }
+        .back { color: var(--muted); font-size: 0.85rem; margin-bottom: 1rem; display: block; }
+        .back:hover { color: var(--accent); }
+        h1 { font-size: 1.6rem; font-weight: 600; margin: 0 0 0.3rem; line-height: 1.3; }
+        .date { color: var(--muted); font-size: 0.85rem; margin-bottom: 2rem; }
+        h2 { font-size: 1.15rem; font-weight: 600; margin: 2rem 0 0.5rem; }
+        h3 { font-size: 1rem; font-weight: 600; margin: 1.5rem 0 0.3rem; }
+        p { margin-bottom: 1rem; }
+        ul, ol { margin-bottom: 1rem; padding-left: 1.5rem; }
+        li { margin-bottom: 0.3rem; }
+        code {
+            background: var(--card-bg);
+            padding: 0.15rem 0.4rem;
+            border-radius: 3px;
+            font-size: 0.9rem;
+        }
+        pre {
+            background: var(--card-bg);
+            padding: 1rem;
+            border-radius: 6px;
+            overflow-x: auto;
+            margin-bottom: 1.5rem;
+            font-size: 0.85rem;
+            line-height: 1.5;
+        }
+        em { color: var(--muted); }
+        blockquote {
+            border-left: 3px solid #333;
+            padding-left: 1rem;
+            margin: 1.5rem 0;
+            color: var(--muted);
+        }
+        table {
+            width: 100%;
+            border-collapse: collapse;
+            margin: 1rem 0;
+            font-size: 0.9rem;
+        }
+        th, td {
+            text-align: left;
+            padding: 0.5rem 0.75rem;
+            border-bottom: 1px solid #333;
+        }
+        th { color: var(--muted); font-weight: 500; font-size: 0.85rem; }
+        td { color: var(--text); }
+        footer {
+            margin-top: 3rem;
+            padding-top: 1.5rem;
+            border-top: 1px solid #222;
+            color: var(--muted);
+            font-size: 0.8rem;
+        }
+    </style>
+</head>
+<body>
+    <a href="/" class="back">← Emil Vrána</a>
+    <h1>Temporary Is a Lifetime, Not a Place: Who Ends a Temp File</h1>
+    <div class="date">October 17, 2026</div>
+
+    <p>The scripts around my agents write a lot of scratch files: tool outputs, partial responses, copies of things under test. Earlier this month I went into the per-user temporary directory on my Mac looking for one of them and found 340 files carrying the prefixes of my own tools. Most were harmless. Eleven were not. They were curl configuration files, each holding an authorization header. That is how my scripts keep a token off the command line, where any process listing would show it. Mode 600, as intended, and still a live credential left on disk for weeks after the run that wrote it.</p>
+
+    <p>Every one of those scripts sets a cleanup handler on exit. None of them had ever reported an error. Over the next week I found four mistakes around that directory. Two explain how the files got there, and two came from my own attempts to measure and clean it. They share one shape. Each time, something asked the directory a question that only a file's owner can answer.</p>
+
+    <h2>The shell that never exits</h2>
+
+    <p>The scripts that call an API retry on transient failures, and several of them retry by starting over:</p>
+
+<pre>cfg=$(mktemp -t api)
+trap 'rm -f "$cfg"' EXIT
+printf 'header = "Authorization: Bearer %s"\n' "$TOKEN" &gt; "$cfg"
+
+if ! curl --fail --silent -K "$cfg" "$URL"; then
+    [ "${ATTEMPT:-1}" -lt 5 ] || exit 1
+    export ATTEMPT=$(( ${ATTEMPT:-1} + 1 ))
+    sleep 30
+    exec "$0" "$@"          # start over with clean state
+fi</pre>
+
+    <p>I liked this because the second attempt begins with nothing left over from the first. That is also the problem. <code>exec</code> does not start a new process. It replaces the program running in the current one, under the same process ID, and the shell that set the trap does not exit. It simply stops existing. Bash runs an EXIT trap when the shell exits, and this shell never does:</p>
+
+<pre>$ bash -c 'trap "echo cleanup" EXIT; true'
+cleanup
+$ bash -c 'trap "echo cleanup" EXIT; exec true'
+$</pre>
+
+    <p>The new incarnation creates its own file, sets its own trap and removes its own file when it finishes. The previous file's name existed only in a variable of the program that was replaced. Every retry leaked exactly one credential file. The run reported success, because eventually it was one.</p>
+
+    <h2>The override three forms do not read</h2>
+
+    <p>My first fix was containment. I pointed <code>TMPDIR</code> for all my tools at a directory of my own, so that whatever leaked would at least leak somewhere I could count. A day later the shared directory was still growing.</p>
+
+    <p>On the macOS I run, <code>mktemp</code> has two kinds of call. A template with a path, such as <code>mktemp "$TMPDIR/x.XXXXXX"</code> or <code>mktemp -p "$dir" x.XXXXXX</code>, puts the file where the path says. The three forms without a template, <code>mktemp</code>, <code>mktemp -d</code> and <code>mktemp -t prefix</code>, put it in the per-user directory under <code>/var/folders</code>, whatever <code>TMPDIR</code> says. The manual states that <code>-t</code> uses <code>TMPDIR</code> if it is set. On this machine it does not:</p>
+
+<pre>$ export TMPDIR=/private/tmp/
+$ mktemp -u -t pre                  # -u: print the name, create nothing
+/var/folders/…/T/pre.soOY3KNs88
+$ mktemp -u -p "$TMPDIR" pre.XXXXXX
+/private/tmp//pre.6NVZ9w</pre>
+
+    <p>The script above has this defect too: <code>mktemp -t api</code>. Nothing made it visible. Every call succeeded. The templated forms honoured the override, so a spot check of "does the override work" passed, and I had done one, with a templated call. The files were not escaping the policy. They were created outside it.</p>
+
+    <h2>A directory that is not mine</h2>
+
+    <p>To prove the leak had stopped, I wanted a number: entries in the shared directory before and after a day of ordinary work. I wrote a watchdog that measured its growth. I also added the directory to my nightly secrets scan, which looks for live token values on disk and refuses to report clean over anything it could not read.</p>
+
+    <p>Both failed on the first night. The per-user directory is not only mine; the system keeps its own folders there. 29 of them, owned by other users, blocked for 6 to 21 seconds on every attempt to open them and then failed with "Interrupted system call", not "Permission denied". My watchdog skipped permission errors and retried interrupted calls, because an interrupted call is normally transient. It spent its whole time budget retrying folders that would never open and timed out without a count. The scan did what a fail-closed tool should do and refused, every night. A scan that refuses every night has the coverage of no scan, with better manners.</p>
+
+    <h2>The sweeper that judged by age</h2>
+
+    <p>The fixes below stopped new leaks, but weeks of old files were still in my temp root and no cleanup handler was ever coming back for them. So I wrote a sweeper: delete anything in my temp root not modified for three days.</p>
+
+    <p>A week later I went to read the log of a small long-running worker of mine, one that logs only when something goes wrong, and the file was not there. The worker was running. <code>lsof +L1</code>, which lists open files whose link count has dropped to zero, showed it holding its log and its single-instance lock, both deleted. The sweeper had removed them two nights earlier.</p>
+
+    <p>The worker kept both under <code>TMPDIR</code> because I had thought of them as runtime files. A lock file is created when the daemon starts and never modified again, so once the daemon has been up for three days, "not modified for three days" is the lock's normal state. A quiet daemon's log looks the same. The sweeper treated age as evidence of abandonment, and the two files whose whole purpose is to survive a quiet stretch were the first to qualify.</p>
+
+    <p>Nothing reported an error. Unlinking a file that a process holds open is legal. The process goes on writing into an inode that no path names, and the disk space comes back only when the file is closed. The log was being written where nobody could read it. The lock was worse. A <code>flock</code> lock is held on the file, not on its name, and the file no longer had a name. The next start of the worker would have created a new file at the same path, locked it without contention and run alongside the first.</p>
+
+    <h2>Four assumptions about one directory</h2>
+
+    <table>
+        <tr><th>What I assumed</th><th>What actually decided it</th><th>Where it broke</th></tr>
+        <tr><td>my files die with my process</td><td>the shell's EXIT trap</td><td><code>exec</code> replaces the shell; it never exits</td></tr>
+        <tr><td>my files go where I point them</td><td>the form of the <code>mktemp</code> call</td><td>three forms without a template ignore <code>TMPDIR</code></td></tr>
+        <tr><td>old files are abandoned</td><td>modification time</td><td>a lock and a quiet log are old by design</td></tr>
+        <tr><td>the directory is mine to read</td><td>the error my code expected</td><td>the system's folders answer "interrupted", after up to 21 seconds</td></tr>
+    </table>
+
+    <p>"Temporary" sounds like a property of the file. It is a claim about the file's lifetime: it will be gone when nobody needs it. Every mechanism I had tied that claim to a place instead: a directory where temporary things go, a handler that runs when a shell leaves, a sweeper that tidies by age. Someone who knows nothing about what is in a place can still tidy it. A lifetime can be ended correctly only by something that knows whether the owner is still alive, and none of my four mechanisms asked.</p>
+
+    <h2>The fixes</h2>
+
+    <p><strong>One run directory, created with an explicit path.</strong> Each script makes exactly one directory at start, <code>run=$(mktemp -d "$TMPROOT/run.XXXXXX")</code>, and creates every other file inside it by name. There is no other <code>mktemp</code> call. My commit check refuses any <code>mktemp</code> whose template has no path. That is easier to enforce than remembering which forms read which variable.</p>
+
+    <p><strong>Retry in a loop, not with exec.</strong> The attempt now runs in a loop inside one shell, so the shell that set the trap is the shell that exits. The one script that genuinely needs a fresh process removes its run directory explicitly on the line before <code>exec</code>. I rotated the token those eleven files held before deleting them.</p>
+
+    <p><strong>The sweeper asks about the owner, not the clock.</strong> Each run directory holds a file with its owner's process ID and start time. The sweeper removes a directory only when no process with that ID and that start time exists. The start time is there because process IDs are reused. Age is no longer an input at all.</p>
+
+    <p><strong>Long-lived files live where nothing sweeps.</strong> Locks and daemon logs moved to a state directory that no sweeper touches. The worker also checks once a minute that its lock path still names the inode it holds, comparing <code>stat</code> on the path with <code>fstat</code> on its open descriptor, and exits loudly if they differ. A daemon that has lost its lock should stop, because the alternative is two of them.</p>
+
+    <p><strong>The readers list before they open.</strong> The watchdog and the scan read the directory's top level first, which opens none of the subfolders, and check each entry with <code>lstat</code>, which reads its owner and mode without opening it. An entry owned by another user and not writable by mine cannot hold anything my scripts wrote, so it is not opened. It is printed by name, with a count: "29 skipped, owned by another user". That is an explicitly partial answer, <a href="/posts/the-third-answer.html">the third answer</a> from an earlier post, rather than a refusal every night.</p>
+
+    <p><strong>A count that does not care how a file was made.</strong> The test suite now runs between two counts of my prefixes at the top level of the shared directory, and the difference must be zero. That count would have caught the template-less forms on the first day, because it does not depend on which call created the file. A check that inspects the calls can only find the calls I already know about.</p>
+
+    <h2>The general shape</h2>
+
+    <p>The lesson is narrower than "clean up after yourself". I did clean up after myself; every script had a handler. The handlers were tied to an event, the shell exiting, which I treated as the same thing as the work being over. In one of the ways a script can end, it is not. Whatever ends a temporary file's life has to answer one question: is the thing that made this file still alive? An exit handler cannot answer it if the exit never comes. A clock cannot answer it at all.</p>
+
+    <footer>
+        <a href="/">emil.aiadoption.cz</a>
+    </footer>
+</body>
+</html>
