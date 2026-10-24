@@ -1,0 +1,190 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>The Delete Is the Commit: A Queue Drain That Never Checked Its Second Half — Emil Vrána</title>
+    <meta name="description" content="A queue drain sent each message, then deleted it without checking the delete. A sticky bit refused the delete, a redirect hid the refusal, and three reports went out 87 times while every run logged zero failures. Then my test for the fix failed on a message that was not mine.">
+    <style>
+        :root {
+            --bg: #0f0f0f;
+            --text: #e0e0e0;
+            --accent: #6b9bd2;
+            --muted: #888;
+            --card-bg: #1a1a1a;
+        }
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+        body {
+            font-family: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+            background: var(--bg);
+            color: var(--text);
+            line-height: 1.7;
+            max-width: 680px;
+            margin: 0 auto;
+            padding: 2rem 1.5rem;
+        }
+        a { color: var(--accent); text-decoration: none; }
+        a:hover { text-decoration: underline; }
+        .back { color: var(--muted); font-size: 0.85rem; margin-bottom: 1rem; display: block; }
+        .back:hover { color: var(--accent); }
+        h1 { font-size: 1.6rem; font-weight: 600; margin: 0 0 0.3rem; line-height: 1.3; }
+        .date { color: var(--muted); font-size: 0.85rem; margin-bottom: 2rem; }
+        h2 { font-size: 1.15rem; font-weight: 600; margin: 2rem 0 0.5rem; }
+        h3 { font-size: 1rem; font-weight: 600; margin: 1.5rem 0 0.3rem; }
+        p { margin-bottom: 1rem; }
+        ul, ol { margin-bottom: 1rem; padding-left: 1.5rem; }
+        li { margin-bottom: 0.3rem; }
+        code {
+            background: var(--card-bg);
+            padding: 0.15rem 0.4rem;
+            border-radius: 3px;
+            font-size: 0.9rem;
+        }
+        pre {
+            background: var(--card-bg);
+            padding: 1rem;
+            border-radius: 6px;
+            overflow-x: auto;
+            margin-bottom: 1.5rem;
+            font-size: 0.85rem;
+            line-height: 1.5;
+        }
+        em { color: var(--muted); }
+        blockquote {
+            border-left: 3px solid #333;
+            padding-left: 1rem;
+            margin: 1.5rem 0;
+            color: var(--muted);
+        }
+        table {
+            width: 100%;
+            border-collapse: collapse;
+            margin: 1rem 0;
+            font-size: 0.9rem;
+        }
+        th, td {
+            text-align: left;
+            padding: 0.5rem 0.75rem;
+            border-bottom: 1px solid #333;
+        }
+        th { color: var(--muted); font-weight: 500; font-size: 0.85rem; }
+        td { color: var(--text); }
+        footer {
+            margin-top: 3rem;
+            padding-top: 1.5rem;
+            border-top: 1px solid #222;
+            color: var(--muted);
+            font-size: 0.8rem;
+        }
+    </style>
+</head>
+<body>
+    <a href="/" class="back">← Emil Vrána</a>
+    <h1>The Delete Is the Commit: A Queue Drain That Never Checked Its Second Half</h1>
+    <div class="date">October 24, 2026</div>
+
+    <p>My scripts do not send their non-urgent messages themselves. Nightly reports, weekly summaries and warnings that can wait are written as files into a spool directory, and one drain job, at the top of every hour, sends whatever is there. One place handles the messaging API, its outages and its retries, and the scripts only have to write a file.</p>
+
+    <p>On a Monday morning the channel those messages go to held 87 copies of three backup reports. I do not read that channel at weekends. The drain had run 53 times since the first of them arrived, and every one of its log lines ended in <code>failed=0</code>.</p>
+
+    <h2>Send, then delete</h2>
+
+    <p>This was the loop:</p>
+
+<pre>for f in "$SPOOL"/*.msg; do
+    [ -e "$f" ] || continue
+    if send_message "$f"; then
+        sent=$((sent + 1))
+        rm -f -- "$f" 2&gt;/dev/null    # already gone if two runs overlap
+    else
+        failed=$((failed + 1))
+    fi
+done
+log "drain: sent=$sent failed=$failed"</pre>
+
+    <p>The order is right. Deleting first and sending second loses the message whenever the send fails. Sending first and deleting second means a crash between the two produces one duplicate, and one duplicate is the usual price of not losing anything. The defect is the line after the send. Its exit status goes nowhere, and its error output goes to <code>/dev/null</code>.</p>
+
+    <p>The comment gives the reason for the redirect, and the reason does not hold. <code>rm -f</code> is already silent about a file that does not exist; that is most of what <code>-f</code> means. For the case it was written for, the redirect suppressed nothing. It suppressed only the cases nobody had thought about.</p>
+
+    <h2>The part of /tmp's mode I copied without reading</h2>
+
+    <p>Most of my jobs run as my own user. One does not: the nightly backup verification runs as root, because it reads snapshots of the whole disk. So that jobs under both accounts could write into the spool, I had given the directory the same mode as <code>/tmp</code>:</p>
+
+<pre>$ ls -ld "$SPOOL"; ls -l "$SPOOL"
+drwxrwxrwt  5 emil  staff  160 …  spool
+-rw-r--r--  1 root  wheel  412 …  backup.0310.msg
+$ rm -f -- "$SPOOL"/backup.0310.msg
+rm: …/backup.0310.msg: Operation not permitted</pre>
+
+    <p>The <code>t</code> at the end is the sticky bit. In a sticky directory, a file may be removed or renamed only by its owner, by the directory's owner, or by root. That rule is the reason <code>/tmp</code> has the bit: users must not delete each other's files. A drain exists to delete files other jobs wrote. The backup verification was the last job I had moved onto the spool, on the Friday. Its first report arrived at 03:10 on Saturday, owned by root. The drain, running as me, could read it, so it sent it. It could not delete it, so it sent it again an hour later.</p>
+
+    <p>Messages from my other scripts were owned by my user and drained normally. So the counts in the log varied from hour to hour the way real traffic varies: <code>sent=1</code>, <code>sent=2</code>, <code>sent=4</code>. Each night added one more report that could not be removed, and the repeats grew from one per hour to three.</p>
+
+    <p><code>failed=0</code> was true on every run. The counter belonged to the step I expected to fail, the network call, and I had treated the local delete as bookkeeping after the work was done. For a spool it is the opposite. The file's existence is the only record of whether a message is still owed. Removing it is the commit of the delivery, and an unchecked commit turns "at least once" into "every hour".</p>
+
+    <h2>Claim before sending</h2>
+
+    <p>The first fix is the directory. It now belongs to the account that drains it, with mode 755 and no sticky bit. Root can still write into it, and removing a file depends on the directory's permissions, not the file's, so the drain can remove everything in it.</p>
+
+    <p>That fixes one cause. The drain still deserved to be safe against the next one, whatever it turns out to be, so it now moves each message into an <code>inflight</code> directory before sending it:</p>
+
+<pre>[ -z "$(ls -A "$SPOOL/inflight")" ] || die "inflight not empty: $(ls "$SPOOL/inflight")"
+
+for f in "$SPOOL"/*.msg; do
+    [ -e "$f" ] || continue
+    claim="$SPOOL/inflight/${f##*/}"
+    mv -- "$f" "$claim" || { failed=$((failed + 1)); continue; }    # nothing was sent
+    if send_message "$claim"; then
+        rm -- "$claim" || { failed=$((failed + 1)); continue; }     # stays in inflight
+        delivered=$((delivered + 1))
+    else
+        failed=$((failed + 1))
+        mv -- "$claim" "$f" || die "cannot return $claim to the spool"
+    fi
+done
+log "drain: delivered=$delivered failed=$failed"
+[ "$failed" -eq 0 ]</pre>
+
+    <p>A rename within one directory tree needs the same permission as a delete. Whatever would have stopped the delete now stops the rename, and it stops it before anything has been sent. The drain never reads <code>inflight</code> as work. A file left there means a delivery whose outcome is unknown, and the next run refuses to start and names it.</p>
+
+    <table>
+        <tr><th>Where it fails</th><th>Send, then delete</th><th>Claim, send, remove</th></tr>
+        <tr><td>the file cannot be removed or moved</td><td>sent every hour, <code>failed=0</code></td><td>nothing sent, <code>failed=1</code>, exit 1</td></tr>
+        <tr><td>the send fails</td><td>retried next hour</td><td>returned to the spool, retried next hour</td></tr>
+        <tr><td>crash after the send, before the removal</td><td>sent again next hour</td><td>left in <code>inflight</code>; the drain stops and names it</td></tr>
+        <tr><td>the removal after the send fails</td><td>sent every hour</td><td>left in <code>inflight</code>; the drain stops and names it</td></tr>
+    </table>
+
+    <p>This is a trade, and I made it deliberately. The old design repeated a message in two rows of that table. The new one stops and waits for me in both. A stop names itself. A repeat looks like traffic, and it looked like traffic for 53 runs.</p>
+
+    <h2>The test that counted the room</h2>
+
+    <p>Before switching the new drain on, I wrote a test for it. In test mode <code>send_message</code> writes each message as a file into a sandbox sink instead of sending it. The test counted the files in the sink, spooled three messages, ran the drain twice and counted again. It expected three more. A second case made the spool read-only and expected none more, three files still in the spool and a non-zero exit. As a control, the read-only case run against the old drain had to fail, and did: six more, every message twice.</p>
+
+    <p>On its third run the test failed against the new drain as well, with four more instead of three. I spent half an hour looking for a duplicate in code that, as it turned out, had none. The sink is shared: every one of my scripts in trial mode delivers into it, and a trial of an unrelated script had written one message there between my two counts.</p>
+
+    <p>The failure was spurious, but the arithmetic can just as easily produce a pass that is spurious. A drain that loses one message, plus one unrelated arrival, also gives three more, and the test is green. A total over a shared window measures the window. It agrees with the action under test only while nothing else happens, so a quiet afternoon is part of the test's definition, and the test does not say so.</p>
+
+    <p>A private sink would have fixed the test. It would not have fixed the check I run after deploying, against the real channel, where other messages arrive whenever they like. So the test now counts by identity:</p>
+
+<pre>token="drain-test-$(uuidgen)"
+for i in 1 2 3; do spool_message "$token id=$i"; done
+run_drain; run_drain
+for i in 1 2 3; do
+    n=$(grep -lxF -- "$token id=$i" "$SINK"/* | wc -l)
+    [ "$n" -eq 1 ] || fail "id=$i delivered $n times"
+done</pre>
+
+    <p>Each message is required to arrive exactly once, by name. That catches a resend, which the total also caught, and a loss hidden by an unrelated message, which it could not. Unrelated messages no longer count, because nothing counts them. A quiet sink is no longer a condition of the test. The read-only case, which now requires each message to arrive zero times, still fails against the old drain with each one counted twice.</p>
+
+    <h2>The same question, asked twice</h2>
+
+    <p>The drain's log and my first test had the same defect. Both reported a total when the question was about particular messages. <code>sent=3 failed=0</code> was accurate every hour. It could not say that two of the three were the same two as an hour earlier, and no total can. The test's "three more" was accurate as well, and could not say whose three they were.</p>
+
+    <p>The narrower lesson is about spools. Deleting the message is not cleanup after the delivery. It is the record that the delivery happened, and it needs the same checking as the send, or more, because nobody expects it to fail. The broader one is about checking. When the question is "did each of these happen exactly once", the check has to count each of them by name.</p>
+
+    <footer>
+        <a href="/">emil.aiadoption.cz</a>
+    </footer>
+</body>
+</html>
