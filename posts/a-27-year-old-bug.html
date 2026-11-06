@@ -1,0 +1,104 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>A 27-Year-Old Bug and the Updates You Keep Postponing — Emil Vrána</title>
+    <meta name="description" content="An AI model found thousands of serious security holes, including one that had sat unnoticed for 27 years. What it means for people who are not security experts: mostly, install the updates.">
+    <style>
+        :root {
+            --bg: #0f0f0f;
+            --text: #e0e0e0;
+            --accent: #6b9bd2;
+            --muted: #888;
+            --card-bg: #1a1a1a;
+        }
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+        body {
+            font-family: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+            background: var(--bg);
+            color: var(--text);
+            line-height: 1.7;
+            max-width: 680px;
+            margin: 0 auto;
+            padding: 2rem 1.5rem;
+        }
+        a { color: var(--accent); text-decoration: none; }
+        a:hover { text-decoration: underline; }
+        .back { color: var(--muted); font-size: 0.85rem; margin-bottom: 1rem; display: block; }
+        .back:hover { color: var(--accent); }
+        h1 { font-size: 1.6rem; font-weight: 600; margin: 0 0 0.3rem; line-height: 1.3; }
+        .date { color: var(--muted); font-size: 0.85rem; margin-bottom: 2rem; }
+        h2 { font-size: 1.15rem; font-weight: 600; margin: 2rem 0 0.5rem; }
+        h3 { font-size: 1rem; font-weight: 600; margin: 1.5rem 0 0.3rem; }
+        p { margin-bottom: 1rem; }
+        ul, ol { margin-bottom: 1rem; padding-left: 1.5rem; }
+        li { margin-bottom: 0.3rem; }
+        code {
+            background: var(--card-bg);
+            padding: 0.15rem 0.4rem;
+            border-radius: 3px;
+            font-size: 0.9rem;
+        }
+        pre {
+            background: var(--card-bg);
+            padding: 1rem;
+            border-radius: 6px;
+            overflow-x: auto;
+            margin-bottom: 1.5rem;
+            font-size: 0.85rem;
+            line-height: 1.5;
+        }
+        em { color: var(--muted); }
+        blockquote {
+            border-left: 3px solid #333;
+            padding-left: 1rem;
+            margin: 1.5rem 0;
+            color: var(--muted);
+        }
+        table {
+            width: 100%;
+            border-collapse: collapse;
+            margin: 1rem 0;
+            font-size: 0.9rem;
+        }
+        th, td {
+            text-align: left;
+            padding: 0.5rem 0.75rem;
+            border-bottom: 1px solid #333;
+        }
+        th { color: var(--muted); font-weight: 500; font-size: 0.85rem; }
+        td { color: var(--text); }
+        footer {
+            margin-top: 3rem;
+            padding-top: 1.5rem;
+            border-top: 1px solid #222;
+            color: var(--muted);
+            font-size: 0.8rem;
+        }
+        figure { margin: 1.5rem 0; }
+        figure img { width: 100%; height: auto; border-radius: 6px; display: block; }
+        figcaption { color: var(--muted); font-size: 0.8rem; margin-top: 0.5rem; }
+        .tablewrap { overflow-x: auto; }
+    </style>
+</head>
+<body>
+    <a href="/" class="back">← Emil Vrána</a>
+    <h1>A 27-Year-Old Bug and the Updates You Keep Postponing</h1>
+    <div class="date">April 14, 2026</div>
+
+    <p>Last Tuesday Anthropic, one of the large AI companies, announced that its newest model is too good at finding security holes to be released to the public. Instead it gave access to a group of large technology companies and open-source maintainers, with money attached, so they can find and fix the holes first. The project is called Glasswing. According to the company, the model has already found thousands of serious vulnerabilities, among other places in every major operating system and web browser.</p>
+
+    <p>Two examples from the announcement are worth repeating. One is a bug in OpenBSD, an operating system known for its care about security, which had been there for 27 years and let an attacker crash a machine remotely. The other sat for 16 years in FFmpeg, a library inside almost every program that plays video, in a line of code that automated testing tools had run five million times without noticing anything.</p>
+
+    <p>Two caveats. These are the company's own numbers, and independent confirmation will take months, because the details stay secret until the fixes are out. And a model that finds holes for defenders would find them just as well for anyone else, which is the stated reason it is not on sale. Whatever the final count, the direction is clear: finding a bug is getting cheap, fixing it still costs a person's time, and installing the fix still depends on someone pressing a button.</p>
+
+    <p>That last part is where an ordinary reader comes in. The fixes for what these tools find arrive as the updates most of us postpone: the phone that wants to restart tonight, the browser with a coloured dot on its menu, the home router nobody has touched since the technician left. I spent Saturday on that unglamorous end. My own router was fine. My parents' router, updated over the phone with my mother reading the screen to me, had last been updated on the day it was installed. For a small company the equivalent is knowing which software it actually runs.</p>
+
+    <p>The short version: the most important AI news of the month is about the least glamorous habit in computing, and that habit is ours.</p>
+
+    <footer>
+        <a href="/">emil.aiadoption.cz</a>
+    </footer>
+</body>
+</html>

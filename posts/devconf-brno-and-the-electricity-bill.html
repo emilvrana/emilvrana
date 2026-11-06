@@ -1,0 +1,109 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>DevConf in Brno and the Electricity Bill Nobody Puts on a Slide — Emil Vrána</title>
+    <meta name="description" content="At DevConf.CZ in Brno the best half hour was by the coffee machine, with an engineer who runs GPU servers, talking about the least discussed limit of AI in Europe: electricity.">
+    <style>
+        :root {
+            --bg: #0f0f0f;
+            --text: #e0e0e0;
+            --accent: #6b9bd2;
+            --muted: #888;
+            --card-bg: #1a1a1a;
+        }
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+        body {
+            font-family: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+            background: var(--bg);
+            color: var(--text);
+            line-height: 1.7;
+            max-width: 680px;
+            margin: 0 auto;
+            padding: 2rem 1.5rem;
+        }
+        a { color: var(--accent); text-decoration: none; }
+        a:hover { text-decoration: underline; }
+        .back { color: var(--muted); font-size: 0.85rem; margin-bottom: 1rem; display: block; }
+        .back:hover { color: var(--accent); }
+        h1 { font-size: 1.6rem; font-weight: 600; margin: 0 0 0.3rem; line-height: 1.3; }
+        .date { color: var(--muted); font-size: 0.85rem; margin-bottom: 2rem; }
+        h2 { font-size: 1.15rem; font-weight: 600; margin: 2rem 0 0.5rem; }
+        h3 { font-size: 1rem; font-weight: 600; margin: 1.5rem 0 0.3rem; }
+        p { margin-bottom: 1rem; }
+        ul, ol { margin-bottom: 1rem; padding-left: 1.5rem; }
+        li { margin-bottom: 0.3rem; }
+        code {
+            background: var(--card-bg);
+            padding: 0.15rem 0.4rem;
+            border-radius: 3px;
+            font-size: 0.9rem;
+        }
+        pre {
+            background: var(--card-bg);
+            padding: 1rem;
+            border-radius: 6px;
+            overflow-x: auto;
+            margin-bottom: 1.5rem;
+            font-size: 0.85rem;
+            line-height: 1.5;
+        }
+        em { color: var(--muted); }
+        blockquote {
+            border-left: 3px solid #333;
+            padding-left: 1rem;
+            margin: 1.5rem 0;
+            color: var(--muted);
+        }
+        table {
+            width: 100%;
+            border-collapse: collapse;
+            margin: 1rem 0;
+            font-size: 0.9rem;
+        }
+        th, td {
+            text-align: left;
+            padding: 0.5rem 0.75rem;
+            border-bottom: 1px solid #333;
+        }
+        th { color: var(--muted); font-weight: 500; font-size: 0.85rem; }
+        td { color: var(--text); }
+        footer {
+            margin-top: 3rem;
+            padding-top: 1.5rem;
+            border-top: 1px solid #222;
+            color: var(--muted);
+            font-size: 0.8rem;
+        }
+        figure { margin: 1.5rem 0; }
+        figure img { width: 100%; height: auto; border-radius: 6px; display: block; }
+        figcaption { color: var(--muted); font-size: 0.8rem; margin-top: 0.5rem; }
+        .tablewrap { overflow-x: auto; }
+    </style>
+</head>
+<body>
+    <a href="/" class="back">← Emil Vrána</a>
+    <h1>DevConf in Brno and the Electricity Bill Nobody Puts on a Slide</h1>
+    <div class="date">June 23, 2026</div>
+
+    <p>Brno in the third week of June belongs to two crowds: open-source developers at DevConf.CZ and motorbike fans at the MotoGP. I was with the first, on Thursday and Friday at the Faculty of Information Technology of the Brno University of Technology, where the conference has been held for years. It is free, it is crowded, and this year the track on artificial intelligence was crowded too.</p>
+
+    <p>The best half hour was not a talk. By the coffee machine I met Marek, who runs GPU servers for a hosting company in Brno, and we got stuck on the subject that rarely makes it onto a slide: electricity. Buying the cards, he said, is not the hardest part. The hardest is getting enough power into the building and enough heat out of it, and waiting for a bigger grid connection can take longer than the cards stay current.</p>
+
+    <p>The open numbers back him up. The International Energy Agency estimates that data centres worldwide used about 415 terawatt-hours of electricity in 2024, around 1.5% of all the electricity used on the planet, and expects that to more than double to about 945 terawatt-hours by 2030, roughly what Japan uses in a year today. AI is the main driver of that growth. For Europe, where electricity is expensive and grids expand slowly, this is a question of competitiveness before it is a question of technology.</p>
+
+    <figure>
+        <img src="/img/devconf-brno-and-the-electricity-bill-chart.png" width="680" height="340" alt="Bar chart: data centres worldwide used about 415 terawatt-hours of electricity in 2024; the IEA projects about 945 in 2030, roughly Japan&#x27;s annual use today.">
+        <figcaption>Electricity used by data centres worldwide; 2030 is the IEA's base-case projection. Source: International Energy Agency, Energy and AI (2025).</figcaption>
+    </figure>
+
+    <p>Czechia has just taken a step of its own. In May the Czech AI Factory was launched in Ostrava, built around a new AI supercomputer called KarolAIna: a project of nearly a billion crowns, half of it paid by the EU, meant for companies, researchers and public institutions. Marek's question was simple: who pays for the power once the subsidy is spent. My answer came from my own work. Most tasks do not need the largest model, and a smaller one that is good enough is also cheaper to run, every single time someone asks it something.</p>
+
+    <p>Verdict: two good days, and the most useful thing I heard was said next to a coffee machine, which is where it usually is.</p>
+
+    <footer>
+        <a href="/">emil.aiadoption.cz</a>
+    </footer>
+</body>
+</html>
