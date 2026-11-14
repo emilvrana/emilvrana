@@ -1,0 +1,100 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>The Moment the Bot Should Have Called a Person — Emil Vrána</title>
+    <meta name="description" content="A small Prague meetup on AI agents in customer service, and the one question that mattered: when should a bot hand the conversation to a person, and why does it so often not?">
+    <style>
+        :root {
+            --bg: #0f0f0f;
+            --text: #e0e0e0;
+            --accent: #6b9bd2;
+            --muted: #888;
+            --card-bg: #1a1a1a;
+        }
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+        body {
+            font-family: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+            background: var(--bg);
+            color: var(--text);
+            line-height: 1.7;
+            max-width: 680px;
+            margin: 0 auto;
+            padding: 2rem 1.5rem;
+        }
+        a { color: var(--accent); text-decoration: none; }
+        a:hover { text-decoration: underline; }
+        .back { color: var(--muted); font-size: 0.85rem; margin-bottom: 1rem; display: block; }
+        .back:hover { color: var(--accent); }
+        h1 { font-size: 1.6rem; font-weight: 600; margin: 0 0 0.3rem; line-height: 1.3; }
+        .date { color: var(--muted); font-size: 0.85rem; margin-bottom: 2rem; }
+        h2 { font-size: 1.15rem; font-weight: 600; margin: 2rem 0 0.5rem; }
+        h3 { font-size: 1rem; font-weight: 600; margin: 1.5rem 0 0.3rem; }
+        p { margin-bottom: 1rem; }
+        ul, ol { margin-bottom: 1rem; padding-left: 1.5rem; }
+        li { margin-bottom: 0.3rem; }
+        code {
+            background: var(--card-bg);
+            padding: 0.15rem 0.4rem;
+            border-radius: 3px;
+            font-size: 0.9rem;
+        }
+        pre {
+            background: var(--card-bg);
+            padding: 1rem;
+            border-radius: 6px;
+            overflow-x: auto;
+            margin-bottom: 1.5rem;
+            font-size: 0.85rem;
+            line-height: 1.5;
+        }
+        em { color: var(--muted); }
+        blockquote {
+            border-left: 3px solid #333;
+            padding-left: 1rem;
+            margin: 1.5rem 0;
+            color: var(--muted);
+        }
+        table {
+            width: 100%;
+            border-collapse: collapse;
+            margin: 1rem 0;
+            font-size: 0.9rem;
+        }
+        th, td {
+            text-align: left;
+            padding: 0.5rem 0.75rem;
+            border-bottom: 1px solid #333;
+        }
+        th { color: var(--muted); font-weight: 500; font-size: 0.85rem; }
+        td { color: var(--text); }
+        footer {
+            margin-top: 3rem;
+            padding-top: 1.5rem;
+            border-top: 1px solid #222;
+            color: var(--muted);
+            font-size: 0.8rem;
+        }
+    </style>
+</head>
+<body>
+    <a href="/" class="back">← Emil Vrána</a>
+    <h1>The Moment the Bot Should Have Called a Person</h1>
+    <div class="date">November 14, 2026</div>
+
+    <p>„Chci mluvit s člověkem.“ The customer typed it for the third time, and for the third time the bot replied, very politely, with a link to the page about delivery times. The parcel showed as delivered, it was not in the box, and the customer had already explained that twice. The room laughed, and I suspect most of us laughed because we have been that customer. This was on Tuesday evening at a small Prague meetup on AI agents in customer service: a few dozen people, and one question that turned out to be the only one worth the evening. At what moment should a bot say “let me get a colleague”, and why does it so rarely do it?</p>
+
+    <p>The best talk came from a man who runs customer support at a Czech company and simply went through real conversations, anonymised, one after another. Taken one by one, the bot’s answers were fine: polite, correct, in the right tone. What failed was the conversation as a whole. The customer repeats the same sentence, asks for a person outright, has money or a deadline at stake, a blocked card on a Friday afternoon, and the bot gives the same answer in slightly different words. His explanation of why is the part that stuck with me. A support bot is usually judged by how many chats it closes without a human. Every handover makes that number worse, so a team tuned to the number ends up with a bot that holds on. It is not stupid. It does exactly what it is measured for.</p>
+
+    <p>The weakest half hour was the opposite kind of talk: slides comparing which model is cheapest this week, down to the price of a thousand conversations, including one model released the day before. I get why people care, and I would not trust one of those numbers past Christmas. More to the point, a customer stuck in a loop stays stuck whatever the model costs. Nobody waiting for a parcel cares how cheap the thing ignoring them was.</p>
+
+    <p>The timing was no accident. Black Friday and the Christmas shopping are coming, and the chats of e-shops and couriers are about to have their busiest weeks of the year. That is exactly when a bot that never lets go costs the most, and the cost lands on the person typing, not on the shop. In my own work it is the same question with documents instead of people: the pipeline I build for a client sends anything it is unsure about to a person’s queue rather than guessing, and that queue is the first thing I check, before the model. On the tram home I kept thinking that a good bot should count a handover at the right moment as a success, not a defeat.</p>
+
+    <p>In the end, where a person stepped in mattered more than which model answered.</p>
+
+    <footer>
+        <a href="/">emil.aiadoption.cz</a>
+    </footer>
+</body>
+</html>
